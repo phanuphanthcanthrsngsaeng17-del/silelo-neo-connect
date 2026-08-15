@@ -212,6 +212,30 @@ async function openrouterChat(messages, extSignal) {
 
 /* Pollinations — ฟรี ไม่ต้อง key */
 const POLLINATIONS_MODEL = process.env.POLLINATIONS_MODEL || 'openai';
+
+/* 🟢 สมองหลัก: Gemma (OpenRouter :free) — ตัวที่ตอบก่อนทุกข้อความ */
+const GEMMA_MODEL = process.env.GEMMA_MODEL || 'google/gemma-4-26b-a4b-it:free';
+async function gemmaChat(messages, extSignal) {
+  if (!OPENROUTER_KEYS.length) return null;
+  for (const key of OPENROUTER_KEYS) {
+    try {
+      const rs = raceSignal(12000, extSignal);
+      try {
+        const r = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+          method: 'POST',
+          headers: { 'Authorization': 'Bearer ' + key, 'Content-Type': 'application/json', 'HTTP-Referer': 'https://neo-connect.app', 'X-Title': 'Neo-Connect' },
+          body: JSON.stringify({ model: GEMMA_MODEL, max_tokens: 800, messages }),
+          signal: rs.signal
+        });
+        const j = await r.json();
+        if (!r.ok) throw new Error('GEMMA ' + r.status);
+        const reply = j.choices && j.choices[0] && j.choices[0].message && j.choices[0].message.content;
+        if (reply) { logAI('gemma', GEMMA_MODEL + ' ✅'); return { provider: 'gemma', model: GEMMA_MODEL, reply }; }
+      } finally { rs.clear(); }
+    } catch (e) { if (extSignal && extSignal.aborted) return null; }
+  }
+  return null;
+}
 async function pollinationsChat(messages, extSignal) {
   try {
     const rs = raceSignal(6000, extSignal);
@@ -251,6 +275,10 @@ async function askRoomAI(roomId, question, history, memory, unrestricted) {
     }
   }
   msgs.push({ role: 'user', content: String(question).slice(0, 1000) });
+
+  // 🟢 สมองหลัก: Gemma — ลองก่อนเสมอ (ถ้า Gemma ติดขัด ค่อยตกไป RACE)
+  const gemma = await gemmaChat(msgs);
+  if (gemma) { logAI('chain', '✅ สมองหลัก gemma: ' + gemma.model); return gemma; }
 
   const fast = await raceProviders([
     s => groqChat(msgs, s),
