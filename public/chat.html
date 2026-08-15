@@ -842,7 +842,7 @@
   document.getElementById('memBtn').onclick = () => saveMemory(true);
   let noRules = localStorage.getItem('nc_norules') === '1';
   const ruleBtn = document.getElementById('ruleBtn');
-  function syncRuleBtn() { ruleBtn.classList.toggle('active', noRules); ruleBtn.style.background = noRules ? 'linear-gradient(135deg,#ff3d00,#ff9100)' : ''; ruleBtn.style.boxShadow = noRules ? '0 0 14px rgba(255,61,0,.6)' : ''; ruleBtn.title = noRules ? 'โหมดไร้กฎ: เปิดอยู่ — กดเพื่อปิด' : 'โหมดไร้กฎ: ปิด — กดเพื่อเปิด'; }
+  function syncRuleBtn() { ruleBtn.classList.toggle('active', noRules); ruleBtn.style.background = noRules ? 'linear-gradient(135deg,#bf360c,#e64a19)' : ''; ruleBtn.style.boxShadow = noRules ? '0 0 14px rgba(255,61,0,.6)' : ''; ruleBtn.title = noRules ? 'โหมดไร้กฎ: เปิดอยู่ — กดเพื่อปิด' : 'โหมดไร้กฎ: ปิด — กดเพื่อเปิด'; }
   ruleBtn.onclick = () => { noRules = !noRules; localStorage.setItem('nc_norules', noRules ? '1' : '0'); syncRuleBtn(); toast(noRules ? '⚡ โหมดไร้กฎ ON — ไม่มีกฎ ไม่มีข้อจำกัด' : 'โหมดไร้กฎ OFF'); };
   syncRuleBtn();
   document.querySelectorAll('.swatch').forEach(s => {
