@@ -289,4 +289,8 @@ app.get('/api/ping', (req, res) => res.json({ pong: true, t: Date.now() }));
 
 app.get('/health', (req, res) => res.json({ ok: true, t: Date.now() }));
 
-app.listen(PORT, () => console.log(`⚡ SILELO Neo-Connect running on port ${PORT}`));
+// Vercel-ready: export app สำหรับ serverless, listen เฉพาะตอนรันตรง (local/Railway)
+if (require.main === module) {
+  app.listen(PORT, () => console.log(`⚡ SILELO Neo-Connect running on port ${PORT}`));
+}
+module.exports = app;
