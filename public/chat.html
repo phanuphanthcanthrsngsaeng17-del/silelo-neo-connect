@@ -15,12 +15,13 @@
     --bot-border: rgba(167,139,250,.45);
   }
   * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html { overflow-x: clip; height: 100%; }
   html, body { height: 100%; }
   body {
-    background: var(--bg); color: var(--txt); height: 100%; overflow: hidden; overflow-x: hidden;
+    background: var(--bg); color: var(--txt); height: 100%; overflow-x: clip;
     font-family: 'Prompt', 'Segoe UI', sans-serif;
   }
-  .bgfx { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
+  .bgfx { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; clip-path: inset(0); }
   .aurora { position: absolute; border-radius: 50%; filter: blur(80px); opacity: .4; animation: drift 16s ease-in-out infinite alternate; }
   .aurora.a1 { width: 50vw; height: 50vw; left: -20vw; top: -20vw; background: radial-gradient(circle, color-mix(in srgb, var(--accent) 25%, transparent), transparent 65%); }
   .aurora.a2 { width: 44vw; height: 44vw; right: -16vw; bottom: -18vw; background: radial-gradient(circle, rgba(167,139,250,.18), transparent 65%); animation-delay: -7s; }
