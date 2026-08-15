@@ -80,6 +80,8 @@
     transition: all .2s;
   }
   .icon-btn:active { transform: scale(.88); background: color-mix(in srgb, var(--accent) 22%, transparent); box-shadow: 0 0 14px color-mix(in srgb, var(--accent) 35%, transparent); }
+  .icon-btn.active { border-color: #ff3d00 !important; color: #fff !important; animation: rulepulse 1.2s ease-in-out infinite; }
+  @keyframes rulepulse { 0%,100% { box-shadow: 0 0 6px rgba(255,61,0,.5); } 50% { box-shadow: 0 0 18px rgba(255,61,0,.9); } }
 
   /* ===== Messages ===== */
   #msgs { flex: 1; overflow-y: auto; padding: 20px 16px 8px; display: flex; flex-direction: column; gap: 14px; scroll-behavior: smooth; }
@@ -273,6 +275,7 @@
       <button class="icon-btn call-btn" id="callBtn" title="โทรคุย">📞</button>
       <button class="icon-btn" id="voiceBtn" title="เลือกเสียง">🎙️</button>
       <button class="icon-btn" id="memBtn" title="จดจำ (ความทรงจำ)">🧠</button>
+      <button class="icon-btn" id="ruleBtn" title="โหมดไร้กฎ — ไม่มีข้อจำกัด">⚡</button>
       <button class="icon-btn" id="themeBtn" title="เปลี่ยนธีม">🎨</button>
       <button class="icon-btn" id="clearBtn" title="ล้างแชท">🗑</button>
     </div>
@@ -485,7 +488,7 @@
     try {
       const r = await fetch('/api/chat', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ room, question: q, history: cleanHist(history.slice(-12, -1)), memory })
+        body: JSON.stringify({ room, question: q, history: cleanHist(history.slice(-12, -1)), memory, unrestricted: noRules })
       });
       const j = await r.json();
       if (j.reply) { addMsg('assistant', j.reply); toast('⚡ ' + (j.provider === 'mock' ? 'BACKUP MODE' : j.provider.toUpperCase() + ' · ' + j.model)); }
@@ -666,7 +669,7 @@
     try {
       const r = await fetch('/api/chat', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ room, question: q, history: cleanHist(history.slice(-12, -1)), memory })
+        body: JSON.stringify({ room, question: q, history: cleanHist(history.slice(-12, -1)), memory, unrestricted: noRules })
       });
       const j = await r.json();
       if (j.reply && callActive) {
@@ -837,6 +840,11 @@
     voicePop.classList.remove('show');
   };
   document.getElementById('memBtn').onclick = () => saveMemory(true);
+  let noRules = localStorage.getItem('nc_norules') === '1';
+  const ruleBtn = document.getElementById('ruleBtn');
+  function syncRuleBtn() { ruleBtn.classList.toggle('active', noRules); ruleBtn.style.background = noRules ? 'linear-gradient(135deg,#ff3d00,#ff9100)' : ''; ruleBtn.style.boxShadow = noRules ? '0 0 14px rgba(255,61,0,.6)' : ''; ruleBtn.title = noRules ? 'โหมดไร้กฎ: เปิดอยู่ — กดเพื่อปิด' : 'โหมดไร้กฎ: ปิด — กดเพื่อเปิด'; }
+  ruleBtn.onclick = () => { noRules = !noRules; localStorage.setItem('nc_norules', noRules ? '1' : '0'); syncRuleBtn(); toast(noRules ? '⚡ โหมดไร้กฎ ON — ไม่มีกฎ ไม่มีข้อจำกัด' : 'โหมดไร้กฎ OFF'); };
+  syncRuleBtn();
   document.querySelectorAll('.swatch').forEach(s => {
     s.onclick = () => {
       const c = s.dataset.accent;
