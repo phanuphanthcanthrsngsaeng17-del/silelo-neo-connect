@@ -168,6 +168,57 @@
     clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px);
   }
   #toast.show { transform: translateX(-50%) translateY(0); }
+  /* ===== 📞 VOICE CALL ===== */
+  .call-btn { font-size: 18px; animation: callPulse 2.2s infinite; }
+  @keyframes callPulse { 0%,100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 45%, transparent); } 50% { box-shadow: 0 0 0 8px transparent; } }
+  #callOverlay {
+    position: fixed; inset: 0; z-index: 100; display: none;
+    background: radial-gradient(120% 120% at 50% 0%, rgba(5,10,18,.92), rgba(2,4,9,.98));
+    backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+    flex-direction: column; align-items: center; justify-content: center; gap: 0;
+    color: #dff3ff;
+  }
+  #callOverlay.show { display: flex; }
+  .call-avatar { position: relative; width: 130px; height: 130px; margin-bottom: 22px; }
+  .call-avatar .ring2 {
+    position: absolute; inset: 0; border-radius: 50%;
+    border: 2px solid var(--accent); animation: ringWave 1.8s ease-out infinite;
+  }
+  .call-avatar .ring2:nth-child(2) { animation-delay: .6s; }
+  .call-avatar .ring2:nth-child(3) { animation-delay: 1.2s; }
+  @keyframes ringWave { 0% { transform: scale(.85); opacity: .9; } 100% { transform: scale(1.55); opacity: 0; } }
+  .call-avatar .cface {
+    position: absolute; inset: 12px; border-radius: 50%;
+    background: linear-gradient(145deg, color-mix(in srgb, var(--accent) 35%, #0a1420), #060b12);
+    border: 1px solid color-mix(in srgb, var(--accent) 70%, transparent);
+    display: flex; align-items: center; justify-content: center; font-size: 52px;
+    box-shadow: 0 0 42px color-mix(in srgb, var(--accent) 40%, transparent), inset 0 0 26px rgba(0,0,0,.6);
+  }
+  .call-avatar.speaking .cface { animation: faceGlow 1s ease-in-out infinite alternate; }
+  @keyframes faceGlow { from { box-shadow: 0 0 30px color-mix(in srgb, var(--accent) 30%, transparent); } to { box-shadow: 0 0 70px color-mix(in srgb, var(--accent) 80%, transparent); } }
+  #callName { font-size: 22px; font-weight: 700; letter-spacing: 3px; text-shadow: 0 0 16px var(--accent); }
+  #callState { font-size: 13px; color: rgba(210,235,250,.65); margin: 8px 0 6px; letter-spacing: 1px; min-height: 18px; }
+  #callTimer { font-size: 30px; font-weight: 300; font-variant-numeric: tabular-nums; margin: 8px 0 4px; color: rgba(230,248,255,.9); }
+  #callTrans {
+    min-height: 44px; max-width: 86%; width: 320px; text-align: center; font-size: 14px;
+    color: var(--accent); margin: 10px 0 18px; padding: 8px 14px; border-radius: 14px;
+    background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.07);
+    letter-spacing: .3px; display: flex; align-items: center; justify-content: center;
+  }
+  #callTrans.empty { color: rgba(200,225,240,.35); }
+  .call-btns { display: flex; gap: 34px; align-items: center; margin-top: 14px; }
+  .cbtn {
+    width: 62px; height: 62px; border-radius: 50%; border: none; cursor: pointer;
+    font-size: 24px; display: flex; align-items: center; justify-content: center;
+    background: rgba(255,255,255,.07); color: #eaf6ff;
+    box-shadow: 0 6px 24px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.1);
+    transition: transform .15s;
+  }
+  .cbtn:active { transform: scale(.92); }
+  .cbtn.muted { background: rgba(255,255,255,.16); opacity: .55; }
+  .cbtn.hang { width: 74px; height: 74px; background: linear-gradient(145deg, #ff2d55, #c90026); box-shadow: 0 8px 30px rgba(255,45,85,.45); }
+  .cbtn.hang:active { transform: scale(.94); }
+  .call-hint { position: absolute; bottom: 26px; font-size: 11px; color: rgba(190,215,230,.4); letter-spacing: .5px; text-align: center; padding: 0 24px; }
 </style>
 </head>
 <body>
@@ -189,6 +240,7 @@
       <div class="status"><span class="pulse"></span><span id="rtag">ผู้ช่วยส่วนตัว · ONLINE</span></div>
     </div>
     <div class="hbtns">
+      <button class="icon-btn call-btn" id="callBtn" title="โทรคุย">📞</button>
       <button class="icon-btn" id="themeBtn" title="เปลี่ยนธีม">🎨</button>
       <button class="icon-btn" id="clearBtn" title="ล้างแชท">🗑</button>
     </div>
@@ -213,6 +265,24 @@
     <div class="swatch" data-accent="#22e584" style="background:linear-gradient(135deg,#22e584,#00b8a9)"></div>
   </div>
 </div>
+
+<!-- 📞 หน้าจอโทร -->
+<div id="callOverlay">
+  <div class="call-avatar" id="callAvatar">
+    <div class="ring2"></div><div class="ring2"></div><div class="ring2"></div>
+    <div class="cface" id="callFace">💜</div>
+  </div>
+  <div id="callName">SLI</div>
+  <div id="callState">CONNECTING...</div>
+  <div id="callTimer">00:00</div>
+  <div id="callTrans" class="empty">🎧 ฟังอยู่ พูดได้เลย...</div>
+  <div class="call-btns">
+    <button class="cbtn" id="muteBtn" title="ปิด/เปิดไมค์">🎙</button>
+    <button class="cbtn hang" id="hangBtn" title="วางสาย">📵</button>
+  </div>
+  <div class="call-hint">คุยสดกับบอทได้เลย — พูดแล้วบอทฟังและตอบเป็นเสียง · วางสายได้ทุกเมื่อ</div>
+</div>
+
 <div id="toast"></div>
 
 <script>
@@ -308,21 +378,174 @@
 
   /* ===== TTS ===== */
   let audio = null;
-  async function speak(text) {
-    if (!text) return;
-    toast('🔊 SYNTHESIZING...');
-    try {
-      const r = await fetch('/api/tts', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text: text.slice(0, 240) }) });
-      if (!r.ok) throw new Error();
-      const blob = await r.blob();
-      const url = URL.createObjectURL(blob);
-      if (audio) { audio.pause(); audio = null; }
-      audio = new Audio(url);
-      audio.onended = () => toast('🔊 DONE');
-      audio.play();
-      toast('🔊 PLAYING');
-    } catch (e) { toast('⚠ TTS OFFLINE'); }
+  function speak(text) {
+    return new Promise((resolve) => {
+      if (!text) return resolve();
+      try {
+        fetch('/api/tts', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text: text.slice(0, 240) }) })
+          .then(r => { if (!r.ok) throw new Error(); return r.blob(); })
+          .then(blob => {
+            const url = URL.createObjectURL(blob);
+            if (audio) { audio.pause(); audio = null; }
+            audio = new Audio(url);
+            audio.onended = () => resolve();
+            audio.onerror = () => resolve();
+            audio.play().catch(() => resolve());
+          })
+          .catch(() => resolve());
+      } catch (e) { resolve(); }
+    });
   }
+
+  /* ===== 📞 VOICE CALL (โทรคุยสด) ===== */
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  const callOverlay = document.getElementById('callOverlay');
+  const callFace = document.getElementById('callFace');
+  const callName = document.getElementById('callName');
+  const callState = document.getElementById('callState');
+  const callTimerEl = document.getElementById('callTimer');
+  const callTrans = document.getElementById('callTrans');
+  const muteBtn = document.getElementById('muteBtn');
+  const hangBtn = document.getElementById('hangBtn');
+  const callBtn = document.getElementById('callBtn');
+
+  let callActive = false, callStateName = 'idle';
+  let recog = null, stream = null, callTimer = null, callSec = 0;
+  let finalText = '', silenceTimer = null, muted = false;
+
+  callFace.textContent = R.avatar;
+  callName.textContent = R.name;
+
+  function setCallState(s) {
+    callStateName = s;
+    const map = { connecting: 'CONNECTING...', listening: '🎧 กำลังฟัง... พูดได้เลย', thinking: '🧠 กำลังคิด...', speaking: '🔊 พูดอยู่...' };
+    callState.textContent = map[s] || s;
+    callAvatar.classList.toggle('speaking', s === 'speaking');
+  }
+  function setCallTrans(t, empty) {
+    callTrans.textContent = t || '';
+    callTrans.classList.toggle('empty', !!empty || !t);
+  }
+
+  function tickTimer() {
+    callSec++;
+    const m = String(Math.floor(callSec / 60)).padStart(2, '0');
+    const s = String(callSec % 60).padStart(2, '0');
+    callTimerEl.textContent = m + ':' + s;
+  }
+
+  function initRecog() {
+    if (!SR) return false;
+    recog = new SR();
+    recog.lang = 'th-TH';
+    recog.continuous = true;
+    recog.interimResults = true;
+    recog.onresult = (e) => {
+      let interim = '';
+      for (let i = e.resultIndex; i < e.results.length; i++) {
+        const r = e.results[i];
+        if (r.isFinal) finalText += (finalText ? ' ' : '') + r[0].transcript;
+        else interim += r[0].transcript;
+      }
+      setCallTrans(finalText + (interim ? ' ' + interim : ''), !finalText && !interim);
+      clearTimeout(silenceTimer);
+      silenceTimer = setTimeout(() => { if (finalText.trim() && callStateName === 'listening') handleUtterance(); }, 1400);
+    };
+    recog.onend = () => {
+      if (!callActive) return;
+      if (callStateName === 'listening') {
+        if (finalText.trim()) { handleUtterance(); return; }
+        try { recog.start(); } catch (e) {}
+      } else if (callStateName === 'idle' || callStateName === 'connecting') {
+        try { recog.start(); } catch (e) {}
+      }
+    };
+    recog.onerror = (e) => {
+      if (e.error === 'not-allowed' || e.error === 'service-not-allowed') { toast('⛔ ไมโครโฟนถูกบล็อก — อนุญาตไมค์ในเบราว์เซอร์'); endCall(); }
+    };
+    return true;
+  }
+
+  async function handleUtterance() {
+    const q = finalText.trim();
+    finalText = '';
+    if (!q || !callActive) return;
+    recog.stop();
+    setCallState('thinking');
+    setCallTrans('🗣 "' + q + '"', false);
+    addMsg('user', q);
+    history.push({ role: 'user', content: q });
+    try { localStorage.setItem(KEY, JSON.stringify(history)); } catch (e) {}
+    try {
+      const r = await fetch('/api/chat', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ room, question: q, history: history.slice(-12, -1) })
+      });
+      const j = await r.json();
+      if (j.reply && callActive) {
+        addMsg('assistant', j.reply);
+        history.push({ role: 'assistant', content: j.reply });
+        try { localStorage.setItem(KEY, JSON.stringify(history)); } catch (e) {}
+        setCallState('speaking');
+        setCallTrans('🔊 ' + R.name + ': ' + j.reply.slice(0, 80) + (j.reply.length > 80 ? '…' : ''), false);
+        await speak(j.reply);
+      }
+    } catch (e) { toast('⚠️ SERVER UNREACHABLE'); }
+    if (callActive) {
+      setCallState('listening');
+      setCallTrans('', true);
+      try { recog.start(); } catch (e) {}
+    }
+  }
+
+  async function startCall() {
+    if (callActive) return;
+    if (!SR) {
+      toast('⚠️ เบราว์เซอร์นี้ไม่รองรับการฟังเสียง — ใช้ Chrome หรือ Edge แทนนะครับ');
+      return;
+    }
+    callActive = true;
+    callSec = 0; callTimerEl.textContent = '00:00';
+    setCallState('connecting');
+    setCallTrans('', true);
+    callOverlay.classList.add('show');
+    callTimer = setInterval(tickTimer, 1000);
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    } catch (e) {
+      toast('⛔ ไมโครโฟนถูกบล็อก — กด 🔒 แล้วอนุญาตไมค์ แล้วลองใหม่');
+      endCall(); return;
+    }
+    if (!initRecog()) { endCall(); return; }
+    try { recog.start(); } catch (e) {}
+    setCallState('listening');
+    toast('📞 สายเชื่อมต่อแล้ว — พูดได้เลย!');
+  }
+
+  function endCall() {
+    callActive = false;
+    setCallState('idle');
+    clearTimeout(silenceTimer);
+    clearInterval(callTimer);
+    if (recog) { try { recog.stop(); } catch (e) {} recog = null; }
+    if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; }
+    if (audio) { audio.pause(); audio = null; }
+    muted = false; muteBtn.classList.remove('muted'); muteBtn.textContent = '🎙';
+    finalText = '';
+    callOverlay.classList.remove('show');
+    setCallTrans('', true);
+    toast('📵 วางสายแล้ว — กลับมาคุยได้ทุกเมื่อ');
+  }
+
+  callBtn.onclick = startCall;
+  hangBtn.onclick = endCall;
+  muteBtn.onclick = () => {
+    muted = !muted;
+    muteBtn.classList.toggle('muted', muted);
+    muteBtn.textContent = muted ? '🔇' : '🎙';
+    if (stream) stream.getAudioTracks().forEach(t => t.enabled = !muted);
+    toast(muted ? '🔇 ไมค์ปิด — บอทจะไม่ได้ยิน' : '🎙 ไมค์เปิดแล้ว');
+  };
 
   /* ===== ปุ่มอื่นๆ ===== */
   document.getElementById('backBtn').onclick = () => location.href = '/';
