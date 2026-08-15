@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SILELO Neo-Connect — แชท</title>
+<style>
+  :root {
+    --bg: #03040c; --cyan: #00e5ff; --purple: #b388ff; --pink: #ff2d95;
+    --txt: #e6f7ff; --dim: #7a8ba8; --user: #00b8d4; --bot: #9c6bff;
+    --accent: var(--cyan);
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; }
+  body {
+    background: var(--bg); color: var(--txt); font-family: 'Segoe UI', system-ui, sans-serif;
+    display: flex; flex-direction: column; height: 100%; overflow: hidden;
+  }
+  #rain { position: fixed; inset: 0; z-index: 0; opacity: .22; pointer-events: none; }
+  body::before {
+    content: ''; position: fixed; inset: 0; z-index: 0; pointer-events: none;
+    background: radial-gradient(ellipse 70% 45% at 50% -5%, color-mix(in srgb, var(--accent) 12%, transparent), transparent 60%);
+  }
+  .app { position: relative; z-index: 1; display: flex; flex-direction: column; height: 100%; max-width: 860px; margin: 0 auto; width: 100%; }
+
+  /* ===== Header ===== */
+  header {
+    display: flex; align-items: center; gap: 12px; padding: 12px 14px;
+    background: rgba(8,14,32,.7); backdrop-filter: blur(16px);
+    border-bottom: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+    box-shadow: 0 0 30px color-mix(in srgb, var(--accent) 10%, transparent);
+  }
+  .back-btn {
+    width: 40px; height: 40px; border-radius: 12px; border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent);
+    background: rgba(0,229,255,.08); color: var(--txt); font-size: 19px; cursor: pointer; flex: none;
+    transition: all .2s;
+  }
+  .back-btn:active { transform: scale(.92); background: rgba(0,229,255,.2); }
+  .avatar {
+    width: 46px; height: 46px; border-radius: 14px; flex: none;
+    display: flex; align-items: center; justify-content: center; font-size: 25px;
+    background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 25%, transparent), rgba(179,136,255,.2));
+    border: 1px solid color-mix(in srgb, var(--accent) 50%, transparent);
+    box-shadow: 0 0 16px color-mix(in srgb, var(--accent) 30%, transparent);
+  }
+  .hinfo { flex: 1; min-width: 0; }
+  .hinfo h1 { font-size: 18px; letter-spacing: .5px; }
+  .hinfo .status { font-size: 12px; color: var(--dim); display: flex; align-items: center; gap: 6px; }
+  .hinfo .status .pulse { width: 8px; height: 8px; border-radius: 50%; background: #22e584; box-shadow: 0 0 8px #22e584; animation: pulse 1.6s infinite; }
+  @keyframes pulse { 50% { opacity: .3; } }
+  .hbtns { display: flex; gap: 8px; }
+  .icon-btn {
+    width: 40px; height: 40px; border-radius: 12px; border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+    background: rgba(0,229,255,.06); color: var(--txt); font-size: 17px; cursor: pointer; flex: none;
+    transition: all .2s;
+  }
+  .icon-btn:active { transform: scale(.9); background: rgba(0,229,255,.18); }
+
+  /* ===== Messages ===== */
+  #msgs {
+    flex: 1; overflow-y: auto; padding: 18px 14px 10px; display: flex; flex-direction: column; gap: 12px;
+    scroll-behavior: smooth;
+  }
+  .msg { max-width: 82%; display: flex; flex-direction: column; animation: pop .25s ease; }
+  @keyframes pop { from { opacity: 0; transform: translateY(8px) scale(.98); } }
+  .msg.user { align-self: flex-end; align-items: flex-end; }
+  .msg.bot { align-self: flex-start; align-items: flex-start; }
+  .bubble {
+    padding: 11px 15px; border-radius: 18px; font-size: 15px; line-height: 1.65; white-space: pre-wrap; word-break: break-word;
+    border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
+  }
+  .msg.user .bubble {
+    background: linear-gradient(135deg, rgba(0,184,212,.25), rgba(0,229,255,.14));
+    border-bottom-right-radius: 5px;
+  }
+  .msg.bot .bubble {
+    background: linear-gradient(135deg, rgba(156,107,255,.2), rgba(179,136,255,.1));
+    border-bottom-left-radius: 5px;
+    box-shadow: 0 0 20px rgba(156,107,255,.08);
+  }
+  .meta { display: flex; gap: 8px; align-items: center; margin-top: 4px; font-size: 11px; color: var(--dim); padding: 0 4px; }
+  .meta button {
+    background: none; border: none; color: var(--dim); cursor: pointer; font-size: 12px; padding: 2px 4px; border-radius: 6px;
+  }
+  .meta button:hover { color: var(--cyan); background: rgba(0,229,255,.08); }
+  .msg.user .meta { flex-direction: row-reverse; }
+  .sys-note { align-self: center; font-size: 11px; color: var(--dim); background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.08); padding: 4px 12px; border-radius: 20px; }
+
+  /* typing */
+  .typing { align-self: flex-start; display: none; align-items: center; gap: 5px; padding: 12px 16px; border-radius: 18px; border-bottom-left-radius: 5px; background: rgba(156,107,255,.15); border: 1px solid rgba(156,107,255,.3); }
+  .typing span { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); animation: bounce 1.2s infinite; }
+  .typing span:nth-child(2) { animation-delay: .15s; } .typing span:nth-child(3) { animation-delay: .3s; }
+  @keyframes bounce { 0%,60%,100% { transform: translateY(0); opacity: .4; } 30% { transform: translateY(-5px); opacity: 1; } }
+
+  /* ===== Input bar ===== */
+  .inputbar {
+    display: flex; align-items: center; gap: 9px; padding: 10px 12px calc(12px + env(safe-area-inset-bottom));
+    background: rgba(8,14,32,.75); backdrop-filter: blur(16px);
+    border-top: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
+  }
+  #inp {
+    flex: 1; min-height: 44px; max-height: 120px; resize: none; border-radius: 14px;
+    background: rgba(0,229,255,.06); border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+    color: var(--txt); font-size: 15px; padding: 12px 14px; outline: none; font-family: inherit; line-height: 1.4;
+  }
+  #inp:focus { border-color: var(--accent); box-shadow: 0 0 14px color-mix(in srgb, var(--accent) 25%, transparent); }
+  .send {
+    width: 50px; height: 50px; border-radius: 16px; border: none; cursor: pointer; flex: none;
+    font-size: 22px; color: #02101a; font-weight: 900;
+    background: linear-gradient(135deg, var(--accent), color-mix(in srgb, var(--accent) 40%, var(--purple)));
+    box-shadow: 0 0 20px color-mix(in srgb, var(--accent) 50%, transparent);
+    transition: transform .15s, box-shadow .15s;
+  }
+  .send:active { transform: scale(.88); box-shadow: 0 0 34px color-mix(in srgb, var(--accent) 80%, transparent); }
+  .send:disabled { opacity: .4; }
+
+  /* Theme picker */
+  .theme-pop {
+    position: fixed; bottom: 86px; right: 14px; z-index: 20; display: none; flex-direction: column; gap: 8px;
+    background: rgba(10,18,38,.92); border: 1px solid rgba(0,229,255,.3); border-radius: 14px; padding: 12px;
+    backdrop-filter: blur(18px); box-shadow: 0 10px 40px rgba(0,0,0,.6);
+  }
+  .theme-pop.show { display: flex; }
+  .theme-row { display: flex; gap: 8px; }
+  .swatch { width: 38px; height: 38px; border-radius: 10px; cursor: pointer; border: 2px solid transparent; }
+  .swatch.on { border-color: #fff; }
+
+  /* toast */
+  #toast {
+    position: fixed; top: 14px; left: 50%; transform: translateX(-50%) translateY(-80px); z-index: 50;
+    background: rgba(10,18,38,.95); border: 1px solid var(--accent); color: var(--txt);
+    padding: 10px 20px; border-radius: 12px; font-size: 13px; transition: transform .3s; pointer-events: none;
+  }
+  #toast.show { transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+<canvas id="rain"></canvas>
+<div class="app">
+  <header>
+    <button class="back-btn" id="backBtn" title="กลับหน้าหลัก">←</button>
+    <div class="avatar" id="av">💜</div>
+    <div class="hinfo">
+      <h1 id="rname">สลี่</h1>
+      <div class="status"><span class="pulse"></span><span id="rtag">ผู้ช่วยส่วนตัว</span></div>
+    </div>
+    <div class="hbtns">
+      <button class="icon-btn" id="themeBtn" title="เปลี่ยนธีม">🎨</button>
+      <button class="icon-btn" id="clearBtn" title="ล้างแชท">🗑️</button>
+    </div>
+  </header>
+
+  <div id="msgs"></div>
+  <div class="typing" id="typing"><span></span><span></span><span></span></div>
+
+  <div class="inputbar">
+    <textarea id="inp" rows="1" placeholder="พิมพ์ข้อความ..." enterkeyhint="send"></textarea>
+    <button class="send" id="sendBtn" title="ส่ง">➤</button>
+  </div>
+</div>
+
+<div class="theme-pop" id="themePop">
+  <div class="theme-row">
+    <div class="swatch on" data-accent="#00e5ff" style="background:linear-gradient(135deg,#00e5ff,#00b0ff)"></div>
+    <div class="swatch" data-accent="#b388ff" style="background:linear-gradient(135deg,#b388ff,#d500f9)"></div>
+    <div class="swatch" data-accent="#ffb74d" style="background:linear-gradient(135deg,#ffb74d,#ff6d00)"></div>
+    <div class="swatch" data-accent="#ff2d95" style="background:linear-gradient(135deg,#ff2d95,#d500f9)"></div>
+    <div class="swatch" data-accent="#22e584" style="background:linear-gradient(135deg,#22e584,#00b8a9)"></div>
+  </div>
+</div>
+<div id="toast"></div>
+
+<script>
+  /* ============ ห้อง ============ */
+  const ROOMS = {
+    private: { name: 'สลี่', tag: 'ผู้ช่วยส่วนตัว — ออนไลน์', avatar: '💜', accent: '#b388ff' },
+    work:    { name: 'คุณเวิร์ค', tag: 'ผู้ช่วยทำงาน — พร้อมทำงาน', avatar: '💼', accent: '#00e5ff' },
+    lab:     { name: 'ดร.แล็บ', tag: 'นักประดิษฐ์ — พร้อมทดลอง', avatar: '🔬', accent: '#ffb74d' }
+  };
+  const room = new URLSearchParams(location.search).get('room') || 'private';
+  const R = ROOMS[room] || ROOMS.private;
+  document.documentElement.style.setProperty('--accent', R.accent);
+  document.getElementById('av').textContent = R.avatar;
+  document.getElementById('rname').textContent = R.name;
+  document.getElementById('rtag').textContent = R.tag;
+  document.title = R.name + ' — SILELO Neo-Connect';
+
+  /* ============ ประวัติ (localStorage ต่อห้อง — จริง) ============ */
+  const KEY = 'nc_' + room;
+  let history = [];
+  try { history = JSON.parse(localStorage.getItem(KEY) || '[]'); } catch (e) { history = []; }
+
+  const msgsEl = document.getElementById('msgs');
+  const fmt = (t) => new Date(t).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
+  function addMsg(role, content, t) {
+    const m = { role, content, t: t || Date.now() };
+    history.push(m); if (history.length > 200) history = history.slice(-200);
+    try { localStorage.setItem(KEY, JSON.stringify(history)); } catch (e) {}
+    renderMsg(m);
+    return m;
+  }
+  function renderMsg(m) {
+    const div = document.createElement('div');
+    div.className = 'msg ' + (m.role === 'assistant' ? 'bot' : 'user');
+    div.innerHTML = `
+      <div class="bubble"></div>
+      <div class="meta">
+        <span>${fmt(m.t)}</span>
+        ${m.role === 'assistant' ? '<button class="spk" title="ฟังเสียง">🔊</button><button class="cpy" title="คัดลอก">📋</button>' : '<span>★ อ่านแล้ว</span>'}
+      </div>`;
+    div.querySelector('.bubble').textContent = m.content;
+    const spk = div.querySelector('.spk');
+    if (spk) spk.onclick = () => speak(m.content);
+    const cpy = div.querySelector('.cpy');
+    if (cpy) cpy.onclick = () => { navigator.clipboard.writeText(m.content).then(() => toast('📋 คัดลอกแล้ว')); };
+    msgsEl.appendChild(div);
+    msgsEl.scrollTop = msgsEl.scrollHeight;
+  }
+  // โหลดประวัติเดิม
+  if (history.length) history.forEach(renderMsg);
+  else {
+    const hellos = {
+      private: 'สวัสดีพี่นุค่ะ 💜 สลี่อยู่ตรงนี้แล้ว — พี่อยากคุยอะไร วันนี้เป็นยังไงบ้างคะ?',
+      work: 'พร้อมทำงานครับ 💼 — มีงานอะไรให้ผมจัดการ บอกมาได้เลย (วางแผน, โค้ด, สรุป, วิเคราะห์)',
+      lab: 'ยินดีต้อนรับสู่ห้องแล็บ! 🔬 วันนี้เราจะทดลองอะไรกันดี — ตั้งคำถามมาได้เลยครับ!'
+    };
+    addMsg('assistant', hellos[room] || hellos.private);
+  }
+
+  /* ============ ส่งข้อความ ============ */
+  const inp = document.getElementById('inp');
+  const sendBtn = document.getElementById('sendBtn');
+  const typing = document.getElementById('typing');
+
+  function autoGrow() { inp.style.height = 'auto'; inp.style.height = Math.min(inp.scrollHeight, 120) + 'px'; }
+  inp.addEventListener('input', autoGrow);
+
+  async function send() {
+    const q = inp.value.trim();
+    if (!q) return;
+    addMsg('user', q);
+    inp.value = ''; autoGrow();
+    typing.style.display = 'flex';
+    sendBtn.disabled = true;
+    msgsEl.scrollTop = msgsEl.scrollHeight;
+    try {
+      const r = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ room, question: q, history: history.slice(-12, -1) })
+      });
+      const j = await r.json();
+      if (j.reply) { addMsg('assistant', j.reply); toast('⚡ ' + (j.provider === 'mock' ? 'โหมดสำรอง' : j.provider + ' · ' + j.model)); }
+      else toast('⚠️ ' + (j.error || 'ไม่มีการตอบกลับ'));
+    } catch (e) { toast('⚠️ ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์'); }
+    typing.style.display = 'none';
+    sendBtn.disabled = false;
+  }
+  sendBtn.onclick = send;
+  inp.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); } });
+
+  /* ============ TTS — ฟังเสียง (msedge-tts จริง) ============ */
+  let audio = null;
+  async function speak(text) {
+    if (!text) return;
+    toast('🔊 กำลังสร้างเสียง...');
+    try {
+      const r = await fetch('/api/tts', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text: text.slice(0, 240) }) });
+      if (!r.ok) throw new Error();
+      const blob = await r.blob();
+      const url = URL.createObjectURL(blob);
+      if (audio) { audio.pause(); audio = null; }
+      audio = new Audio(url);
+      audio.onended = () => toast('🔊 จบแล้ว');
+      audio.play();
+      toast('🔊 กำลังเล่นเสียง');
+    } catch (e) { toast('⚠️ สร้างเสียงไม่ได้ตอนนี้'); }
+  }
+
+  /* ============ ปุ่มอื่นๆ ============ */
+  document.getElementById('backBtn').onclick = () => location.href = '/';
+  document.getElementById('clearBtn').onclick = () => {
+    if (confirm('ล้างประวัติแชทห้องนี้ทั้งหมด?')) {
+      history = []; try { localStorage.removeItem(KEY); } catch (e) {}
+      msgsEl.innerHTML = '';
+      addMsg('assistant', (ROOMS[room].name) + ': ห้องสะอาดพร้อมเริ่มใหม่แล้ว 🧹');
+    }
+  };
+
+  const themePop = document.getElementById('themePop');
+  document.getElementById('themeBtn').onclick = () => themePop.classList.toggle('show');
+  document.querySelectorAll('.swatch').forEach(s => {
+    s.onclick = () => {
+      document.documentElement.style.setProperty('--accent', s.dataset.accent);
+      document.querySelectorAll('.swatch').forEach(x => x.classList.remove('on'));
+      s.classList.add('on');
+      try { localStorage.setItem('nc_theme', s.dataset.accent); } catch (e) {}
+      toast('🎨 ธีมเปลี่ยนแล้ว');
+      themePop.classList.remove('show');
+    };
+  });
+  try {
+    const saved = localStorage.getItem('nc_theme');
+    if (saved) {
+      document.documentElement.style.setProperty('--accent', saved);
+      document.querySelectorAll('.swatch').forEach(x => x.classList.toggle('on', x.dataset.accent === saved));
+    }
+  } catch (e) {}
+
+  let toastTimer;
+  function toast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg; t.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => t.classList.remove('show'), 2200);
+  }
+
+  /* ============ Digital Rain ============ */
+  const cv = document.getElementById('rain'), ctx = cv.getContext('2d');
+  let W, H, cols, drops = [];
+  const chars = '01アイウエオカキクケコSILELO⚡ネオ'.split('');
+  function resize() {
+    W = cv.width = innerWidth; H = cv.height = innerHeight;
+    cols = Math.floor(W / 14); drops = Array(cols).fill(0).map(() => Math.random() * -H / 14);
+  }
+  resize(); addEventListener('resize', resize);
+  (function drawRain() {
+    ctx.fillStyle = 'rgba(3,4,12,.14)'; ctx.fillRect(0, 0, W, H);
+    ctx.font = '14px monospace';
+    for (let i = 0; i < cols; i++) {
+      ctx.fillStyle = Math.random() > .97 ? '#22e584' : '#00e5ff';
+      ctx.fillText(chars[(Math.random() * chars.length) | 0], i * 14, drops[i] * 14);
+      if (drops[i] * 14 > H && Math.random() > .97) drops[i] = 0;
+      drops[i]++;
+    }
+    requestAnimationFrame(drawRain);
+  })();
+
+  /* ============ Heartbeat ============ */
+  setInterval(() => { try { fetch('/api/presence', { method: 'POST' }); } catch (e) {} }, 20000);
+  try { fetch('/api/presence', { method: 'POST' }); } catch (e) {}
+
+  inp.focus();
+</script>
+</body>
+</html>

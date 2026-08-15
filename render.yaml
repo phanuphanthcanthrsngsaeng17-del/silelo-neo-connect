@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: silelo-neo-connect
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: node server.js
+    healthCheckPath: /health
+    envVars:
+      - key: GROQ_API_KEY
+        sync: false
+      - key: GEMINI_API_KEYS
+        sync: false
+      - key: OPENROUTER_API_KEY
+        sync: false
+      - key: POLLINATIONS_MODEL
+        value: openai
