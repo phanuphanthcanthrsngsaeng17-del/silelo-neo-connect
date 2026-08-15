@@ -4,149 +4,193 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>SILELO Neo-Connect — แชท</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Prompt:wght@300;400;600;700&display=swap" rel="stylesheet">
 <style>
   :root {
-    --bg: #03040c; --cyan: #00e5ff; --purple: #b388ff; --pink: #ff2d95;
-    --txt: #e6f7ff; --dim: #7a8ba8; --user: #00b8d4; --bot: #9c6bff;
+    --bg: #01030a; --cyan: #00e5ff; --purple: #a78bfa; --amber: #ffb74d; --pink: #ff2d95;
+    --txt: #e8f6ff; --dim: #6b7f99;
     --accent: var(--cyan);
+    --bot-grad1: rgba(167,139,250,.24); --bot-grad2: rgba(167,139,250,.08);
+    --bot-border: rgba(167,139,250,.45);
   }
   * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   html, body { height: 100%; }
   body {
-    background: var(--bg); color: var(--txt); font-family: 'Segoe UI', system-ui, sans-serif;
-    display: flex; flex-direction: column; height: 100%; overflow: hidden;
+    background: var(--bg); color: var(--txt); height: 100%; overflow: hidden; overflow-x: hidden;
+    font-family: 'Prompt', 'Segoe UI', sans-serif;
   }
-  #rain { position: fixed; inset: 0; z-index: 0; opacity: .22; pointer-events: none; }
-  body::before {
-    content: ''; position: fixed; inset: 0; z-index: 0; pointer-events: none;
-    background: radial-gradient(ellipse 70% 45% at 50% -5%, color-mix(in srgb, var(--accent) 12%, transparent), transparent 60%);
-  }
-  .app { position: relative; z-index: 1; display: flex; flex-direction: column; height: 100%; max-width: 860px; margin: 0 auto; width: 100%; }
+  .bgfx { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
+  .aurora { position: absolute; border-radius: 50%; filter: blur(80px); opacity: .4; animation: drift 16s ease-in-out infinite alternate; }
+  .aurora.a1 { width: 50vw; height: 50vw; left: -20vw; top: -20vw; background: radial-gradient(circle, color-mix(in srgb, var(--accent) 25%, transparent), transparent 65%); }
+  .aurora.a2 { width: 44vw; height: 44vw; right: -16vw; bottom: -18vw; background: radial-gradient(circle, rgba(167,139,250,.18), transparent 65%); animation-delay: -7s; }
+  @keyframes drift { from { transform: translate(0,0) scale(1); } to { transform: translate(5vw,-4vh) scale(1.12); } }
+  .scanlines { position: absolute; inset: 0; opacity: .06; background: repeating-linear-gradient(0deg, #fff 0 1px, transparent 1px 3px); }
+  .vignette { position: absolute; inset: 0; background: radial-gradient(ellipse 100% 90% at 50% 35%, transparent 50%, rgba(0,0,0,.6)); }
+  #particles { position: fixed; inset: 0; z-index: 0; opacity: .55; pointer-events: none; }
+
+  .app { position: relative; z-index: 2; display: flex; flex-direction: column; height: 100%; max-width: 880px; margin: 0 auto; width: 100%; overflow-x: clip; }
 
   /* ===== Header ===== */
   header {
-    display: flex; align-items: center; gap: 12px; padding: 12px 14px;
-    background: rgba(8,14,32,.7); backdrop-filter: blur(16px);
+    display: flex; align-items: center; gap: 14px; padding: 12px 16px;
+    background: linear-gradient(180deg, rgba(8,16,36,.85), rgba(5,10,26,.6));
+    backdrop-filter: blur(20px);
     border-bottom: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
-    box-shadow: 0 0 30px color-mix(in srgb, var(--accent) 10%, transparent);
+    box-shadow: 0 0 34px color-mix(in srgb, var(--accent) 12%, transparent);
+    position: relative;
   }
+  header::after { content: ''; position: absolute; bottom: -1px; left: 0; right: 0; height: 1px; background: linear-gradient(90deg, transparent, var(--accent), transparent); opacity: .7; }
   .back-btn {
-    width: 40px; height: 40px; border-radius: 12px; border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent);
-    background: rgba(0,229,255,.08); color: var(--txt); font-size: 19px; cursor: pointer; flex: none;
-    transition: all .2s;
+    width: 42px; height: 42px; border-radius: 6px; border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent);
+    background: rgba(0,229,255,.06); color: var(--txt); font-size: 18px; cursor: pointer; flex: none;
+    font-family: 'Orbitron', monospace; transition: all .2s;
+    clip-path: polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px);
   }
-  .back-btn:active { transform: scale(.92); background: rgba(0,229,255,.2); }
+  .back-btn:active { transform: scale(.9); background: color-mix(in srgb, var(--accent) 25%, transparent); box-shadow: 0 0 16px color-mix(in srgb, var(--accent) 40%, transparent); }
+
+  .avatar-wrap { position: relative; width: 52px; height: 52px; flex: none; }
+  .avatar-wrap .ring {
+    position: absolute; inset: 0; border-radius: 50%;
+    background: conic-gradient(from 0deg, transparent 0 35%, var(--accent) 50%, transparent 65%);
+    -webkit-mask: radial-gradient(circle, transparent 60%, #000 63%);
+    mask: radial-gradient(circle, transparent 60%, #000 63%);
+    animation: spin 3s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
   .avatar {
-    width: 46px; height: 46px; border-radius: 14px; flex: none;
-    display: flex; align-items: center; justify-content: center; font-size: 25px;
-    background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 25%, transparent), rgba(179,136,255,.2));
-    border: 1px solid color-mix(in srgb, var(--accent) 50%, transparent);
-    box-shadow: 0 0 16px color-mix(in srgb, var(--accent) 30%, transparent);
+    position: absolute; inset: 6px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+    font-size: 26px;
+    background: radial-gradient(circle at 32% 28%, color-mix(in srgb, var(--accent) 28%, transparent), rgba(3,6,18,.9));
+    border: 1px solid color-mix(in srgb, var(--accent) 55%, transparent);
+    box-shadow: 0 0 18px color-mix(in srgb, var(--accent) 35%, transparent), inset 0 0 12px color-mix(in srgb, var(--accent) 18%, transparent);
   }
   .hinfo { flex: 1; min-width: 0; }
-  .hinfo h1 { font-size: 18px; letter-spacing: .5px; }
-  .hinfo .status { font-size: 12px; color: var(--dim); display: flex; align-items: center; gap: 6px; }
-  .hinfo .status .pulse { width: 8px; height: 8px; border-radius: 50%; background: #22e584; box-shadow: 0 0 8px #22e584; animation: pulse 1.6s infinite; }
-  @keyframes pulse { 50% { opacity: .3; } }
+  .hinfo h1 { font-family: 'Orbitron', sans-serif; font-size: 17px; letter-spacing: 3px; font-weight: 700; }
+  .hinfo .status { font-size: 11px; color: var(--dim); display: flex; align-items: center; gap: 7px; font-family: 'Orbitron', monospace; letter-spacing: 1px; }
+  .hinfo .status .pulse { width: 7px; height: 7px; border-radius: 50%; background: #22e584; box-shadow: 0 0 9px #22e584; animation: pulse 1.4s infinite; }
+  @keyframes pulse { 50% { opacity: .25; transform: scale(.7); } }
+
   .hbtns { display: flex; gap: 8px; }
   .icon-btn {
-    width: 40px; height: 40px; border-radius: 12px; border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
-    background: rgba(0,229,255,.06); color: var(--txt); font-size: 17px; cursor: pointer; flex: none;
+    width: 42px; height: 42px; border-radius: 6px; border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+    background: rgba(0,229,255,.05); color: var(--txt); font-size: 16px; cursor: pointer; flex: none;
+    clip-path: polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px);
     transition: all .2s;
   }
-  .icon-btn:active { transform: scale(.9); background: rgba(0,229,255,.18); }
+  .icon-btn:active { transform: scale(.88); background: color-mix(in srgb, var(--accent) 22%, transparent); box-shadow: 0 0 14px color-mix(in srgb, var(--accent) 35%, transparent); }
 
   /* ===== Messages ===== */
-  #msgs {
-    flex: 1; overflow-y: auto; padding: 18px 14px 10px; display: flex; flex-direction: column; gap: 12px;
-    scroll-behavior: smooth;
-  }
-  .msg { max-width: 82%; display: flex; flex-direction: column; animation: pop .25s ease; }
-  @keyframes pop { from { opacity: 0; transform: translateY(8px) scale(.98); } }
+  #msgs { flex: 1; overflow-y: auto; padding: 20px 16px 8px; display: flex; flex-direction: column; gap: 14px; scroll-behavior: smooth; }
+  .msg { max-width: 82%; display: flex; flex-direction: column; animation: pop .28s cubic-bezier(.2,.9,.3,1.2); }
+  @keyframes pop { from { opacity: 0; transform: translateY(10px) scale(.96); } }
   .msg.user { align-self: flex-end; align-items: flex-end; }
   .msg.bot { align-self: flex-start; align-items: flex-start; }
+
   .bubble {
-    padding: 11px 15px; border-radius: 18px; font-size: 15px; line-height: 1.65; white-space: pre-wrap; word-break: break-word;
-    border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
+    position: relative; padding: 13px 17px; font-size: 15px; line-height: 1.7; white-space: pre-wrap; word-break: break-word;
+    font-weight: 300; backdrop-filter: blur(10px);
   }
   .msg.user .bubble {
-    background: linear-gradient(135deg, rgba(0,184,212,.25), rgba(0,229,255,.14));
-    border-bottom-right-radius: 5px;
+    background: linear-gradient(135deg, rgba(0,229,255,.28), rgba(0,140,255,.12));
+    border: 1px solid rgba(0,229,255,.4);
+    clip-path: polygon(12px 0, 100% 0, 100% 100%, 0 100%, 0 12px);
+    box-shadow: 0 0 22px rgba(0,229,255,.14), inset 0 0 20px rgba(0,229,255,.06);
   }
   .msg.bot .bubble {
-    background: linear-gradient(135deg, rgba(156,107,255,.2), rgba(179,136,255,.1));
-    border-bottom-left-radius: 5px;
-    box-shadow: 0 0 20px rgba(156,107,255,.08);
+    background: linear-gradient(135deg, var(--bot-grad1), var(--bot-grad2));
+    border: 1px solid var(--bot-border);
+    clip-path: polygon(0 0, calc(100% - 12px) 0, 100% 12px, 100% 100%, 0 100%);
+    box-shadow: 0 0 22px color-mix(in srgb, var(--bot-border) 25%, transparent), inset 0 0 20px color-mix(in srgb, var(--bot-border) 6%, transparent);
   }
-  .meta { display: flex; gap: 8px; align-items: center; margin-top: 4px; font-size: 11px; color: var(--dim); padding: 0 4px; }
-  .meta button {
-    background: none; border: none; color: var(--dim); cursor: pointer; font-size: 12px; padding: 2px 4px; border-radius: 6px;
-  }
-  .meta button:hover { color: var(--cyan); background: rgba(0,229,255,.08); }
+  .meta { display: flex; gap: 10px; align-items: center; margin-top: 5px; font-size: 10px; color: var(--dim); padding: 0 6px; font-family: 'Orbitron', monospace; letter-spacing: 1px; }
+  .meta button { background: none; border: none; color: var(--dim); cursor: pointer; font-size: 12px; padding: 3px 6px; border-radius: 4px; transition: all .15s; }
+  .meta button:hover { color: var(--accent); background: color-mix(in srgb, var(--accent) 10%, transparent); box-shadow: 0 0 10px color-mix(in srgb, var(--accent) 20%, transparent); }
   .msg.user .meta { flex-direction: row-reverse; }
-  .sys-note { align-self: center; font-size: 11px; color: var(--dim); background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.08); padding: 4px 12px; border-radius: 20px; }
+  .sys-note { align-self: center; font-size: 10px; color: var(--dim); background: rgba(255,255,255,.03); border: 1px solid rgba(255,255,255,.09); padding: 5px 16px; border-radius: 30px; font-family: 'Orbitron', monospace; letter-spacing: 1px; }
 
-  /* typing */
-  .typing { align-self: flex-start; display: none; align-items: center; gap: 5px; padding: 12px 16px; border-radius: 18px; border-bottom-left-radius: 5px; background: rgba(156,107,255,.15); border: 1px solid rgba(156,107,255,.3); }
-  .typing span { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); animation: bounce 1.2s infinite; }
+  /* typing — core charging */
+  .typing { align-self: flex-start; display: none; align-items: center; gap: 7px; padding: 14px 20px; border-radius: 6px; background: linear-gradient(135deg, var(--bot-grad1), var(--bot-grad2)); border: 1px solid var(--bot-border); clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 0 100%); }
+  .typing span { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 10px var(--accent); animation: bounce 1.2s infinite; }
   .typing span:nth-child(2) { animation-delay: .15s; } .typing span:nth-child(3) { animation-delay: .3s; }
-  @keyframes bounce { 0%,60%,100% { transform: translateY(0); opacity: .4; } 30% { transform: translateY(-5px); opacity: 1; } }
+  @keyframes bounce { 0%,60%,100% { transform: translateY(0); opacity: .4; } 30% { transform: translateY(-6px); opacity: 1; } }
 
   /* ===== Input bar ===== */
   .inputbar {
-    display: flex; align-items: center; gap: 9px; padding: 10px 12px calc(12px + env(safe-area-inset-bottom));
-    background: rgba(8,14,32,.75); backdrop-filter: blur(16px);
+    display: flex; align-items: center; gap: 10px; padding: 12px 14px calc(14px + env(safe-area-inset-bottom));
+    background: linear-gradient(0deg, rgba(8,16,36,.9), rgba(5,10,26,.6));
+    backdrop-filter: blur(20px);
     border-top: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
+    position: relative;
   }
+  .inputbar::before { content: ''; position: absolute; top: -1px; left: 0; right: 0; height: 1px; background: linear-gradient(90deg, transparent, var(--accent), transparent); opacity: .6; }
   #inp {
-    flex: 1; min-height: 44px; max-height: 120px; resize: none; border-radius: 14px;
-    background: rgba(0,229,255,.06); border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
-    color: var(--txt); font-size: 15px; padding: 12px 14px; outline: none; font-family: inherit; line-height: 1.4;
+    flex: 1; min-height: 46px; max-height: 130px; resize: none; border-radius: 6px;
+    background: rgba(0,229,255,.05); border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
+    color: var(--txt); font-size: 15px; padding: 12px 15px; outline: none; font-family: 'Prompt', sans-serif; font-weight: 300; line-height: 1.4;
+    clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px);
+    transition: box-shadow .2s, border-color .2s;
   }
-  #inp:focus { border-color: var(--accent); box-shadow: 0 0 14px color-mix(in srgb, var(--accent) 25%, transparent); }
+  #inp:focus { border-color: var(--accent); box-shadow: 0 0 18px color-mix(in srgb, var(--accent) 30%, transparent), inset 0 0 16px color-mix(in srgb, var(--accent) 6%, transparent); }
+  #inp::placeholder { color: rgba(232,246,255,.3); }
   .send {
-    width: 50px; height: 50px; border-radius: 16px; border: none; cursor: pointer; flex: none;
-    font-size: 22px; color: #02101a; font-weight: 900;
+    width: 52px; height: 52px; border-radius: 50%; border: none; cursor: pointer; flex: none;
+    font-size: 20px; color: #02101a; font-family: 'Orbitron', sans-serif; font-weight: 900;
     background: linear-gradient(135deg, var(--accent), color-mix(in srgb, var(--accent) 40%, var(--purple)));
-    box-shadow: 0 0 20px color-mix(in srgb, var(--accent) 50%, transparent);
+    position: relative; overflow: visible;
+    box-shadow: 0 0 24px color-mix(in srgb, var(--accent) 55%, transparent);
     transition: transform .15s, box-shadow .15s;
   }
-  .send:active { transform: scale(.88); box-shadow: 0 0 34px color-mix(in srgb, var(--accent) 80%, transparent); }
+  .send::before { content: ''; position: absolute; inset: -5px; border-radius: 50%; border: 1px solid color-mix(in srgb, var(--accent) 55%, transparent); animation: spin 4s linear infinite; }
+  .send:active { transform: scale(.85); box-shadow: 0 0 40px color-mix(in srgb, var(--accent) 90%, transparent); }
   .send:disabled { opacity: .4; }
 
-  /* Theme picker */
+  /* Theme pop */
   .theme-pop {
-    position: fixed; bottom: 86px; right: 14px; z-index: 20; display: none; flex-direction: column; gap: 8px;
-    background: rgba(10,18,38,.92); border: 1px solid rgba(0,229,255,.3); border-radius: 14px; padding: 12px;
-    backdrop-filter: blur(18px); box-shadow: 0 10px 40px rgba(0,0,0,.6);
+    position: fixed; bottom: 92px; right: 14px; z-index: 30; display: none; flex-direction: column; gap: 10px;
+    background: rgba(8,16,36,.94); border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent);
+    border-radius: 8px; padding: 14px; backdrop-filter: blur(20px);
+    box-shadow: 0 14px 50px rgba(0,0,0,.7), 0 0 24px color-mix(in srgb, var(--accent) 15%, transparent);
   }
   .theme-pop.show { display: flex; }
-  .theme-row { display: flex; gap: 8px; }
-  .swatch { width: 38px; height: 38px; border-radius: 10px; cursor: pointer; border: 2px solid transparent; }
-  .swatch.on { border-color: #fff; }
+  .theme-pop .ttl { font-family: 'Orbitron', monospace; font-size: 10px; letter-spacing: 2px; color: var(--dim); text-transform: uppercase; }
+  .theme-row { display: flex; gap: 9px; }
+  .swatch { width: 40px; height: 40px; border-radius: 50%; cursor: pointer; border: 2px solid transparent; position: relative; transition: transform .15s; }
+  .swatch:hover { transform: scale(1.15); }
+  .swatch.on { border-color: #fff; box-shadow: 0 0 16px rgba(255,255,255,.4); }
 
-  /* toast */
   #toast {
-    position: fixed; top: 14px; left: 50%; transform: translateX(-50%) translateY(-80px); z-index: 50;
-    background: rgba(10,18,38,.95); border: 1px solid var(--accent); color: var(--txt);
-    padding: 10px 20px; border-radius: 12px; font-size: 13px; transition: transform .3s; pointer-events: none;
+    position: fixed; top: 16px; left: 50%; transform: translateX(-50%) translateY(-90px); z-index: 60;
+    background: rgba(8,16,36,.95); border: 1px solid var(--accent); color: var(--txt);
+    padding: 11px 22px; border-radius: 6px; font-size: 12px; transition: transform .3s; pointer-events: none;
+    font-family: 'Orbitron', monospace; letter-spacing: 1px;
+    box-shadow: 0 0 24px color-mix(in srgb, var(--accent) 25%, transparent);
+    clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px);
   }
   #toast.show { transform: translateX(-50%) translateY(0); }
 </style>
 </head>
 <body>
-<canvas id="rain"></canvas>
+<div class="bgfx">
+  <div class="aurora a1"></div><div class="aurora a2"></div>
+  <div class="scanlines"></div><div class="vignette"></div>
+</div>
+<canvas id="particles"></canvas>
+
 <div class="app">
   <header>
     <button class="back-btn" id="backBtn" title="กลับหน้าหลัก">←</button>
-    <div class="avatar" id="av">💜</div>
+    <div class="avatar-wrap">
+      <div class="ring"></div>
+      <div class="avatar" id="av">💜</div>
+    </div>
     <div class="hinfo">
-      <h1 id="rname">สลี่</h1>
-      <div class="status"><span class="pulse"></span><span id="rtag">ผู้ช่วยส่วนตัว</span></div>
+      <h1 id="rname">SLI</h1>
+      <div class="status"><span class="pulse"></span><span id="rtag">ผู้ช่วยส่วนตัว · ONLINE</span></div>
     </div>
     <div class="hbtns">
       <button class="icon-btn" id="themeBtn" title="เปลี่ยนธีม">🎨</button>
-      <button class="icon-btn" id="clearBtn" title="ล้างแชท">🗑️</button>
+      <button class="icon-btn" id="clearBtn" title="ล้างแชท">🗑</button>
     </div>
   </header>
 
@@ -160,9 +204,10 @@
 </div>
 
 <div class="theme-pop" id="themePop">
+  <div class="ttl">▣ ACCENT COLOR</div>
   <div class="theme-row">
     <div class="swatch on" data-accent="#00e5ff" style="background:linear-gradient(135deg,#00e5ff,#00b0ff)"></div>
-    <div class="swatch" data-accent="#b388ff" style="background:linear-gradient(135deg,#b388ff,#d500f9)"></div>
+    <div class="swatch" data-accent="#a78bfa" style="background:linear-gradient(135deg,#a78bfa,#d500f9)"></div>
     <div class="swatch" data-accent="#ffb74d" style="background:linear-gradient(135deg,#ffb74d,#ff6d00)"></div>
     <div class="swatch" data-accent="#ff2d95" style="background:linear-gradient(135deg,#ff2d95,#d500f9)"></div>
     <div class="swatch" data-accent="#22e584" style="background:linear-gradient(135deg,#22e584,#00b8a9)"></div>
@@ -171,21 +216,25 @@
 <div id="toast"></div>
 
 <script>
-  /* ============ ห้อง ============ */
+  /* ===== ห้อง ===== */
   const ROOMS = {
-    private: { name: 'สลี่', tag: 'ผู้ช่วยส่วนตัว — ออนไลน์', avatar: '💜', accent: '#b388ff' },
-    work:    { name: 'คุณเวิร์ค', tag: 'ผู้ช่วยทำงาน — พร้อมทำงาน', avatar: '💼', accent: '#00e5ff' },
-    lab:     { name: 'ดร.แล็บ', tag: 'นักประดิษฐ์ — พร้อมทดลอง', avatar: '🔬', accent: '#ffb74d' }
+    private: { name: 'SLI', tag: 'ผู้ช่วยส่วนตัว · ONLINE', avatar: '💜', accent: '#a78bfa' },
+    work:    { name: 'WORK', tag: 'ผู้ช่วยทำงาน · ONLINE', avatar: '💼', accent: '#00e5ff' },
+    lab:     { name: 'LAB', tag: 'นักประดิษฐ์ & นักทดลอง · ONLINE', avatar: '🔬', accent: '#ffb74d' }
   };
   const room = new URLSearchParams(location.search).get('room') || 'private';
   const R = ROOMS[room] || ROOMS.private;
   document.documentElement.style.setProperty('--accent', R.accent);
+  const botC = R.accent;
+  document.documentElement.style.setProperty('--bot-grad1', botC + '33');
+  document.documentElement.style.setProperty('--bot-grad2', botC + '14');
+  document.documentElement.style.setProperty('--bot-border', botC + '73');
   document.getElementById('av').textContent = R.avatar;
   document.getElementById('rname').textContent = R.name;
   document.getElementById('rtag').textContent = R.tag;
   document.title = R.name + ' — SILELO Neo-Connect';
 
-  /* ============ ประวัติ (localStorage ต่อห้อง — จริง) ============ */
+  /* ===== ประวัติ (localStorage ต่อห้อง) ===== */
   const KEY = 'nc_' + room;
   let history = [];
   try { history = JSON.parse(localStorage.getItem(KEY) || '[]'); } catch (e) { history = []; }
@@ -207,17 +256,16 @@
       <div class="bubble"></div>
       <div class="meta">
         <span>${fmt(m.t)}</span>
-        ${m.role === 'assistant' ? '<button class="spk" title="ฟังเสียง">🔊</button><button class="cpy" title="คัดลอก">📋</button>' : '<span>★ อ่านแล้ว</span>'}
+        ${m.role === 'assistant' ? '<button class="spk" title="ฟังเสียง">🔊</button><button class="cpy" title="คัดลอก">📋</button>' : '<span>★ READ</span>'}
       </div>`;
     div.querySelector('.bubble').textContent = m.content;
     const spk = div.querySelector('.spk');
     if (spk) spk.onclick = () => speak(m.content);
     const cpy = div.querySelector('.cpy');
-    if (cpy) cpy.onclick = () => { navigator.clipboard.writeText(m.content).then(() => toast('📋 คัดลอกแล้ว')); };
+    if (cpy) cpy.onclick = () => { navigator.clipboard.writeText(m.content).then(() => toast('📋 COPIED')); };
     msgsEl.appendChild(div);
     msgsEl.scrollTop = msgsEl.scrollHeight;
   }
-  // โหลดประวัติเดิม
   if (history.length) history.forEach(renderMsg);
   else {
     const hellos = {
@@ -228,12 +276,11 @@
     addMsg('assistant', hellos[room] || hellos.private);
   }
 
-  /* ============ ส่งข้อความ ============ */
+  /* ===== ส่งข้อความ ===== */
   const inp = document.getElementById('inp');
   const sendBtn = document.getElementById('sendBtn');
   const typing = document.getElementById('typing');
-
-  function autoGrow() { inp.style.height = 'auto'; inp.style.height = Math.min(inp.scrollHeight, 120) + 'px'; }
+  function autoGrow() { inp.style.height = 'auto'; inp.style.height = Math.min(inp.scrollHeight, 130) + 'px'; }
   inp.addEventListener('input', autoGrow);
 
   async function send() {
@@ -246,25 +293,24 @@
     msgsEl.scrollTop = msgsEl.scrollHeight;
     try {
       const r = await fetch('/api/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ room, question: q, history: history.slice(-12, -1) })
       });
       const j = await r.json();
-      if (j.reply) { addMsg('assistant', j.reply); toast('⚡ ' + (j.provider === 'mock' ? 'โหมดสำรอง' : j.provider + ' · ' + j.model)); }
-      else toast('⚠️ ' + (j.error || 'ไม่มีการตอบกลับ'));
-    } catch (e) { toast('⚠️ ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์'); }
+      if (j.reply) { addMsg('assistant', j.reply); toast('⚡ ' + (j.provider === 'mock' ? 'BACKUP MODE' : j.provider.toUpperCase() + ' · ' + j.model)); }
+      else toast('⚠ ' + (j.error || 'NO REPLY'));
+    } catch (e) { toast('⚠ SERVER UNREACHABLE'); }
     typing.style.display = 'none';
     sendBtn.disabled = false;
   }
   sendBtn.onclick = send;
   inp.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); } });
 
-  /* ============ TTS — ฟังเสียง (msedge-tts จริง) ============ */
+  /* ===== TTS ===== */
   let audio = null;
   async function speak(text) {
     if (!text) return;
-    toast('🔊 กำลังสร้างเสียง...');
+    toast('🔊 SYNTHESIZING...');
     try {
       const r = await fetch('/api/tts', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text: text.slice(0, 240) }) });
       if (!r.ok) throw new Error();
@@ -272,19 +318,19 @@
       const url = URL.createObjectURL(blob);
       if (audio) { audio.pause(); audio = null; }
       audio = new Audio(url);
-      audio.onended = () => toast('🔊 จบแล้ว');
+      audio.onended = () => toast('🔊 DONE');
       audio.play();
-      toast('🔊 กำลังเล่นเสียง');
-    } catch (e) { toast('⚠️ สร้างเสียงไม่ได้ตอนนี้'); }
+      toast('🔊 PLAYING');
+    } catch (e) { toast('⚠ TTS OFFLINE'); }
   }
 
-  /* ============ ปุ่มอื่นๆ ============ */
+  /* ===== ปุ่มอื่นๆ ===== */
   document.getElementById('backBtn').onclick = () => location.href = '/';
   document.getElementById('clearBtn').onclick = () => {
     if (confirm('ล้างประวัติแชทห้องนี้ทั้งหมด?')) {
       history = []; try { localStorage.removeItem(KEY); } catch (e) {}
       msgsEl.innerHTML = '';
-      addMsg('assistant', (ROOMS[room].name) + ': ห้องสะอาดพร้อมเริ่มใหม่แล้ว 🧹');
+      addMsg('assistant', R.name + ': MEMORY WIPED — ห้องสะอาดพร้อมเริ่มใหม่ 🧹');
     }
   };
 
@@ -292,11 +338,15 @@
   document.getElementById('themeBtn').onclick = () => themePop.classList.toggle('show');
   document.querySelectorAll('.swatch').forEach(s => {
     s.onclick = () => {
-      document.documentElement.style.setProperty('--accent', s.dataset.accent);
+      const c = s.dataset.accent;
+      document.documentElement.style.setProperty('--accent', c);
+      document.documentElement.style.setProperty('--bot-grad1', c + '33');
+      document.documentElement.style.setProperty('--bot-grad2', c + '14');
+      document.documentElement.style.setProperty('--bot-border', c + '73');
       document.querySelectorAll('.swatch').forEach(x => x.classList.remove('on'));
       s.classList.add('on');
-      try { localStorage.setItem('nc_theme', s.dataset.accent); } catch (e) {}
-      toast('🎨 ธีมเปลี่ยนแล้ว');
+      try { localStorage.setItem('nc_theme', c); } catch (e) {}
+      toast('🎨 ACCENT: ' + c.toUpperCase());
       themePop.classList.remove('show');
     };
   });
@@ -304,6 +354,9 @@
     const saved = localStorage.getItem('nc_theme');
     if (saved) {
       document.documentElement.style.setProperty('--accent', saved);
+      document.documentElement.style.setProperty('--bot-grad1', saved + '33');
+      document.documentElement.style.setProperty('--bot-grad2', saved + '14');
+      document.documentElement.style.setProperty('--bot-border', saved + '73');
       document.querySelectorAll('.swatch').forEach(x => x.classList.toggle('on', x.dataset.accent === saved));
     }
   } catch (e) {}
@@ -316,28 +369,36 @@
     toastTimer = setTimeout(() => t.classList.remove('show'), 2200);
   }
 
-  /* ============ Digital Rain ============ */
-  const cv = document.getElementById('rain'), ctx = cv.getContext('2d');
-  let W, H, cols, drops = [];
-  const chars = '01アイウエオカキクケコSILELO⚡ネオ'.split('');
+  /* ===== อนุภาค ===== */
+  const cv = document.getElementById('particles'), ctx = cv.getContext('2d');
+  let W, H, parts = [];
+  const N = Math.min(60, Math.floor(innerWidth * innerHeight / 22000));
   function resize() {
     W = cv.width = innerWidth; H = cv.height = innerHeight;
-    cols = Math.floor(W / 14); drops = Array(cols).fill(0).map(() => Math.random() * -H / 14);
+    parts = Array.from({ length: N }, () => ({ x: Math.random() * W, y: Math.random() * H, vx: (Math.random() - .5) * .3, vy: (Math.random() - .5) * .3, r: Math.random() * 1.6 + .5, a: Math.random() * .4 + .2 }));
   }
   resize(); addEventListener('resize', resize);
-  (function drawRain() {
-    ctx.fillStyle = 'rgba(3,4,12,.14)'; ctx.fillRect(0, 0, W, H);
-    ctx.font = '14px monospace';
-    for (let i = 0; i < cols; i++) {
-      ctx.fillStyle = Math.random() > .97 ? '#22e584' : '#00e5ff';
-      ctx.fillText(chars[(Math.random() * chars.length) | 0], i * 14, drops[i] * 14);
-      if (drops[i] * 14 > H && Math.random() > .97) drops[i] = 0;
-      drops[i]++;
+  (function loop() {
+    ctx.clearRect(0, 0, W, H);
+    for (const p of parts) {
+      p.x += p.vx; p.y += p.vy;
+      if (p.x < 0 || p.x > W) p.vx *= -1;
+      if (p.y < 0 || p.y > H) p.vy *= -1;
+      ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, 7);
+      ctx.fillStyle = `rgba(0,229,255,${p.a})`; ctx.fill();
     }
-    requestAnimationFrame(drawRain);
+    for (let i = 0; i < parts.length; i++) for (let j = i + 1; j < parts.length; j++) {
+      const dx = parts[i].x - parts[j].x, dy = parts[i].y - parts[j].y;
+      const d = Math.hypot(dx, dy);
+      if (d < 110) {
+        ctx.beginPath(); ctx.moveTo(parts[i].x, parts[i].y); ctx.lineTo(parts[j].x, parts[j].y);
+        ctx.strokeStyle = `rgba(0,229,255,${(1 - d / 110) * .14})`; ctx.lineWidth = 1; ctx.stroke();
+      }
+    }
+    requestAnimationFrame(loop);
   })();
 
-  /* ============ Heartbeat ============ */
+  /* ===== Heartbeat ===== */
   setInterval(() => { try { fetch('/api/presence', { method: 'POST' }); } catch (e) {} }, 20000);
   try { fetch('/api/presence', { method: 'POST' }); } catch (e) {}
 

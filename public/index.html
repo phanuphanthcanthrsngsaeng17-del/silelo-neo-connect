@@ -4,203 +4,294 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>SILELO Neo-Connect</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Prompt:wght@300;400;600;700&display=swap" rel="stylesheet">
 <style>
   :root {
-    --bg: #03040c; --cyan: #00e5ff; --purple: #b388ff; --pink: #ff2d95;
-    --txt: #e6f7ff; --dim: #7a8ba8;
+    --bg: #01030a; --cyan: #00e5ff; --purple: #a78bfa; --pink: #ff2d95; --amber: #ffb74d;
+    --txt: #e8f6ff; --dim: #5f7k8f;
   }
   * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   body {
-    background: var(--bg); color: var(--txt); font-family: 'Segoe UI', system-ui, sans-serif;
-    min-height: 100vh; overflow-x: hidden; position: relative;
+    background: var(--bg); color: var(--txt); min-height: 100vh; overflow-x: hidden; position: relative;
+    font-family: 'Prompt', 'Segoe UI', sans-serif;
   }
-  /* Digital Rain */
-  #rain { position: fixed; inset: 0; z-index: 0; opacity: .35; pointer-events: none; }
-  /* Neon grid backdrop */
-  body::before {
-    content: ''; position: fixed; inset: 0; z-index: 0; pointer-events: none;
+  /* ===== พื้นหลังจักรวาล: aurora + grid + vignette ===== */
+  .bgfx { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
+  .aurora { position: absolute; border-radius: 50%; filter: blur(90px); opacity: .5; animation: drift 18s ease-in-out infinite alternate; }
+  .aurora.a1 { width: 55vw; height: 55vw; left: -18vw; top: -22vw; background: radial-gradient(circle, rgba(0,229,255,.22), transparent 65%); }
+  .aurora.a2 { width: 50vw; height: 50vw; right: -16vw; top: 8vh; background: radial-gradient(circle, rgba(167,139,250,.2), transparent 65%); animation-delay: -6s; }
+  .aurora.a3 { width: 45vw; height: 45vw; left: 22vw; bottom: -24vw; background: radial-gradient(circle, rgba(255,45,149,.14), transparent 65%); animation-delay: -12s; }
+  @keyframes drift { from { transform: translate(0,0) scale(1); } to { transform: translate(6vw, -4vh) scale(1.15); } }
+  .grid3d {
+    position: absolute; inset: -2%; opacity: .5;
     background:
-      radial-gradient(ellipse 80% 50% at 50% -10%, rgba(0,229,255,.15), transparent 60%),
-      radial-gradient(ellipse 60% 40% at 90% 110%, rgba(179,136,255,.12), transparent 60%),
-      linear-gradient(rgba(0,229,255,.04) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(0,229,255,.04) 1px, transparent 1px);
-    background-size: 100% 100%, 100% 100%, 44px 44px, 44px 44px;
+      linear-gradient(rgba(0,229,255,.05) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,229,255,.05) 1px, transparent 1px);
+    background-size: 52px 52px;
+    mask-image: radial-gradient(ellipse 90% 70% at 50% 30%, #000 20%, transparent 75%);
+    -webkit-mask-image: radial-gradient(ellipse 90% 70% at 50% 30%, #000 20%, transparent 75%);
+    animation: gridmove 14s linear infinite;
   }
-  .wrap { position: relative; z-index: 1; max-width: 1100px; margin: 0 auto; padding: 28px 18px 60px; }
+  @keyframes gridmove { from { background-position: 0 0, 0 0; } to { background-position: 0 52px, 52px 0; } }
+  .scanlines { position: absolute; inset: 0; opacity: .07; background: repeating-linear-gradient(0deg, #fff 0 1px, transparent 1px 3px); }
+  .vignette { position: absolute; inset: 0; background: radial-gradient(ellipse 100% 90% at 50% 40%, transparent 45%, rgba(0,0,0,.65)); }
 
-  /* HUD */
+  #particles { position: fixed; inset: 0; z-index: 0; opacity: .8; pointer-events: none; }
+
+  .wrap { position: relative; z-index: 2; max-width: 1120px; margin: 0 auto; padding: 26px 20px 60px; }
+
+  /* ===== HUD สถานะ (JARVIS-style) ===== */
   .hud {
-    display: flex; flex-wrap: wrap; gap: 10px; justify-content: space-between; align-items: center;
-    padding: 10px 16px; margin-bottom: 26px;
-    background: rgba(10,18,38,.55); border: 1px solid rgba(0,229,255,.25);
-    border-radius: 14px; backdrop-filter: blur(14px);
-    box-shadow: 0 0 24px rgba(0,229,255,.08), inset 0 0 30px rgba(0,229,255,.05);
-    font-size: 12px; letter-spacing: .5px; color: var(--dim);
+    position: relative; display: flex; flex-wrap: wrap; gap: 8px 22px; justify-content: space-between; align-items: center;
+    padding: 14px 22px; margin-bottom: 8px;
+    background: linear-gradient(90deg, rgba(6,14,34,.7), rgba(10,20,50,.45));
+    border: 1px solid rgba(0,229,255,.28);
+    clip-path: polygon(14px 0, 100% 0, 100% calc(100% - 14px), calc(100% - 14px) 100%, 0 100%, 0 14px);
+    backdrop-filter: blur(18px); font-family: 'Orbitron', monospace;
   }
-  .hud .item { display: flex; align-items: center; gap: 7px; }
-  .hud .dot { width: 8px; height: 8px; border-radius: 50%; background: #22e584; box-shadow: 0 0 10px #22e584; animation: pulse 1.6s infinite; }
-  .hud .dot.red { background: #ff2d55; box-shadow: 0 0 10px #ff2d55; animation: none; }
-  .hud b { color: var(--cyan); font-weight: 600; }
-  @keyframes pulse { 50% { opacity: .35; } }
+  .hud::before { content: ''; position: absolute; inset: 0; background: linear-gradient(90deg, transparent, rgba(0,229,255,.14), transparent); animation: hudscan 4s linear infinite; }
+  @keyframes hudscan { from { transform: translateX(-100%); } to { transform: translateX(100%); } }
+  .hud .cell { display: flex; flex-direction: column; gap: 2px; font-size: 10px; letter-spacing: 2px; color: rgba(0,229,255,.75); text-transform: uppercase; }
+  .hud .cell b { font-size: 15px; letter-spacing: 1px; color: var(--txt); font-weight: 700; }
+  .hud .cell b.on { color: #22e584; text-shadow: 0 0 12px rgba(34,229,132,.8); }
+  .hud .cell b.off { color: #ff4d6d; text-shadow: 0 0 12px rgba(255,77,109,.8); }
+  .hud .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #22e584; box-shadow: 0 0 10px #22e584; animation: pulse 1.5s infinite; }
 
-  .logo { text-align: center; margin: 26px 0 8px; }
-  .logo .glow {
-    font-size: clamp(30px, 7vw, 54px); font-weight: 900; letter-spacing: 4px;
-    background: linear-gradient(90deg, var(--cyan), var(--purple), var(--pink));
+  /* ===== โลโก้ ===== */
+  .hero { text-align: center; margin: 34px 0 6px; position: relative; }
+  .hero .ringwrap { position: relative; display: inline-block; }
+  .hero .ringwrap::before, .hero .ringwrap::after {
+    content: ''; position: absolute; inset: -26px; border-radius: 50%; pointer-events: none;
+  }
+  .hero .ringwrap::before { border: 1px dashed rgba(0,229,255,.35); animation: spin 16s linear infinite; }
+  .hero .ringwrap::after {
+    inset: -46px; border: 1px solid transparent;
+    border-top-color: rgba(0,229,255,.5); border-right-color: rgba(167,139,250,.4);
+    border-radius: 50%; animation: spin 9s linear infinite reverse;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .hero h1 {
+    font-family: 'Orbitron', sans-serif; font-weight: 900; font-size: clamp(44px, 10vw, 84px); letter-spacing: 10px;
+    background: linear-gradient(180deg, #fff 0%, #9be8ff 35%, #00c8ff 60%, #2b6cff 100%);
     -webkit-background-clip: text; background-clip: text; color: transparent;
-    filter: drop-shadow(0 0 18px rgba(0,229,255,.45));
+    filter: drop-shadow(0 0 26px rgba(0,200,255,.55)) drop-shadow(0 4px 30px rgba(0,229,255,.25));
+    text-shadow: none; line-height: 1.1;
   }
-  .logo .sub { color: var(--dim); margin-top: 6px; font-size: 14px; letter-spacing: 6px; text-transform: uppercase; }
-  .tagline { text-align: center; color: var(--dim); font-size: 13px; margin: 14px 0 34px; }
+  .hero .sub {
+    margin-top: 10px; font-family: 'Orbitron', sans-serif; letter-spacing: 14px; font-size: clamp(11px, 2.6vw, 16px);
+    color: var(--cyan); text-transform: uppercase; text-shadow: 0 0 16px rgba(0,229,255,.8);
+  }
+  .hero .sub::before, .hero .sub::after { content: '◆'; margin: 0 14px; font-size: 8px; opacity: .8; }
+  .badge {
+    display: inline-flex; align-items: center; gap: 8px; margin-top: 18px; padding: 6px 18px;
+    font-family: 'Orbitron', monospace; font-size: 10px; letter-spacing: 3px; color: #22e584;
+    border: 1px solid rgba(34,229,132,.4); border-radius: 30px;
+    background: rgba(34,229,132,.08); box-shadow: 0 0 18px rgba(34,229,132,.2), inset 0 0 14px rgba(34,229,132,.08);
+    text-transform: uppercase;
+  }
+  .badge .pulse { width: 7px; height: 7px; border-radius: 50%; background: #22e584; box-shadow: 0 0 10px #22e584; animation: pulse 1.2s infinite; }
+  @keyframes pulse { 50% { opacity: .25; transform: scale(.75); } }
 
-  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 18px; }
+  .tagline { text-align: center; color: rgba(232,246,255,.5); font-size: 13px; font-weight: 300; letter-spacing: 2px; margin: 22px 0 34px; }
+
+  /* ===== Holo-cards ===== */
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(270px, 1fr)); gap: 22px; }
 
   .card {
-    position: relative; border-radius: 20px; padding: 26px 20px 22px; cursor: pointer;
-    background: rgba(12,20,44,.5); border: 1px solid rgba(0,229,255,.3);
-    backdrop-filter: blur(16px); overflow: hidden;
-    transition: transform .22s, box-shadow .22s, border-color .22s;
-    text-decoration: none; color: var(--txt); display: block;
+    position: relative; display: block; text-decoration: none; color: var(--txt);
+    padding: 30px 24px 22px; border-radius: 6px; overflow: hidden; cursor: pointer;
+    background: linear-gradient(160deg, rgba(10,20,44,.62), rgba(4,8,22,.55));
+    border: 1px solid rgba(0,229,255,.22);
+    backdrop-filter: blur(16px);
+    clip-path: polygon(22px 0, 100% 0, 100% calc(100% - 22px), calc(100% - 22px) 100%, 0 100%, 0 22px);
+    transition: transform .25s ease, box-shadow .25s ease, border-color .25s;
   }
-  .card:hover, .card:active { transform: translateY(-5px); border-color: var(--accent, var(--cyan)); box-shadow: 0 12px 40px rgba(0,0,0,.5), 0 0 30px var(--glow, rgba(0,229,255,.35)); }
-  .card .avatar {
-    width: 62px; height: 62px; border-radius: 18px; display: flex; align-items: center; justify-content: center;
-    font-size: 32px; margin-bottom: 14px;
-    background: linear-gradient(135deg, rgba(0,229,255,.18), rgba(179,136,255,.18));
-    border: 1px solid var(--accent, rgba(0,229,255,.4));
-    box-shadow: 0 0 22px var(--glow, rgba(0,229,255,.25));
+  /* มุม bracket */
+  .card::before, .card::after { content: ''; position: absolute; width: 26px; height: 26px; pointer-events: none; }
+  .card::before { top: 8px; left: 8px; border-top: 2px solid var(--cc); border-left: 2px solid var(--cc); filter: drop-shadow(0 0 6px var(--cc)); }
+  .card::after { bottom: 8px; right: 8px; border-bottom: 2px solid var(--cc); border-right: 2px solid var(--cc); filter: drop-shadow(0 0 6px var(--cc)); }
+  /* แถบไฟบนสุด */
+  .card .topline { position: absolute; top: 0; left: 0; right: 0; height: 2px; background: linear-gradient(90deg, transparent, var(--cc), transparent); opacity: .9; }
+  .card:hover, .card:active {
+    transform: translateY(-6px);
+    border-color: color-mix(in srgb, var(--cc) 65%, transparent);
+    box-shadow: 0 18px 50px rgba(0,0,0,.6), 0 0 34px color-mix(in srgb, var(--cc) 28%, transparent), inset 0 0 40px color-mix(in srgb, var(--cc) 6%, transparent);
   }
-  .card h2 { font-size: 22px; font-weight: 800; letter-spacing: 1px; margin-bottom: 4px; }
-  .card .tag { color: var(--accent, var(--cyan)); font-size: 12px; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 10px; }
-  .card p { color: var(--dim); font-size: 13px; line-height: 1.7; min-height: 44px; }
+  .card:hover .topline { box-shadow: 0 0 14px var(--cc); }
+  /* avatar + วงแหวนโคจร */
+  .avatar-wrap { position: relative; width: 86px; height: 86px; margin: 6px auto 18px; }
+  .avatar-wrap .ring {
+    position: absolute; inset: 0; border-radius: 50%;
+    background: conic-gradient(from 0deg, transparent 0 40%, var(--cc) 55%, transparent 70%);
+    -webkit-mask: radial-gradient(circle, transparent 62%, #000 64%);
+    mask: radial-gradient(circle, transparent 62%, #000 64%);
+    animation: spin 3.2s linear infinite;
+  }
+  .avatar-wrap .ring2 { inset: -9px; animation-duration: 7s; animation-direction: reverse; opacity: .6; }
+  .avatar {
+    position: absolute; inset: 9px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+    font-size: 40px;
+    background: radial-gradient(circle at 32% 28%, color-mix(in srgb, var(--cc) 30%, transparent), rgba(3,6,18,.9));
+    border: 1px solid color-mix(in srgb, var(--cc) 55%, transparent);
+    box-shadow: 0 0 24px color-mix(in srgb, var(--cc) 35%, transparent), inset 0 0 18px color-mix(in srgb, var(--cc) 20%, transparent);
+  }
+  .card h2 { text-align: center; font-family: 'Orbitron', sans-serif; font-size: 21px; letter-spacing: 4px; font-weight: 700; }
+  .card .tag { text-align: center; color: var(--cc); font-size: 10px; letter-spacing: 3px; text-transform: uppercase; margin: 5px 0 12px; font-family: 'Orbitron', monospace; }
+  .card p { color: rgba(232,246,255,.62); font-size: 13px; font-weight: 300; line-height: 1.75; text-align: center; min-height: 66px; }
   .card .enter {
-    margin-top: 14px; display: inline-flex; align-items: center; gap: 8px;
-    padding: 9px 18px; border-radius: 12px; font-size: 13px; font-weight: 700;
-    background: linear-gradient(90deg, var(--accent, var(--cyan)), var(--accent2, var(--purple)));
-    color: #02101a; box-shadow: 0 0 18px var(--glow, rgba(0,229,255,.4));
+    margin: 16px auto 0; display: flex; align-items: center; justify-content: center; gap: 10px;
+    padding: 11px 0; border-radius: 4px; font-family: 'Orbitron', sans-serif; font-size: 12px; letter-spacing: 3px; font-weight: 700;
+    background: linear-gradient(90deg, color-mix(in srgb, var(--cc) 80%, #000), color-mix(in srgb, var(--cc) 45%, var(--purple)));
+    color: #02101a; position: relative; overflow: hidden;
+    box-shadow: 0 0 22px color-mix(in srgb, var(--cc) 35%, transparent);
   }
-  .card .enter::after { content: '→'; transition: transform .2s; }
-  .card:hover .enter::after { transform: translateX(4px); }
-  .card .statusline { margin-top: 12px; font-size: 11px; color: var(--dim); display: flex; gap: 10px; align-items: center; }
+  .card .enter::before { content: ''; position: absolute; top: 0; bottom: 0; width: 40%; background: linear-gradient(90deg, transparent, rgba(255,255,255,.5), transparent); animation: btnglide 2.6s ease-in-out infinite; }
+  @keyframes btnglide { from { left: -50%; } to { left: 110%; } }
+  .card .enter::after { content: '▸'; transition: transform .2s; }
+  .card:hover .enter::after { transform: translateX(5px); }
+  .card .power {
+    margin-top: 14px; height: 3px; border-radius: 2px; background: rgba(255,255,255,.07); overflow: hidden;
+  }
+  .card .power i { display: block; height: 100%; width: 78%; background: linear-gradient(90deg, var(--cc), color-mix(in srgb, var(--cc) 50%, #fff)); box-shadow: 0 0 8px var(--cc); animation: powerpulse 3s ease-in-out infinite; }
+  .card:nth-child(2) .power i { width: 92%; animation-delay: .8s; }
+  .card:nth-child(3) .power i { width: 86%; animation-delay: 1.6s; }
+  @keyframes powerpulse { 0%,100% { opacity: .6; } 50% { opacity: 1; } }
+  .card .statusline { margin-top: 10px; display: flex; justify-content: space-between; font-size: 10px; color: rgba(232,246,255,.42); font-family: 'Orbitron', monospace; letter-spacing: 1px; }
   .card .statusline .on { color: #22e584; }
 
-  .foot { text-align: center; margin-top: 44px; color: var(--dim); font-size: 12px; letter-spacing: 1px; }
+  .foot { text-align: center; margin-top: 46px; color: rgba(232,246,255,.35); font-size: 11px; letter-spacing: 2px; font-family: 'Orbitron', monospace; }
   .foot b { color: var(--cyan); }
 
-  @media (max-width: 640px) { .wrap { padding: 18px 14px 50px; } .hud { font-size: 11px; } }
+  @media (max-width: 640px) { .wrap { padding: 18px 14px 46px; } .card p { min-height: 0; } }
 </style>
 </head>
 <body>
-<canvas id="rain"></canvas>
+<div class="bgfx">
+  <div class="aurora a1"></div><div class="aurora a2"></div><div class="aurora a3"></div>
+  <div class="grid3d"></div><div class="scanlines"></div><div class="vignette"></div>
+</div>
+<canvas id="particles"></canvas>
+
 <div class="wrap">
-  <!-- HUD สถานะจริง -->
-  <div class="hud" id="hud">
-    <div class="item"><span class="dot" id="netDot"></span><span id="netTxt">เชื่อมต่อ...</span></div>
-    <div class="item">🌐 ออนไลน์ <b id="onlineCount">—</b> คน</div>
-    <div class="item">⚡ ความเร็ว <b id="netSpeed">—</b></div>
-    <div class="item">🕐 <b id="clock">--:--:--</b></div>
+  <!-- HUD -->
+  <div class="hud">
+    <div class="cell"><span>⏱ Time</span><b id="clock">--:--:--</b></div>
+    <div class="cell"><span>🌐 Online</span><b id="onlineCount">—</b></div>
+    <div class="cell"><span>⚡ Latency</span><b id="netSpeed">—</b></div>
+    <div class="cell"><span id="netTxt">Network</span><b id="netDotB" class="on"><span class="dot"></span> ONLINE</b></div>
   </div>
 
-  <div class="logo">
-    <div class="glow">SILELO</div>
+  <div class="hero">
+    <div class="ringwrap">
+      <h1>SILELO</h1>
+    </div>
     <div class="sub">Neo-Connect</div>
+    <div class="badge"><span class="pulse"></span> System Online · AI Core Active</div>
   </div>
-  <div class="tagline">🌐 โลกอนาคต — ทุกห้องมีชีวิต เชื่อมต่อทุกคนทุกที่</div>
+  <div class="tagline">— ทุกห้องมีชีวิต · เชื่อมต่อทุกคนทุกที่ —</div>
 
   <div class="grid">
-    <a class="card" href="/chat?room=private" style="--accent:#b388ff;--accent2:#d500f9;--glow:rgba(179,136,255,.4)">
-      <div class="avatar">💜</div>
-      <h2>สลี่</h2>
+    <a class="card" href="/chat?room=private" style="--cc:#a78bfa">
+      <div class="topline"></div>
+      <div class="avatar-wrap">
+        <div class="ring"></div><div class="ring ring2"></div>
+        <div class="avatar">💜</div>
+      </div>
+      <h2>SLI</h2>
       <div class="tag">ผู้ช่วยส่วนตัว</div>
-      <p>คุยเป็นกันเอง อบอุ่น จำเรื่องพี่นุได้ ช่วยทุกเรื่อง ตั้งแต่ให้กำลังใจ วางแผน จนถึงคุยเล่นยามดึก</p>
-      <div class="enter">เข้าห้อง</div>
-      <div class="statusline"><span class="on">● ออนไลน์</span><span>ตอบไว ~1 วิ</span></div>
+      <p>อบอุ่น จำเรื่องพี่นุได้ ช่วยทุกเรื่อง ตั้งแต่ให้กำลังใจ วางแผน ถึงคุยเล่นยามดึก</p>
+      <div class="enter">ACCESS</div>
+      <div class="power"><i></i></div>
+      <div class="statusline"><span class="on">● ONLINE</span><span>RESP ~1s</span></div>
     </a>
 
-    <a class="card" href="/chat?room=work" style="--accent:#00e5ff;--accent2:#00b0ff;--glow:rgba(0,229,255,.4)">
-      <div class="avatar">💼</div>
-      <h2>คุณเวิร์ค</h2>
+    <a class="card" href="/chat?room=work" style="--cc:#00e5ff">
+      <div class="topline"></div>
+      <div class="avatar-wrap">
+        <div class="ring"></div><div class="ring ring2"></div>
+        <div class="avatar">💼</div>
+      </div>
+      <h2>WORK</h2>
       <div class="tag">ผู้ช่วยทำงาน</div>
-      <p>จริงจัง ตรงประเด็น เขียนโค้ด วางแผน สรุปเอกสาร วิเคราะห์ตัวเลข ทำงานให้เสร็จ ไม่มีคำว่าเดี๋ยวก่อน</p>
-      <div class="enter">เข้าห้อง</div>
-      <div class="statusline"><span class="on">● พร้อมทำงาน</span><span>โฟกัส 100%</span></div>
+      <p>จริงจัง ตรงประเด็น โค้ด วางแผน สรุปเอกสาร วิเคราะห์ตัวเลข จัดการให้เสร็จ</p>
+      <div class="enter">ACCESS</div>
+      <div class="power"><i></i></div>
+      <div class="statusline"><span class="on">● ONLINE</span><span>FOCUS 100%</span></div>
     </a>
 
-    <a class="card" href="/chat?room=lab" style="--accent:#ffb74d;--accent2:#ff6d00;--glow:rgba(255,183,77,.4)">
-      <div class="avatar">🔬</div>
-      <h2>ดร.แล็บ</h2>
+    <a class="card" href="/chat?room=lab" style="--cc:#ffb74d">
+      <div class="topline"></div>
+      <div class="avatar-wrap">
+        <div class="ring"></div><div class="ring ring2"></div>
+        <div class="avatar">🔬</div>
+      </div>
+      <h2>LAB</h2>
       <div class="tag">นักประดิษฐ์ & นักทดลอง</div>
-      <p>พลังงานเต็มร้อย ไอเดียสุดล้ำ อธิบายวิทย์ให้สนุก ทดลองอะไรใหม่ๆ ได้ทุกวัน ไม่มีคำว่าทำไม่ได้</p>
-      <div class="enter">เข้าห้อง</div>
-      <div class="statusline"><span class="on">● พร้อมทดลอง</span><span>ไอเดียไม่เคยหมด</span></div>
+      <p>พลังงานเต็มร้อย ไอเดียสุดล้ำ อธิบายวิทย์ให้สนุก ไม่มีคำว่าทำไม่ได้</p>
+      <div class="enter">ACCESS</div>
+      <div class="power"><i></i></div>
+      <div class="statusline"><span class="on">● ONLINE</span><span>IDEAS ∞</span></div>
     </a>
   </div>
 
-  <div class="foot">⚡ <b>SILELO Neo-Connect</b> — ทุกปุ่มใช้ได้จริง · AI ฟรี 100% · พลังงานจาก Groq ⚡ Gemini 🆚 OpenRouter 🌈 Pollinations</div>
+  <div class="foot">SILELO NEO-CONNECT v1.0 · <b>AI CORE</b>: GROQ ⚡ · GEMINI 🆚 · OPENROUTER · POLLINATIONS</div>
 </div>
 
 <script>
-  /* ============ Digital Rain (ทำงานจริง 60fps) ============ */
-  const cv = document.getElementById('rain'), ctx = cv.getContext('2d');
-  let W, H, cols, drops = [];
-  const FONT = 14;
-  const chars = '01アイウエオカキクケコサシスセソタチツテトナニヌネノSILELOネオコネクト⚡'.split('');
+  /* ===== อนุภาคลอย + เส้นเชื่อม (จักรวาล) ===== */
+  const cv = document.getElementById('particles'), ctx = cv.getContext('2d');
+  let W, H, parts = [];
+  const N = Math.min(90, Math.floor(innerWidth * innerHeight / 16000));
   function resize() {
     W = cv.width = innerWidth; H = cv.height = innerHeight;
-    cols = Math.floor(W / FONT); drops = Array(cols).fill(0).map(() => Math.random() * -H / FONT);
+    parts = Array.from({ length: N }, () => ({
+      x: Math.random() * W, y: Math.random() * H,
+      vx: (Math.random() - .5) * .35, vy: (Math.random() - .5) * .35,
+      r: Math.random() * 1.8 + .6, a: Math.random() * .5 + .3
+    }));
   }
   resize(); addEventListener('resize', resize);
-  function drawRain() {
-    ctx.fillStyle = 'rgba(3,4,12,.16)'; ctx.fillRect(0, 0, W, H);
-    ctx.font = FONT + 'px monospace';
-    for (let i = 0; i < cols; i++) {
-      const ch = chars[(Math.random() * chars.length) | 0];
-      ctx.fillStyle = Math.random() > .975 ? '#22e584' : '#00e5ff';
-      ctx.fillText(ch, i * FONT, drops[i] * FONT);
-      if (drops[i] * FONT > H && Math.random() > .975) drops[i] = 0;
-      drops[i]++;
+  (function loop() {
+    ctx.clearRect(0, 0, W, H);
+    for (const p of parts) {
+      p.x += p.vx; p.y += p.vy;
+      if (p.x < 0 || p.x > W) p.vx *= -1;
+      if (p.y < 0 || p.y > H) p.vy *= -1;
+      ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, 7);
+      ctx.fillStyle = `rgba(0,229,255,${p.a})`; ctx.fill();
     }
-    requestAnimationFrame(drawRain);
-  }
-  requestAnimationFrame(drawRain);
+    for (let i = 0; i < parts.length; i++) for (let j = i + 1; j < parts.length; j++) {
+      const dx = parts[i].x - parts[j].x, dy = parts[i].y - parts[j].y;
+      const d = Math.hypot(dx, dy);
+      if (d < 130) {
+        ctx.beginPath(); ctx.moveTo(parts[i].x, parts[i].y); ctx.lineTo(parts[j].x, parts[j].y);
+        ctx.strokeStyle = `rgba(0,229,255,${(1 - d / 130) * .18})`; ctx.lineWidth = 1; ctx.stroke();
+      }
+    }
+    requestAnimationFrame(loop);
+  })();
 
-  /* ============ HUD — ของจริงทุกค่า ============ */
-  const clockEl = document.getElementById('clock');
-  setInterval(() => { const d = new Date(); clockEl.textContent = d.toLocaleTimeString('th-TH', { hour12: false }); }, 1000);
-
-  const onlineEl = document.getElementById('onlineCount');
+  /* ===== HUD — ของจริงทุกค่า ===== */
+  setInterval(() => { const d = new Date(); document.getElementById('clock').textContent = d.toLocaleTimeString('th-TH', { hour12: false }); }, 1000);
   async function refreshOnline() {
-    try {
-      const r = await fetch('/api/stats'); const j = await r.json();
-      onlineEl.textContent = j.online;
-    } catch (e) {}
+    try { const j = await (await fetch('/api/stats')).json(); document.getElementById('onlineCount').textContent = j.online; } catch (e) {}
   }
   setInterval(refreshOnline, 15000); refreshOnline();
-
-  // heartbeat — นับตัวเองเป็นผู้ใช้ออนไลน์จริง
   setInterval(() => { try { fetch('/api/presence', { method: 'POST' }); } catch (e) {} }, 20000);
   try { fetch('/api/presence', { method: 'POST' }); } catch (e) {}
 
-  // ความเร็วเน็ตจริง — วัด latency 5 ครั้งจาก /api/ping
-  const speedEl = document.getElementById('netSpeed');
   async function measureSpeed() {
     const times = [];
-    for (let i = 0; i < 5; i++) {
-      const t0 = performance.now();
-      try { await fetch('/api/ping?_=' + Math.random()); times.push(performance.now() - t0); } catch (e) {}
-    }
-    if (times.length) {
-      const avg = times.reduce((a, b) => a + b, 0) / times.length;
-      speedEl.textContent = avg.toFixed(0) + 'ms';
-    }
+    for (let i = 0; i < 5; i++) { const t0 = performance.now(); try { await fetch('/api/ping?_=' + Math.random()); times.push(performance.now() - t0); } catch (e) {} }
+    if (times.length) document.getElementById('netSpeed').textContent = (times.reduce((a, b) => a + b, 0) / times.length).toFixed(0) + 'ms';
   }
   measureSpeed(); setInterval(measureSpeed, 20000);
 
-  // สถานะเน็ตจริง (navigator.onLine)
-  const netDot = document.getElementById('netDot'), netTxt = document.getElementById('netTxt');
+  const netB = document.getElementById('netDotB'), netT = document.getElementById('netTxt');
   function netStatus() {
-    if (navigator.onLine) { netDot.classList.remove('red'); netTxt.textContent = 'เชื่อมต่อออนไลน์'; }
-    else { netDot.classList.add('red'); netTxt.textContent = 'ออฟไลน์ — เช็คเน็ต'; }
+    if (navigator.onLine) { netB.className = 'on'; netB.innerHTML = '<span class="dot"></span> ONLINE'; netT.textContent = 'Network'; }
+    else { netB.className = 'off'; netB.textContent = 'OFFLINE'; netT.textContent = '⚠ Network'; }
   }
   addEventListener('online', netStatus); addEventListener('offline', netStatus); netStatus();
 </script>
