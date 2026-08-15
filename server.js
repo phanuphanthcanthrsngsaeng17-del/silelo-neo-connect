@@ -135,6 +135,54 @@ async function geminiChat(messages, extSignal) {
   return null;
 }
 
+/* Gemini Vision — ดูรูป/หน้าจอ (inline image) */
+async function geminiVision(imageDataUrl, question, sysHint) {
+  if (!GEMINI_API_KEYS.length) return null;
+  const mime = (String(imageDataUrl).match(/^data:([^;]+);/) || [])[1] || 'image/jpeg';
+  const data = String(imageDataUrl).replace(/^data:[^;]+;base64,/, '');
+  if (!data) return null;
+  const n = GEMINI_API_KEYS.length;
+  const start = geminiKeyIdx++ % n;
+  const body = {
+    contents: [{ role: 'user', parts: [
+      { text: String(question || 'ช่วยอธิบายรูปนี้ให้หน่อย').slice(0, 600) },
+      { inline_data: { mime_type: mime, data } }
+    ] }],
+    generationConfig: { temperature: 0.4, maxOutputTokens: 500 }
+  };
+  if (sysHint && String(sysHint).trim()) body.systemInstruction = { parts: [{ text: String(sysHint).slice(0, 1200) }] };
+  for (let i = 0; i < n; i++) {
+    const key = GEMINI_API_KEYS[(start + i) % n];
+    const rs = raceSignal(25000);
+    try {
+      const r = await fetch('https://generativelanguage.googleapis.com/v1beta/models/' + GEMINI_MODEL + ':generateContent?key=' + key, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body), signal: rs.signal
+      });
+      const j = await r.json();
+      if (!r.ok) {
+        const msg = (j.error && j.error.message) || '';
+        if (r.status === 401 || r.status === 403 || /quota|permission|invalid|api key|high demand|unavailable/i.test(msg)) continue;
+        throw new Error('Gemini ' + r.status);
+      }
+      const reply = j.candidates && j.candidates[0] && j.candidates[0].content && j.candidates[0].content.parts && j.candidates[0].content.parts[0] && j.candidates[0].content.parts[0].text;
+      if (reply) { logAI('gemini-vision', 'key#' + ((start + i) % n + 1) + '/' + n + ' ✅'); return { provider: 'gemini-vision', model: GEMINI_MODEL, reply }; }
+    } catch (e) { /* try next key */ } finally { rs.clear(); }
+  }
+  return null;
+}
+
+/* สรุปความทรงจำจากประวัติสนทนา */
+async function summarizeMemory(history) {
+  const lines = (Array.isArray(history) ? history : []).map(m => (m.role === 'assistant' ? 'AI: ' : 'เจ้าของ: ') + String(m.content || '').slice(0, 300)).join('\n').slice(0, 9000);
+  if (!lines.trim()) return null;
+  const msgs = [
+    { role: 'system', content: 'คุณคือผู้ช่วยคัดสรุป "ความทรงจำ" เกี่ยวกับเจ้าของ (ผู้ใช้) จากบทสนทนา ตอบเป็นข้อเท็จจริงสั้นๆ ภาษาไทย (ใช้สรรพนามเดียวกับที่เจ้าของใช้ เช่น พี่นุ) เรียงเป็น bullet สั้น ไม่เกิน 10 ข้อ แต่ละข้อไม่เกิน 20 คำ ครอบคลุม: ชื่อ ชื่อเล่น สิ่งที่ชอบ ไม่ชอบ งาน/อาชีพ โปรเจกต์ ครอบครัว เป้าหมาย เหตุการณ์สำคัญที่เจ้าของเล่า ห้ามแต่งเติม ห้ามรวมคำถามที่ไม่ใช่เรื่องส่วนตัว' },
+    { role: 'user', content: 'บทสนทนา:\n' + lines }
+  ];
+  const r = await geminiChat(msgs);
+  return r ? String(r.reply).trim().slice(0, 1500) : null;
+}
+
 /* OpenRouter — :free models, timeout 8 วิ */
 const OPENROUTER_KEYS = (process.env.OPENROUTER_API_KEY || '').split(',').map(s => s.trim()).filter(Boolean);
 const OPENROUTER_TEXT_MODELS = (process.env.OPENROUTER_TEXT_MODELS || 'nvidia/nemotron-3-ultra-550b-a55b:free,google/gemma-4-26b-a4b-it:free').split(',').map(s => s.trim()).filter(Boolean);
@@ -228,20 +276,42 @@ function googleTtsFile(text, outFile) {
     }).on('error', reject);
   });
 }
-async function ttsFile(text) {
+/* เสียงไทย msedge-tts — เลือกได้หลายเสียง */
+const TTS_VOICES = {
+  premwadee: 'th-TH-PremwadeeNeural',
+  niwat: 'th-TH-NiwatNeural',
+  achara: 'th-TH-AcharaNeural'
+};
+async function msedgeTtsFile(safe, out, voiceName) {
+  const { MsEdgeTTS, OUTPUT_FORMAT } = require('msedge-tts');
+  const tts = new MsEdgeTTS();
+  await tts.setMetadata(voiceName || 'th-TH-PremwadeeNeural', OUTPUT_FORMAT.AUDIO_24KHZ_48KBITRATE_MONO_MP3);
+  const p = await tts.toFile(out, safe);
+  await tts.close().catch(() => {});
+  return p;
+}
+async function ttsFile(text, voice) {
   const safe = String(text).replace(/[^\u0E00-\u0E7Fa-zA-Z0-9 .,!?ฯๆะาิีึืุูเแโใไ่้๊๋์็่้]/g, ' ').slice(0, 240);
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'nctts-'));
   const out = path.join(dir, 'voice.mp3');
+  // เลือกเสียงเฉพาะ → ใช้ msedge-tts กับเสียงนั้น (ล้มแล้ว fallback google TTS)
+  if (voice && TTS_VOICES[voice]) {
+    try {
+      return await msedgeTtsFile(safe, out, TTS_VOICES[voice]);
+    } catch (e2) {
+      try { return await googleTtsFile(safe, out); }
+      catch (e3) {
+        try { fs.rmSync(dir, { recursive: true, force: true }); } catch (e) {}
+        throw new Error('tts unavailable');
+      }
+    }
+  }
+  // auto → google TTS (เร็ว) ก่อน, msedge Premwadee สำรอง
   try {
     return await googleTtsFile(safe, out);
   } catch (e1) {
     try {
-      const { MsEdgeTTS, OUTPUT_FORMAT } = require('msedge-tts');
-      const tts = new MsEdgeTTS();
-      await tts.setMetadata('th-TH-PremwadeeNeural', OUTPUT_FORMAT.AUDIO_24KHZ_48KBITRATE_MONO_MP3);
-      const p = await tts.toFile(out, safe);
-      await tts.close().catch(() => {});
-      return p;
+      return await msedgeTtsFile(safe, out, 'th-TH-PremwadeeNeural');
     } catch (e2) {
       try { fs.rmSync(dir, { recursive: true, force: true }); } catch (e) {}
       throw new Error('tts unavailable');
@@ -253,22 +323,58 @@ async function ttsFile(text) {
 // แชท
 app.post('/api/chat', async (req, res) => {
   try {
-    const { room, question, history } = req.body || {};
+    const { room, question, history, memory } = req.body || {};
     if (!question || !String(question).trim()) return res.status(400).json({ error: 'ข้อความว่าง' });
     const roomId = ROOMS[room] ? room : 'private';
-    const r = await askRoomAI(roomId, String(question), history || []);
+    const r = await askRoomAI(roomId, String(question), history || [], memory);
     res.json({ reply: r.reply, provider: r.provider, model: r.model, room: roomId, t: Date.now() });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-// TTS — ข้อความ → เสียง mp3
+// TTS — ข้อความ → เสียง mp3 (เลือกเสียงได้)
 app.post('/api/tts', async (req, res) => {
   try {
-    const { text } = req.body || {};
+    const { text, voice } = req.body || {};
     if (!text || !String(text).trim()) return res.status(400).json({ error: 'no text' });
-    const file = await ttsFile(String(text));
+    const file = await ttsFile(String(text), voice);
     res.sendFile(file, () => { try { fs.rmSync(path.dirname(file), { recursive: true, force: true }); } catch (e) {} });
   } catch (e) { res.status(500).json({ error: 'tts fail: ' + e.message }); }
+});
+
+// 🎨 วาดรูป — Pollinations flux ฟรี ไม่ต้อง key
+app.post('/api/draw', async (req, res) => {
+  try {
+    const { prompt } = req.body || {};
+    if (!prompt || !String(prompt).trim()) return res.status(400).json({ error: 'prompt ว่าง' });
+    const p = String(prompt).trim().slice(0, 300);
+    const seed = Math.floor(Math.random() * 1e9);
+    const url = 'https://image.pollinations.ai/prompt/' + encodeURIComponent(p) + '?width=1024&height=1024&nologo=true&seed=' + seed;
+    logAI('draw', '🎨 ' + p.slice(0, 60));
+    res.json({ url, prompt: p, seed, t: Date.now() });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// 👁️ ดูรูป — Gemini vision (round-robin keys)
+app.post('/api/vision', async (req, res) => {
+  try {
+    const { image, question, room, sys } = req.body || {};
+    if (!image || !String(image).startsWith('data:image')) return res.status(400).json({ error: 'ไม่พบรูป' });
+    const sysHint = sys || (ROOMS[room] ? ROOMS[room].sys : '');
+    const r = await geminiVision(String(image), question || 'ช่วยอธิบายรูปนี้ให้หน่อย', sysHint);
+    if (!r) return res.status(503).json({ error: 'ระบบมองรูปไม่พร้อม ลองใหม่ทีหลัง' });
+    res.json({ reply: r.reply, provider: r.provider, model: r.model, t: Date.now() });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// 🧠 สรุปความจำจากประวัติสนทนา
+app.post('/api/summarize', async (req, res) => {
+  try {
+    const { history } = req.body || {};
+    if (!Array.isArray(history) || !history.length) return res.status(400).json({ error: 'no history' });
+    const mem = await summarizeMemory(history);
+    if (!mem) return res.status(503).json({ error: 'ระบบสรุปไม่พร้อม ลองใหม่ทีหลัง' });
+    res.json({ memory: mem, t: Date.now() });
+  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 // สถานะผู้ใช้ออนไลน์ (จริง — นับ session ผ่าน heartbeat)

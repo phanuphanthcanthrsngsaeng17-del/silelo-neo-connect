@@ -146,6 +146,35 @@
   .send:active { transform: scale(.85); box-shadow: 0 0 40px color-mix(in srgb, var(--accent) 90%, transparent); }
   .send:disabled { opacity: .4; }
 
+  /* ===== รูปในแชท & ปุ่มเพิ่ม ===== */
+  .img-msg { display: block; max-width: 240px; max-height: 240px; border-radius: 8px; margin-top: 8px; border: 1px solid color-mix(in srgb, var(--accent) 55%, transparent); cursor: zoom-in; box-shadow: 0 0 18px color-mix(in srgb, var(--accent) 20%, transparent); }
+  .msg.user .img-msg { max-width: 180px; max-height: 180px; }
+  .inputbar .icon-btn { width: 42px; height: 42px; border-radius: 50%; border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent); background: rgba(0,229,255,.05); color: var(--txt); font-size: 17px; cursor: pointer; flex: none; display: flex; align-items: center; justify-content: center; transition: all .2s; clip-path: none; }
+  .inputbar .icon-btn:active { transform: scale(.88); background: color-mix(in srgb, var(--accent) 22%, transparent); }
+
+  /* Voice picker */
+  .voice-pop {
+    position: fixed; bottom: 92px; right: 14px; z-index: 30; display: none; flex-direction: column; gap: 8px;
+    background: rgba(8,16,36,.94); border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent);
+    border-radius: 8px; padding: 14px; backdrop-filter: blur(20px);
+    box-shadow: 0 14px 50px rgba(0,0,0,.7), 0 0 24px color-mix(in srgb, var(--accent) 15%, transparent);
+  }
+  .voice-pop.show { display: flex; }
+  .voice-opt {
+    display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-radius: 6px; cursor: pointer;
+    border: 1px solid rgba(255,255,255,.08); background: rgba(255,255,255,.03); color: var(--txt); font-size: 13px; min-width: 210px;
+    transition: all .15s;
+  }
+  .voice-opt:hover { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 10%, transparent); }
+  .voice-opt.on { border-color: var(--accent); box-shadow: 0 0 12px color-mix(in srgb, var(--accent) 30%, transparent); }
+  .voice-opt .vicon { font-size: 18px; }
+  .voice-opt .vsub { font-size: 10px; color: var(--dim); font-family: 'Orbitron', monospace; letter-spacing: .5px; margin-left: auto; }
+
+  /* live video preview (screen share / camera) */
+  #liveVideo { position: fixed; right: 14px; bottom: 110px; width: 160px; border-radius: 10px; border: 2px solid var(--accent); z-index: 120; display: none; background: #000; box-shadow: 0 8px 30px rgba(0,0,0,.7); }
+  .cbtn.on { border: 2px solid var(--accent); box-shadow: 0 0 18px color-mix(in srgb, var(--accent) 50%, transparent); background: color-mix(in srgb, var(--accent) 18%, transparent); }
+  .call-btns { gap: 22px; }
+
   /* Theme pop */
   .theme-pop {
     position: fixed; bottom: 92px; right: 14px; z-index: 30; display: none; flex-direction: column; gap: 10px;
@@ -242,6 +271,8 @@
     </div>
     <div class="hbtns">
       <button class="icon-btn call-btn" id="callBtn" title="โทรคุย">📞</button>
+      <button class="icon-btn" id="voiceBtn" title="เลือกเสียง">🎙️</button>
+      <button class="icon-btn" id="memBtn" title="จดจำ (ความทรงจำ)">🧠</button>
       <button class="icon-btn" id="themeBtn" title="เปลี่ยนธีม">🎨</button>
       <button class="icon-btn" id="clearBtn" title="ล้างแชท">🗑</button>
     </div>
@@ -251,7 +282,9 @@
   <div class="typing" id="typing"><span></span><span></span><span></span></div>
 
   <div class="inputbar">
-    <textarea id="inp" rows="1" placeholder="พิมพ์ข้อความ..." enterkeyhint="send"></textarea>
+    <button class="icon-btn" id="imgBtn" title="ส่งรูป/ถ่ายรูป">📎</button>
+    <input type="file" id="imgFile" accept="image/*" hidden>
+    <textarea id="inp" rows="1" placeholder="พิมพ์ข้อความ... (ลอง: วาดรูปแมวอวกาศ)" enterkeyhint="send"></textarea>
     <button class="send" id="sendBtn" title="ส่ง">➤</button>
   </div>
 </div>
@@ -267,6 +300,15 @@
   </div>
 </div>
 
+<!-- 🎙️ เลือกเสียง -->
+<div class="voice-pop" id="voicePop">
+  <div class="ttl">🎙️ VOICE</div>
+  <div class="voice-opt" data-voice="auto"><span class="vicon">⚡</span><span class="vname">อัตโนมัติ</span><span class="vsub">เร็วสุด</span></div>
+  <div class="voice-opt" data-voice="premwadee"><span class="vicon">👩</span><span class="vname">พรีมาวดี</span><span class="vsub">หญิง อ่อนโยน</span></div>
+  <div class="voice-opt" data-voice="niwat"><span class="vicon">👨</span><span class="vname">นิวัฒน์</span><span class="vsub">ชาย</span></div>
+  <div class="voice-opt" data-voice="achara"><span class="vicon">👩‍💼</span><span class="vname">อัจฉรา</span><span class="vsub">หญิง ทางการ</span></div>
+</div>
+
 <!-- 📞 หน้าจอโทร -->
 <div id="callOverlay">
   <div class="call-avatar" id="callAvatar">
@@ -279,9 +321,11 @@
   <div id="callTrans" class="empty">🎧 ฟังอยู่ พูดได้เลย...</div>
   <div class="call-btns">
     <button class="cbtn" id="muteBtn" title="ปิด/เปิดไมค์">🎙</button>
+    <button class="cbtn" id="screenBtn" title="แชร์หน้าจอให้ AI ดู">📺</button>
     <button class="cbtn hang" id="hangBtn" title="วางสาย">📵</button>
+    <button class="cbtn" id="camBtn" title="เปิดกล้องให้ AI ดู">📷</button>
   </div>
-  <div class="call-hint">คุยสดกับบอทได้เลย — พูดแล้วบอทฟังและตอบเป็นเสียง · วางสายได้ทุกเมื่อ</div>
+  <div class="call-hint">คุยสดกับบอทได้เลย — พูดแล้วบอทฟังและตอบเป็นเสียง · 📺 แชร์หน้าจอ/📷 กล้อง ให้ AI เห็นแบบสด · วางสายได้ทุกเมื่อ</div>
 </div>
 
 <div id="toast"></div>
@@ -313,8 +357,47 @@
   const msgsEl = document.getElementById('msgs');
   const fmt = (t) => new Date(t).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 
-  function addMsg(role, content, t) {
+  /* ===== 🧠 ความทรงจำถาวร (localStorage) ===== */
+  let memory = '';
+  try { memory = localStorage.getItem('nc_mem') || ''; } catch (e) { memory = ''; }
+  let userMsgCount = 0;
+  let memBusy = false;
+  async function saveMemory(showToast) {
+    if (memBusy) return;
+    const recent = cleanHist(history).filter(m => m.content && m.content.trim()).slice(-40);
+    if (recent.length < 3) { if (showToast) toast('🧠 ยังไม่มีบทสนทนาพอจะจดจำ'); return; }
+    memBusy = true;
+    if (showToast) toast('🧠 กำลังจดจำ...');
+    try {
+      const r = await fetch('/api/summarize', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ history: recent })
+      });
+      const j = await r.json();
+      if (j.memory) {
+        const m = String(j.memory).trim();
+        if (m && m !== memory) {
+          memory = m;
+          try { localStorage.setItem('nc_mem', memory); } catch (e) {}
+          if (showToast) toast('🧠 จดจำแล้ว! สลี่จำพี่นุได้มากขึ้น');
+          else toast('🧠 อัปเดตความทรงจำแล้ว');
+        } else if (showToast) toast('🧠 ความทรงจำเหมือนเดิม');
+      } else if (showToast) toast('⚠ ' + (j.error || 'จดจำไม่ได้'));
+    } catch (e) { if (showToast) toast('⚠ SERVER UNREACHABLE'); }
+    memBusy = false;
+  }
+  function bumpMemory() {
+    userMsgCount++;
+    if (userMsgCount % 6 === 0) saveMemory(false); // อัตโนมัติทุก 6 ข้อความ
+  }
+
+  function cleanHist(h) {
+    return (Array.isArray(h) ? h : []).map(m => m.image ? { role: m.role, content: '[📷 รูปภาพ] ' + (m.content || '') } : m);
+  }
+
+  function addMsg(role, content, t, image) {
     const m = { role, content, t: t || Date.now() };
+    if (image) m.image = image;
     history.push(m); if (history.length > 200) history = history.slice(-200);
     try { localStorage.setItem(KEY, JSON.stringify(history)); } catch (e) {}
     renderMsg(m);
@@ -330,6 +413,14 @@
         ${m.role === 'assistant' ? '<button class="spk" title="ฟังเสียง">🔊</button><button class="cpy" title="คัดลอก">📋</button>' : '<span>★ READ</span>'}
       </div>`;
     div.querySelector('.bubble').textContent = m.content;
+    if (m.image) {
+      const img = document.createElement('img');
+      img.className = 'img-msg';
+      img.src = m.image;
+      img.loading = 'lazy';
+      img.onclick = () => window.open(m.image);
+      div.querySelector('.bubble').appendChild(img);
+    }
     const spk = div.querySelector('.spk');
     if (spk) spk.onclick = () => speak(m.content);
     const cpy = div.querySelector('.cpy');
@@ -354,18 +445,47 @@
   function autoGrow() { inp.style.height = 'auto'; inp.style.height = Math.min(inp.scrollHeight, 130) + 'px'; }
   inp.addEventListener('input', autoGrow);
 
+  /* ===== 🎨 คำสั่งวาดรูป ===== */
+  function extractDrawPrompt(q) {
+    const m = q.match(/^\s*(?:ช่วย|ขอ|please)?\s*(?:\/draw|วาดรูป|วาดภาพ|สร้างรูป|สร้างภาพ|ทำรูป|ทำภาพ|draw|วาด)\s*[:\s]*(.+)$/i);
+    if (!m) return null;
+    let p = m[1].replace(/(ให้หน่อย|ให้ที|ให้ด้วย|ให้หน่อยนะ|หน่อย|ทีเถอะ|นะครับ|นะคะ|นะจ๊ะ|นะ|ได้ไหม|ได้มั้ย|ให้ดู|ดูหน่อย|จ้า|เลย|ครับ|ค่ะ)\s*[.!?]*$/i, '').trim();
+    return p || null;
+  }
+  async function doDraw(prompt) {
+    typing.style.display = 'flex';
+    sendBtn.disabled = true;
+    try {
+      const r = await fetch('/api/draw', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt })
+      });
+      const j = await r.json();
+      if (j.url) {
+        addMsg('assistant', '🎨 วาดให้แล้ว: "' + j.prompt + '" — (Flux AI · ฟรี)', Date.now(), j.url);
+        toast('🎨 วาดเสร็จ (ใช้เวลา ~10 วิ รอโหลดได้เลย)');
+      } else toast('⚠ ' + (j.error || 'วาดไม่ได้'));
+    } catch (e) { toast('⚠ SERVER UNREACHABLE'); }
+    typing.style.display = 'none';
+    sendBtn.disabled = false;
+  }
+
   async function send() {
     const q = inp.value.trim();
     if (!q) return;
     addMsg('user', q);
     inp.value = ''; autoGrow();
+    // 🎨 วาดรูป
+    const dp = extractDrawPrompt(q);
+    if (dp) { await doDraw(dp); return; }
     typing.style.display = 'flex';
     sendBtn.disabled = true;
     msgsEl.scrollTop = msgsEl.scrollHeight;
+    bumpMemory();
     try {
       const r = await fetch('/api/chat', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ room, question: q, history: history.slice(-12, -1) })
+        body: JSON.stringify({ room, question: q, history: cleanHist(history.slice(-12, -1)), memory })
       });
       const j = await r.json();
       if (j.reply) { addMsg('assistant', j.reply); toast('⚡ ' + (j.provider === 'mock' ? 'BACKUP MODE' : j.provider.toUpperCase() + ' · ' + j.model)); }
@@ -379,11 +499,13 @@
 
   /* ===== TTS ===== */
   let audio = null;
+  let voice = 'auto';
+  try { voice = localStorage.getItem('nc_voice') || 'auto'; } catch (e) { voice = 'auto'; }
   function speak(text) {
     return new Promise((resolve) => {
       if (!text) return resolve();
       try {
-        fetch('/api/tts', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text: text.slice(0, 240) }) })
+        fetch('/api/tts', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text: text.slice(0, 240), voice }) })
           .then(r => { if (!r.ok) throw new Error(); return r.blob(); })
           .then(blob => {
             const url = URL.createObjectURL(blob);
@@ -397,6 +519,70 @@
       } catch (e) { resolve(); }
     });
   }
+
+  /* ===== 🎙️ เลือกเสียง ===== */
+  const voicePop = document.getElementById('voicePop');
+  document.getElementById('voiceBtn').onclick = () => {
+    voicePop.classList.toggle('show');
+    document.querySelectorAll('.voice-opt').forEach(o => o.classList.toggle('on', o.dataset.voice === voice));
+  };
+  document.querySelectorAll('.voice-opt').forEach(o => {
+    o.onclick = () => {
+      voice = o.dataset.voice;
+      try { localStorage.setItem('nc_voice', voice); } catch (e) {}
+      document.querySelectorAll('.voice-opt').forEach(x => x.classList.toggle('on', x === o));
+      voicePop.classList.remove('show');
+      const names = { auto: 'อัตโนมัติ (เร็วสุด)', premwadee: 'พรีมาวดี (หญิง อ่อนโยน)', niwat: 'นิวัฒน์ (ชาย)', achara: 'อัจฉรา (หญิง ทางการ)' };
+      toast('🎙️ เสียง: ' + (names[voice] || voice));
+    };
+  });
+
+  /* ===== 📎 ส่งรูปให้ AI ดู ===== */
+  const imgBtn = document.getElementById('imgBtn');
+  const imgFile = document.getElementById('imgFile');
+  function resizeImage(file, max, q) {
+    return new Promise((resolve) => {
+      const img = new Image();
+      const url = URL.createObjectURL(file);
+      img.onload = () => {
+        let w = img.width, h = img.height;
+        const s = Math.min(1, max / Math.max(w, h));
+        w = Math.max(1, Math.round(w * s)); h = Math.max(1, Math.round(h * s));
+        const c = document.createElement('canvas');
+        c.width = w; c.height = h;
+        c.getContext('2d').drawImage(img, 0, 0, w, h);
+        URL.revokeObjectURL(url);
+        resolve(c.toDataURL('image/jpeg', q));
+      };
+      img.onerror = () => { URL.revokeObjectURL(url); resolve(null); };
+      img.src = url;
+    });
+  }
+  imgBtn.onclick = () => imgFile.click();
+  imgFile.onchange = async () => {
+    const f = imgFile.files[0];
+    imgFile.value = '';
+    if (!f) return;
+    const dataUrl = await resizeImage(f, 1024, 0.85);
+    if (!dataUrl) { toast('⚠ อ่านรูปไม่ได้'); return; }
+    const q = inp.value.trim();
+    inp.value = ''; autoGrow();
+    addMsg('user', q || '', Date.now(), dataUrl);
+    bumpMemory();
+    typing.style.display = 'flex';
+    sendBtn.disabled = true;
+    try {
+      const r = await fetch('/api/vision', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ image: dataUrl, question: q || 'ช่วยอธิบายรูปนี้ให้หน่อย', room })
+      });
+      const j = await r.json();
+      if (j.reply) addMsg('assistant', j.reply);
+      else toast('⚠ ' + (j.error || 'NO REPLY'));
+    } catch (e) { toast('⚠ SERVER UNREACHABLE'); }
+    typing.style.display = 'none';
+    sendBtn.disabled = false;
+  };
 
   /* ===== 📞 VOICE CALL (โทรคุยสด) ===== */
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -480,7 +666,7 @@
     try {
       const r = await fetch('/api/chat', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ room, question: q, history: history.slice(-12, -1) })
+        body: JSON.stringify({ room, question: q, history: cleanHist(history.slice(-12, -1)), memory })
       });
       const j = await r.json();
       if (j.reply && callActive) {
@@ -523,11 +709,98 @@
     toast('📞 สายเชื่อมต่อแล้ว — พูดได้เลย!');
   }
 
+  /* ===== 📺📷 แชร์หน้าจอ/กล้อง — AI มองเห็นแบบสด ===== */
+  const screenBtn = document.getElementById('screenBtn');
+  const camBtn = document.getElementById('camBtn');
+  let liveStream = null, liveTimer = null, liveMode = null, lastSpeakAt = 0, liveBusy = false;
+  const liveVideo = document.createElement('video');
+  liveVideo.id = 'liveVideo';
+  liveVideo.autoplay = true;
+  liveVideo.playsInline = true;
+  liveVideo.muted = true;
+  document.body.appendChild(liveVideo);
+
+  function captureFrame() {
+    if (!liveStream || !liveVideo.videoWidth) return null;
+    const c = document.createElement('canvas');
+    c.width = 480; c.height = 270;
+    c.getContext('2d').drawImage(liveVideo, 0, 0, 480, 270);
+    return c.toDataURL('image/jpeg', 0.6);
+  }
+
+  async function liveLoop() {
+    if (!callActive || !liveStream || liveBusy) { if (callActive && liveStream) liveTimer = setTimeout(liveLoop, 4000); return; }
+    const frame = captureFrame();
+    if (frame) {
+      liveBusy = true;
+      const q = liveMode === 'screen'
+        ? 'คุณกำลังดูหน้าจอที่แชร์สด ให้บรรยายสั้นๆ 1-2 ประโยคว่ามีอะไรอยู่บนหน้าจอ หรือถ้าเห็นการเปลี่ยนแปลงสำคัญจากครั้งก่อน บอกสั้นๆ (ภาษาไทย)'
+        : 'คุณกำลังดูภาพจากกล้องสด ให้บรรยายสั้นๆ 1-2 ประโยคว่ามีอะไรในภาพ (ภาษาไทย)';
+      setCallTrans('👁 ' + (liveMode === 'screen' ? 'AI กำลังมองหน้าจอ...' : 'AI กำลังมองกล้อง...'), false);
+      try {
+        const r = await fetch('/api/vision', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ image: frame, question: q, room })
+        });
+        const j = await r.json();
+        if (j.reply && callActive && liveStream && Date.now() - lastSpeakAt > 10000) {
+          lastSpeakAt = Date.now();
+          const short = j.reply.slice(0, 160);
+          setCallState('speaking');
+          setCallTrans('👁 ' + short, false);
+          addMsg('assistant', '👁 [มองเห็นแบบสด] ' + short);
+          await speak(short);
+          if (callActive) { setCallState('listening'); setCallTrans('', true); }
+        }
+      } catch (e) {}
+      liveBusy = false;
+    }
+    if (callActive && liveStream) liveTimer = setTimeout(liveLoop, 6000);
+  }
+
+  async function startLive(mode) {
+    if (liveStream) stopLive();
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { toast('⚠ เบราว์เซอร์นี้ไม่รองรับกล้อง/หน้าจอ'); return; }
+    if (mode === 'screen' && !navigator.mediaDevices.getDisplayMedia) { toast('⚠ เบราว์เซอร์นี้ไม่รองรับการแชร์หน้าจอ (ใช้ Chrome/Edge บนคอม)'); return; }
+    try {
+      liveStream = mode === 'screen'
+        ? await navigator.mediaDevices.getDisplayMedia({ video: true })
+        : await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+    } catch (e) {
+      toast('⚠ ไม่สามารถเปิด' + (mode === 'screen' ? 'หน้าจอ' : 'กล้อง') + 'ได้ — ปฏิเสธหรือไม่รองรับ');
+      return;
+    }
+    liveMode = mode;
+    liveVideo.srcObject = liveStream;
+    liveVideo.style.display = 'block';
+    liveVideo.play().catch(() => {});
+    screenBtn.classList.add('on');
+    camBtn.classList.add('on');
+    lastSpeakAt = 0;
+    const t = liveStream.getVideoTracks()[0];
+    if (t) t.onended = () => stopLive();
+    toast(mode === 'screen' ? '📺 AI เห็นหน้าจอแล้ว!' : '📷 AI เห็นกล้องแล้ว!');
+    liveLoop();
+  }
+
+  function stopLive() {
+    if (liveTimer) { clearTimeout(liveTimer); liveTimer = null; }
+    if (liveStream) { liveStream.getTracks().forEach(t => t.stop()); liveStream = null; }
+    liveMode = null; liveBusy = false;
+    liveVideo.srcObject = null;
+    liveVideo.style.display = 'none';
+    screenBtn.classList.remove('on');
+    camBtn.classList.remove('on');
+  }
+  screenBtn.onclick = () => startLive('screen');
+  camBtn.onclick = () => startLive('camera');
+
   function endCall() {
     callActive = false;
     setCallState('idle');
     clearTimeout(silenceTimer);
     clearInterval(callTimer);
+    stopLive();
     if (recog) { try { recog.stop(); } catch (e) {} recog = null; }
     if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; }
     if (audio) { audio.pause(); audio = null; }
@@ -559,7 +832,11 @@
   };
 
   const themePop = document.getElementById('themePop');
-  document.getElementById('themeBtn').onclick = () => themePop.classList.toggle('show');
+  document.getElementById('themeBtn').onclick = () => {
+    themePop.classList.toggle('show');
+    voicePop.classList.remove('show');
+  };
+  document.getElementById('memBtn').onclick = () => saveMemory(true);
   document.querySelectorAll('.swatch').forEach(s => {
     s.onclick = () => {
       const c = s.dataset.accent;
@@ -590,8 +867,14 @@
     const t = document.getElementById('toast');
     t.textContent = msg; t.classList.add('show');
     clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => t.classList.remove('show'), 2200);
+    toastTimer = setTimeout(() => t.classList.remove('show'), 2400);
   }
+
+  // ปิด popup เมื่อคลิกข้างนอก
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest('#themePop') && !e.target.closest('#themeBtn')) themePop.classList.remove('show');
+    if (!e.target.closest('#voicePop') && !e.target.closest('#voiceBtn')) voicePop.classList.remove('show');
+  });
 
   /* ===== อนุภาค ===== */
   const cv = document.getElementById('particles'), ctx = cv.getContext('2d');

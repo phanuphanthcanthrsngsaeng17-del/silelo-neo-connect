@@ -161,6 +161,10 @@
   .card .statusline { margin-top: 10px; display: flex; justify-content: space-between; font-size: 10px; color: rgba(232,246,255,.42); font-family: 'Orbitron', monospace; letter-spacing: 1px; }
   .card .statusline .on { color: #22e584; }
 
+  .featbar { margin: 26px auto 6px; max-width: 560px; text-align: center; }
+  .feat-ttl { font-family: 'Orbitron', monospace; font-size: 11px; letter-spacing: 3px; color: var(--accent, #00e5ff); margin-bottom: 10px; text-shadow: 0 0 12px rgba(0,229,255,.4); }
+  .feat-row { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+  .feat { font-size: 11px; color: rgba(232,246,255,.75); background: rgba(0,229,255,.06); border: 1px solid rgba(0,229,255,.22); border-radius: 30px; padding: 6px 12px; font-family: 'Prompt', sans-serif; letter-spacing: .3px; }
   .foot { text-align: center; margin-top: 46px; color: rgba(232,246,255,.35); font-size: 11px; letter-spacing: 2px; font-family: 'Orbitron', monospace; }
   .foot b { color: var(--cyan); }
 
@@ -236,7 +240,18 @@
     </a>
   </div>
 
-  <div class="foot">SILELO NEO-CONNECT v1.0 · <b>AI CORE</b>: GROQ ⚡ · GEMINI 🆚 · OPENROUTER · POLLINATIONS</div>
+  <div class="featbar">
+    <div class="feat-ttl">⚡ NEW ABILITIES · อัปเกรดใหม่ล่าสุด</div>
+    <div class="feat-row">
+      <span class="feat">🎨 วาดรูปในแชท — พิมพ์ "วาดรูปแมวอวกาศ"</span>
+      <span class="feat">👁️ ส่งรูปให้ AI ดู/บรรยาย</span>
+      <span class="feat">📺 แชร์หน้าจอ/กล้องสดในโทร</span>
+      <span class="feat">🧠 ความทรงจำถาวร — จำพี่นุได้</span>
+      <span class="feat">🎙️ เปลี่ยนเสียงสลี่ได้ 4 แบบ</span>
+    </div>
+  </div>
+
+  <div class="foot">SILELO NEO-CONNECT v1.5 · <b>AI CORE</b>: GROQ ⚡ · GEMINI 🆚 · OPENROUTER · POLLINATIONS</div>
 </div>
 
 <script>
