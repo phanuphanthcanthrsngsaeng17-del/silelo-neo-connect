@@ -323,6 +323,16 @@ async function ttsFile(text, voice) {
 }
 
 /* ---------------- API ---------------- */
+// 🔒 ปลดล็อกแอพ (PIN)
+app.post('/api/unlock', (req, res) => {
+  try {
+    const { pin } = req.body || {};
+    const ok = String(pin || '').trim() === String(process.env.PIN_CODE || '22223').trim();
+    logAI('lock', ok ? '✅ ปลดล็อกสำเร็จ' : '❌ PIN ผิด');
+    res.json({ ok, t: Date.now() });
+  } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
 // แชท
 app.post('/api/chat', async (req, res) => {
   try {

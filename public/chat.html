@@ -251,6 +251,23 @@
   .cbtn.hang { width: 74px; height: 74px; background: linear-gradient(145deg, #ff2d55, #c90026); box-shadow: 0 8px 30px rgba(255,45,85,.45); }
   .cbtn.hang:active { transform: scale(.94); }
   .call-hint { position: absolute; bottom: 26px; font-size: 11px; color: rgba(190,215,230,.4); letter-spacing: .5px; text-align: center; padding: 0 24px; }
+
+  /* ===== 🔒 Lock screen ===== */
+  .lock { position: fixed; inset: 0; z-index: 9999; display: none; align-items: center; justify-content: center; background: radial-gradient(ellipse at 50% 30%, #0d1b2a 0%, #030b14 70%); backdrop-filter: blur(6px); }
+  .lock.show { display: flex; }
+  .lock-box { width: min(320px, 88vw); text-align: center; padding: 26px 18px 20px; border: 1px solid rgba(0,229,255,.25); border-radius: 18px; background: rgba(6,18,30,.85); box-shadow: 0 0 40px rgba(0,229,255,.12), inset 0 0 30px rgba(0,229,255,.04); }
+  .lock-ico { font-size: 34px; animation: lockpulse 2s ease-in-out infinite; }
+  @keyframes lockpulse { 0%,100% { filter: drop-shadow(0 0 4px rgba(0,229,255,.5)); } 50% { filter: drop-shadow(0 0 16px rgba(0,229,255,.9)); } }
+  .lock-ttl { font-family: 'Orbitron', monospace; font-size: 14px; letter-spacing: 4px; color: #e8f6ff; margin-top: 8px; }
+  .lock-sub { font-size: 12px; color: rgba(232,246,255,.55); margin: 6px 0 14px; font-family: 'Prompt', sans-serif; }
+  .lock-dots { display: flex; justify-content: center; gap: 10px; min-height: 16px; margin-bottom: 16px; }
+  .lock-dots span { width: 12px; height: 12px; border-radius: 50%; border: 1px solid rgba(0,229,255,.4); transition: all .15s; }
+  .lock-dots span.on { background: #00e5ff; box-shadow: 0 0 10px rgba(0,229,255,.8); border-color: #00e5ff; }
+  .lock-pad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  .lk { height: 58px; border-radius: 12px; border: 1px solid rgba(0,229,255,.22); background: rgba(0,229,255,.05); color: #e8f6ff; font-size: 20px; font-family: 'Orbitron', monospace; cursor: pointer; transition: all .15s; }
+  .lk:active { transform: scale(.9); background: rgba(0,229,255,.2); }
+  .lk-ok { border-color: rgba(34,229,132,.5); color: #22e584; font-size: 22px; }
+  .lock-msg { min-height: 18px; margin-top: 12px; font-size: 12px; color: #ff5252; font-family: 'Prompt', sans-serif; }
 </style>
 </head>
 <body>
@@ -289,6 +306,31 @@
     <input type="file" id="imgFile" accept="image/*" hidden>
     <textarea id="inp" rows="1" placeholder="พิมพ์ข้อความ... (ลอง: วาดรูปแมวอวกาศ)" enterkeyhint="send"></textarea>
     <button class="send" id="sendBtn" title="ส่ง">➤</button>
+  </div>
+</div>
+
+<!-- 🔒 หน้าจอล็อก -->
+<div class="lock" id="lockScreen">
+  <div class="lock-box">
+    <div class="lock-ico">🔒</div>
+    <div class="lock-ttl">SILELO NEO-CONNECT</div>
+    <div class="lock-sub">กรอกรหัสปลดล็อก</div>
+    <div class="lock-dots" id="lockDots"></div>
+    <div class="lock-pad">
+      <button class="lk" data-k="1">1</button>
+      <button class="lk" data-k="2">2</button>
+      <button class="lk" data-k="3">3</button>
+      <button class="lk" data-k="4">4</button>
+      <button class="lk" data-k="5">5</button>
+      <button class="lk" data-k="6">6</button>
+      <button class="lk" data-k="7">7</button>
+      <button class="lk" data-k="8">8</button>
+      <button class="lk" data-k="9">9</button>
+      <button class="lk" data-k="del">⌫</button>
+      <button class="lk" data-k="0">0</button>
+      <button class="lk lk-ok" data-k="ok">✓</button>
+    </div>
+    <div class="lock-msg" id="lockMsg"></div>
   </div>
 </div>
 
@@ -918,6 +960,41 @@
   try { fetch('/api/presence', { method: 'POST' }); } catch (e) {}
 
   inp.focus();
+
+/* ===== 🔒 Lock ===== */
+let pinBuf = '';
+const lockScreen = document.getElementById('lockScreen');
+const lockDots = document.getElementById('lockDots');
+const lockMsg = document.getElementById('lockMsg');
+const LOCK_KEY = 'nc_unlocked';
+function isUnlocked() { try { return localStorage.getItem(LOCK_KEY) === '1'; } catch (e) { return false; } }
+function renderDots() {
+  lockDots.innerHTML = '';
+  for (let i = 0; i < 6; i++) {
+    const d = document.createElement('span');
+    if (i < pinBuf.length) d.className = 'on';
+    lockDots.appendChild(d);
+  }
+}
+async function verifyPin() {
+  if (!pinBuf) return;
+  lockMsg.textContent = '...';
+  try {
+    const r = await fetch('/api/unlock', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ pin: pinBuf }) });
+    const j = await r.json();
+    if (j.ok) { try { localStorage.setItem(LOCK_KEY, '1'); } catch (e) {} lockScreen.classList.remove('show'); lockMsg.textContent = ''; }
+    else { lockMsg.textContent = 'รหัสไม่ถูกต้อง ❌'; pinBuf = ''; renderDots(); }
+  } catch (e) { lockMsg.textContent = 'เชื่อมต่อเซิร์ฟเวอร์ไม่ได้'; pinBuf = ''; renderDots(); }
+}
+document.querySelectorAll('.lk').forEach(b => b.onclick = () => {
+  const k = b.dataset.k;
+  if (k === 'del') pinBuf = pinBuf.slice(0, -1);
+  else if (k === 'ok') { verifyPin(); return; }
+  else { if (pinBuf.length < 6) pinBuf += k; }
+  renderDots();
+});
+// ล็อกอัตโนมัติทุกครั้งที่เปิดหน้า (ใช้คนเดียว — ปลดล็อกแล้วจำไว้ในเบราว์เซอร์นี้)
+if (!isUnlocked()) { lockScreen.classList.add('show'); renderDots(); }
 </script>
 </body>
 </html>
