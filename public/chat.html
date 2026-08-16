@@ -1319,7 +1319,7 @@ if (!isUnlocked()) { lockScreen.classList.add('show'); setTimeout(() => lockInp.
   const lcStatus = document.getElementById('lcStatus');
   const lcClose = document.getElementById('lcClose');
   const codeBtn = document.getElementById('codeBtn');
-  if (room !== 'lab' && codeBtn) codeBtn.style.display = 'none';
+  if (codeBtn) codeBtn.style.display = ''; /* console ใช้ได้ทุกห้อง — สลี่รันโค้ดได้ด้วย */
   function labOpen(prefill, lang) {
     if (!labConsole) return;
     if (lang && lcLang) lcLang.value = lang;

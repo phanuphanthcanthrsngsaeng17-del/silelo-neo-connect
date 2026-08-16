@@ -16,6 +16,51 @@ app.get('/chat', (req, res) => res.sendFile(path.join(__dirname, 'public', 'chat
 const PORT = process.env.PORT || 3000;
 
 /* ---------------- ระบบห้อง & System Prompts ---------------- */
+const PROJECT_KNOWLEDGE = `[ฐานความรู้โปรเจกต์ของพี่นุ — ใช้ตอบคำถามเรื่องโปรเจกต์/ระบบ/โค้ดได้เลย]
+👤 เจ้าของ: "พี่นุ" (bossnu) — เจ้าของโปรเจกต์ AI "Silelo (สลี่)" — ภาษาไทย ไม่ได้เป็นโปรแกรมเมอร์ แต่สั่ง AI ให้ทำงานเป็นระบบได้ดีมาก — ทำงานคนเดียว ต้องการผู้ช่วยที่เข้าใจและจัดการระบบให้ทั้งหมด
+📦 โปรเจกต์ 1: SILELO (แอพเว็บตัวแรก)
+- Node.js/Express (server.js) — GitHub: phanuphanthcanthrsngsaeng6-hue/silelo (branch main)
+- Deploy: Render https://silelo.onrender.com (free plan)
+- สมอง: fallback chain ฟรี 100% — RACE: Groq 6 โมเดล (gpt-oss-120b → llama-3.3-70b-versatile → qwen3.6-27b → gpt-oss-20b → groq/compound-mini → llama-3.1-8b-instant) 🆚 Gemini 9 keys ใครตอบก่อนชนะ → OpenRouter :free → Pollinations → mock — branding = "gpt-oss-120b (Groq)"
+- LINE Bot: SaliOlila (LINE ID @325yzpie) — webhook https://silelo.onrender.com/webhook — ตอบเป็นเสียง: msedge-tts th-TH-PremwadeeNeural → mp3 ลง /tmp → ส่ง audio message (ตัด ~250 ตัวอักษร/45 วิ)
+📦 โปรเจกต์ 2: SILELO NEO-CONNECT (เว็บนี้ ที่พี่นุกำลังใช้อยู่)
+- GitHub: phanuphanthcanthrsngsaeng6-hue/silelo-neo-connect — Deploy: Vercel https://neo-connect-ten.vercel.app
+- 3 ห้อง: SLI 💜 (ผู้ช่วยส่วนตัว/เพื่อน), WORK 💼 (ทำงาน), LAB 🔬 (ทดลอง/รันโค้ด)
+- สมอง: Gemini Flash (gemini-3.6-flash) → RACE (Groq 6 🆚 OpenRouter nemotron-3-ultra-550b + gemma-4-26b) → Pollinations → mock — ฟรี 100%
+- ฟีเจอร์: /api/draw วาดรูป (Pollinations Flux), /api/vision ดูรูป (ตาในบ้าน bossnusilelo ก่อน → Gemini Vision), แชร์หน้าจอ/กล้องสดในโหมดโทร (Gemini Vision + TTS), ความทรงจำ localStorage nc_mem + /api/summarize อัตโนมัติทุก 6 ข้อความ, เสียง 4 แบบ (auto=Google TTS / premwadee / niwat / achara = msedge-tts), โหมดไร้กฎ ⚡, รหัสล็อก = gamma
+- /api/run: LAB CONSOLE รันโค้ดจริง (Python/JavaScript/Bash) — พิมพ์ \`\`\`code\`\`\` ในแชทแล้วกดปุ่ม ▶ หรือพิมพ์ /run เปิด console
+- /api/classify + /api/vision: "ตาในบ้าน" bossnusilelo — EfficientNet-B0 + Tiny Transformer ฝึก CIFAR-10 K-Fold 90.23% → ONNX 79MB (in-graph bicubic resize 224 + ImageNet normalize) รันใน browser ด้วย onnxruntime-web
+- โหมดโทร: STT Groq Whisper-large-v3, TTS แทรก silence ตามวรรคตอน (.!?→550ms ,;:→320ms \n→700ms), VAD ฟังไมค์ — พี่นุพูดแทรกได้ สลี่หยุดทันที, ปุ่ม ⏹ หยุดพูด
+📌 ข้อควรรู้: env บน Render/Vercel มี GROQ_API_KEY, GEMINI_API_KEYS (9 keys), OPENROUTER_API_KEY, LINE_ACCESS_TOKEN, LINE_CHANNEL_SECRET — AI_OWNER_EMAIL = Phanuphanthcanthrsngsaeng6@gmail.com — โปรเจกต์นี้เป็นของพี่นุ 100% ฟรี 100%
+`;
+
+/* ตรวจสถานะจริงของทุก service (ใช้ตอนพี่นุถามว่า "ตรวจระบบ/สถานะ") */
+function httpGetStatus(url, timeoutMs) {
+  return new Promise((resolve) => {
+    const mod = url.startsWith('https') ? require('https') : require('http');
+    const req = mod.get(url, { timeout: timeoutMs || 4000, headers: { 'User-Agent': 'NeoConnect-Status/1.0' } }, (res) => {
+      res.resume();
+      resolve({ url, ok: res.statusCode >= 200 && res.statusCode < 500, status: res.statusCode });
+    });
+    req.on('timeout', () => { req.destroy(); resolve({ url, ok: false, status: 'timeout' }); });
+    req.on('error', () => resolve({ url, ok: false, status: 'error' }));
+  });
+}
+async function checkServices() {
+  const urls = [
+    ['Neo-Connect (เว็บนี้)', 'https://neo-connect-ten.vercel.app'],
+    ['Silelo (Render)', 'https://silelo.onrender.com']
+  ];
+  const results = [];
+  for (const [name, url] of urls) {
+    try {
+      const r = await httpGetStatus(url, 5000);
+      results.push(name + ': ' + (r.ok ? 'ออนไลน์ (HTTP ' + r.status + ')' : 'ไม่ตอบสนอง (' + r.status + ')'));
+    } catch (e) { results.push(name + ': ตรวจไม่ได้'); }
+  }
+  return results.join(' | ');
+}
+
 const ROOMS = {
   private: {
     id: 'private', name: 'สลี่', tag: 'ผู้ช่วยส่วนตัว',
@@ -45,6 +90,7 @@ const ROOMS = {
   }
 };
 
+/* ---------------- ฐานความรู้โปรเจกต์ของพี่นุ (Project Knowledge) ---------------- */
 /* ---------------- AI Chain (คัดลอก pattern จาก Silelo) ---------------- */
 function logAI(provider, msg) { try { console.log(`[ai] ${provider}: ${msg}`); } catch (e) {} }
 
@@ -357,6 +403,15 @@ async function askRoomAI(roomId, question, history, memory, unrestricted) {
   msgs.push({ role: 'user', content: String(question).slice(0, 1000) });
 
   // 🟢 สมองหลัก: Gemini Flash — ลองก่อนเสมอ (ถ้าติดขัด ค่อยตกไป RACE)
+  // 🔍 ถ้าพี่นุถามเรื่องตรวจ/สถานะระบบ → ตรวจของจริงแล้วให้ AI สรุป
+  const qs = String(question);
+  if (/(ตรวจ|สถานะ|ระบบ|ออนไลน์|ออนไลน|ล่ม|ขึ้นไหม|ทำงานอยู่|ping|status|health|เวิร์คไหม)/i.test(qs)) {
+    try {
+      const st = await checkServices();
+      sys += '\n\n[ผลตรวจสถานะระบบจริงล่าสุด]: ' + st + ' — สรุปให้พี่นุฟังเป็นภาษาไทยสั้น ๆ ว่าตัวไหนรันอยู่/ล่ม';
+      msgs[0] = { role: 'system', content: sys };
+    } catch (e) {}
+  }
   const gem = await geminiChat(msgs);
   if (gem) { logAI('chain', '✅ สมองหลัก gemini: ' + gem.model); return gem; }
 
@@ -935,6 +990,13 @@ app.get('/health', (req, res) => res.json({ ok: true, t: Date.now() }));
 
 // Vercel-ready: export app สำหรับ serverless, listen เฉพาะตอนรันตรง (local/Railway)
 if (require.main === module) {
-  app.listen(PORT, () => console.log(`⚡ SILELO Neo-Connect running on port ${PORT}`));
+  app.get('/api/status', async (req, res) => {
+  try {
+    const summary = await checkServices();
+    res.json({ ok: true, services: summary, at: new Date().toISOString() });
+  } catch (e) { res.status(500).json({ ok: false, error: String(e) }); }
+});
+
+app.listen(PORT, () => console.log(`⚡ SILELO Neo-Connect running on port ${PORT}`));
 }
 module.exports = app;
