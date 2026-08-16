@@ -276,13 +276,13 @@ async function askRoomAI(roomId, question, history, memory, unrestricted) {
   }
   msgs.push({ role: 'user', content: String(question).slice(0, 1000) });
 
-  // 🟢 สมองหลัก: Gemma — ลองก่อนเสมอ (ถ้า Gemma ติดขัด ค่อยตกไป RACE)
-  const gemma = await gemmaChat(msgs);
-  if (gemma) { logAI('chain', '✅ สมองหลัก gemma: ' + gemma.model); return gemma; }
+  // 🟢 สมองหลัก: Gemini Flash — ลองก่อนเสมอ (ถ้าติดขัด ค่อยตกไป RACE)
+  const gem = await geminiChat(msgs);
+  if (gem) { logAI('chain', '✅ สมองหลัก gemini: ' + gem.model); return gem; }
 
   const fast = await raceProviders([
     s => groqChat(msgs, s),
-    s => geminiChat(msgs, s)
+    s => openrouterChat(msgs, s)
   ]);
   if (fast) { logAI('chain', '✅ race ชนะ: ' + fast.provider + ' ' + fast.model); return fast; }
   const or = await openrouterChat(msgs);
