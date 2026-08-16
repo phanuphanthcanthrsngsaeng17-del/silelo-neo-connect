@@ -10,7 +10,7 @@ const fs = require('fs');
 const os = require('os');
 
 const app = express();
-app.use(express.json({ limit: '1mb' }));
+app.use(express.json({ limit: '5mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
 app.get('/chat', (req, res) => res.sendFile(path.join(__dirname, 'public', 'chat.html')));
 const PORT = process.env.PORT || 3000;
@@ -155,7 +155,7 @@ async function geminiChat(messages, extSignal) {
   for (const m of messages) {
     const text = String(m.content || '');
     if (m.role === 'system') { sys += (sys ? '\n' : '') + text; continue; }
-    contents.push({ role: m.role === 'assistant' ? 'model' : 'user', parts: [{ text: text.slice(0, 2000) }] });
+    contents.push({ role: m.role === 'assistant' ? 'model' : 'user', parts: [{ text: text.slice(0, 5000) }] });
   }
   if (!contents.length) contents.push({ role: 'user', parts: [{ text: 'สวัสดี' }] });
   const body = { contents, generationConfig: { temperature: 0.7, maxOutputTokens: 900 } };
@@ -397,10 +397,10 @@ async function askRoomAI(roomId, question, history, memory, unrestricted) {
   if (Array.isArray(history) && history.length) {
     for (const m of history.slice(-10)) {
       if (m && typeof m.content === 'string' && m.content.trim())
-        msgs.push({ role: m.role === 'assistant' ? 'assistant' : 'user', content: String(m.content).slice(0, 1000) });
+        msgs.push({ role: m.role === 'assistant' ? 'assistant' : 'user', content: String(m.content).slice(0, 3000) });
     }
   }
-  msgs.push({ role: 'user', content: String(question).slice(0, 1000) });
+  msgs.push({ role: 'user', content: String(question).slice(0, 12000) });
 
   // 🟢 สมองหลัก: Gemini Flash — ลองก่อนเสมอ (ถ้าติดขัด ค่อยตกไป RACE)
   // 🔍 ถ้าพี่นุถามเรื่องตรวจ/สถานะระบบ → ตรวจของจริงแล้วให้ AI สรุป
