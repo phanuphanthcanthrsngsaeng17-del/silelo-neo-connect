@@ -627,6 +627,8 @@
     return out.filter(Boolean);
   }
   /* TTS สตรีมทีละวรรค — พูดวรรคแรกทันที + โหลดวรรคถัดไปล่วงหน้า (lookahead) + หยุดพัก 170ms เหมือนคนหายใจ */
+  /* โหลดรายการเสียงของเบราว์เซอร์ล่วงหน้า (fallback Web Speech API) */
+  if (window.speechSynthesis) { try { speechSynthesis.getVoices(); } catch (e) {} }
   /* พูดแบบคิวต่อกัน — กันเสียงทับกันเมื่อมีข้อความใหม่เข้ามาเร็ว */
   let speakChain = Promise.resolve();
   function speak(text) {
@@ -639,10 +641,30 @@
       if (!soundOn || !text) return resolve();
       const parts = splitSentences(text);
       if (!parts.length) return resolve();
-      const ttsOne = (txt) => fetch('/api/tts', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text: txt, voice }) })
-        .then(r => (r.ok ? r.blob() : null)).catch(() => null);
-      const playOne = (blob) => new Promise((res) => {
-        if (!blob) return res();
+      const ttsOne = async (txt) => {
+        try {
+          const r = await fetch('/api/tts', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text: txt, voice }) });
+          if (r.ok) return await r.blob();
+        } catch (e) {}
+        return null;
+      };
+      const playOne = (blob, txt) => new Promise((res) => {
+        if (!blob) {
+          /* กันล้ม: เซิร์ฟเวอร์ TTS ไม่ว่าง -> ใช้เสียงของเบราว์เซอร์ (Web Speech API) พูดแทน */
+          if (window.speechSynthesis && txt) {
+            try {
+              speechSynthesis.cancel();
+              const u = new SpeechSynthesisUtterance(String(txt));
+              u.lang = 'th-TH'; u.rate = 0.95;
+              const v = speechSynthesis.getVoices().find(x => x.lang && x.lang.toLowerCase().replace('_', '-').startsWith('th'));
+              if (v) u.voice = v;
+              u.onend = res; u.onerror = res;
+              speechSynthesis.speak(u);
+              return;
+            } catch (e) {}
+          }
+          return res();
+        }
         try {
           const url = URL.createObjectURL(blob);
           if (!audio) { audio = new Audio(); audio.preload = 'auto'; audio.setAttribute('playsinline', ''); }
@@ -666,7 +688,7 @@
           for (let i = 0; i < parts.length; i++) {
             const blob = await next;
             if (i + 1 < parts.length) next = ttsOne(parts[i + 1]);
-            await playOne(blob);
+            await playOne(blob, parts[i]);
             if (i + 1 < parts.length) await new Promise(r => setTimeout(r, 140));
           }
         } catch (e) {}

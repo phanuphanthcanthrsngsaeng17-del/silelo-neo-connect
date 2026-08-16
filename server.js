@@ -368,6 +368,17 @@ async function ttsBuffer(text, voice) {
       try { fs.rmSync(dir, { recursive: true, force: true }); } catch (e) {}
     }
   }
+  /* retry รอบสอง - กัน flaky บน cold instance (Vercel) */
+  if (!buf) buf = await googleTtsBuf(safe).catch(() => null);
+  if (!buf) {
+    try {
+      const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'nctts-'));
+      const out = path.join(dir, 'v.mp3');
+      await msedgeTtsFile(safe, out, (voice && TTS_VOICES[voice]) || 'th-TH-PremwadeeNeural');
+      buf = fs.readFileSync(out);
+      try { fs.rmSync(dir, { recursive: true, force: true }); } catch (e) {}
+    } catch (e) { buf = null; }
+  }
   if (!buf) throw new Error('tts unavailable');
   ttsCacheSet(key, buf);
   return { buf, cached: false };
