@@ -988,15 +988,15 @@ app.post('/api/sandbox/install', async (req, res) => {
 
 app.get('/health', (req, res) => res.json({ ok: true, t: Date.now() }));
 
-// Vercel-ready: export app สำหรับ serverless, listen เฉพาะตอนรันตรง (local/Railway)
-if (require.main === module) {
-  app.get('/api/status', async (req, res) => {
+app.get('/api/status', async (req, res) => {
   try {
     const summary = await checkServices();
     res.json({ ok: true, services: summary, at: new Date().toISOString() });
   } catch (e) { res.status(500).json({ ok: false, error: String(e) }); }
 });
 
-app.listen(PORT, () => console.log(`⚡ SILELO Neo-Connect running on port ${PORT}`));
+// Vercel-ready: export app สำหรับ serverless, listen เฉพาะตอนรันตรง (local/Railway)
+if (require.main === module) {
+  app.listen(PORT, () => console.log('⚡ SILELO Neo-Connect running on port ' + PORT));
 }
 module.exports = app;
