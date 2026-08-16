@@ -369,6 +369,11 @@
   .lc-fixcode pre { background: #0a1020; border: 1px solid #2a3a66; border-radius: 10px; padding: 10px; overflow-x: auto; font-size: 11px; color: #7ee787; }
 
   /* เบา: หยุด animation ถ้าผู้ใช้ตั้งค่า */
+  @media (max-width: 420px) {
+    .call-ctrl-row { gap: 14px; }
+    .cctrl { width: 60px; height: 60px; font-size: 22px; }
+    #callOverlay { padding: 24px 14px 18px; }
+  }
   @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after { animation: none !important; transition: none !important; }
   }
@@ -463,6 +468,7 @@
   </div>
   <div id="callTrans" class="empty">🎧 ฟังอยู่ พูดได้เลย...</div>
   <div class="call-ctrl-row">
+    <button class="cctrl" id="stopTtsBtn" title="หยุดพูดทันที — สลี่จะหยุดแล้วฟังพี่นุ">⏹<span>หยุดพูด</span></button>
     <button class="cctrl" id="muteBtn" title="ปิด/เปิดไมค์">🤫<span>ไมค์</span></button>
     <button class="cctrl" id="speakerBtn" title="ลำโพง/หูฟัง">🔊<span>ลำโพง</span></button>
     <button class="cctrl" id="camBtn" title="เปิดกล้องให้ AI ดูแบบสด">📹<span>กล้อง</span></button>
@@ -695,14 +701,21 @@
   /* TTS สตรีมทีละวรรค — พูดวรรคแรกทันที + โหลดวรรคถัดไปล่วงหน้า (lookahead) + หยุดพัก 170ms เหมือนคนหายใจ */
   /* โหลดรายการเสียงของเบราว์เซอร์ล่วงหน้า (fallback Web Speech API) */
   if (window.speechSynthesis) { try { speechSynthesis.getVoices(); } catch (e) {} }
-  /* พูดแบบคิวต่อกัน — กันเสียงทับกันเมื่อมีข้อความใหม่เข้ามาเร็ว */
+  /* พูดแบบคิวต่อกัน — กันเสียงทับกันเมื่อมีข้อความใหม่เข้ามาเร็ว + ยกเลิกได้ (stopSpeaking) */
   let speakChain = Promise.resolve();
+  let speakToken = 0;
+  function stopSpeaking() {
+    speakToken++;
+    try { if (audio) audio.pause(); } catch (e) {}
+    if (window.speechSynthesis) { try { speechSynthesis.cancel(); } catch (e) {} }
+  }
   function speak(text) {
-    const run = speakChain.then(() => _speak(text));
+    const myToken = ++speakToken;
+    const run = speakChain.then(() => _speak(text, myToken));
     speakChain = run.catch(() => {});
     return run;
   }
-  function _speak(text) {
+  function _speak(text, token) {
     return new Promise((resolve) => {
       if (!soundOn || !text) return resolve();
       const parts = splitSentences(text);
@@ -717,9 +730,8 @@
       const playOne = (blob, txt) => new Promise((res) => {
         if (!blob) {
           /* กันล้ม: เซิร์ฟเวอร์ TTS ไม่ว่าง -> ใช้เสียงของเบราว์เซอร์ (Web Speech API) พูดแทน */
-          if (window.speechSynthesis && txt) {
+          if (window.speechSynthesis && txt && token === speakToken) {
             try {
-              speechSynthesis.cancel();
               const u = new SpeechSynthesisUtterance(String(txt));
               u.lang = 'th-TH'; u.rate = 0.95;
               const v = speechSynthesis.getVoices().find(x => x.lang && x.lang.toLowerCase().replace('_', '-').startsWith('th'));
@@ -742,7 +754,7 @@
           if (pp && pp.catch) pp.catch((err) => {
             /* เบราว์เซอร์บล็อก autoplay -> เตือน + พูดซ้ำอัตโนมัติเมื่อแตะหน้าจอถัดไป */
             if (err && (err.name === 'NotAllowedError' || err.name === 'AbortError')) {
-              if (!pendingSpeak) { pendingSpeak = text; toast('🔊 แตะที่หน้าจอเพื่อเปิดเสียงสลี่'); }
+              if (!pendingSpeak && token === speakToken) { pendingSpeak = text; toast('🔊 แตะที่หน้าจอเพื่อเปิดเสียงสลี่'); }
             }
             res();
           });
@@ -752,10 +764,12 @@
         try {
           let next = ttsOne(parts[0]);
           for (let i = 0; i < parts.length; i++) {
+            if (token !== speakToken) { resolve(); return; }
             const blob = await next;
             if (i + 1 < parts.length) next = ttsOne(parts[i + 1]);
             await playOne(blob, parts[i]);
-            if (i + 1 < parts.length) await new Promise(r => setTimeout(r, 140));
+            if (token !== speakToken) { resolve(); return; }
+            if (i + 1 < parts.length) await new Promise(r => setTimeout(r, 240));
           }
         } catch (e) {}
         resolve();
@@ -935,7 +949,12 @@
         try { localStorage.setItem(KEY, JSON.stringify(history)); } catch (e) {}
         setCallState('speaking');
         setCallTrans('🔊 ' + R.name + ': ' + j.reply.slice(0, 80) + (j.reply.length > 80 ? '…' : ''), false);
-        await speak(j.reply);
+        /* 🎯 สลี่พูดแล้วฟังพี่นุด้วย — พี่นุพูดแทรกเมื่อไหร่ สลี่หยุดทันที (รู้จังหวะฟัง) */
+        let doneSpeaking = false;
+        const sp = speak(j.reply).then(() => { doneSpeaking = true; });
+        startVad(() => { if (!doneSpeaking) { stopSpeaking(); toast('🛑 สลี่หยุดแล้ว — พี่นุพูดได้เลย!'); } });
+        await sp;
+        stopVad();
       }
     } catch (e) { toast('⚠️ SERVER UNREACHABLE'); }
     if (callActive) {
@@ -1063,6 +1082,8 @@
     clearTimeout(silenceTimer);
     clearInterval(callTimer);
     stopLive();
+    stopVad();
+    stopSpeaking();
     if (recog) { try { recog.stop(); } catch (e) {} recog = null; }
     if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; }
     if (audio) { audio.pause(); audio = null; }
@@ -1073,6 +1094,47 @@
     setCallTrans('', true);
     toast('📵 วางสายแล้ว — กลับมาคุยได้ทุกเมื่อ');
   }
+
+  /* ===== 🎤 VAD — ฟังเสียงพี่นุระหว่างที่สลี่พูด (พูดแทรกได้ สลี่หยุดทันที) ===== */
+  let vadCtx = null, vadAnalyser = null, vadData = null, vadRunning = false, vadCb = null;
+  function startVad(cb) {
+    if (vadRunning || !stream || !callActive) return;
+    try {
+      if (!vadCtx) vadCtx = new (window.AudioContext || window.webkitAudioContext)();
+      if (!vadAnalyser) {
+        const src = vadCtx.createMediaStreamSource(stream);
+        vadAnalyser = vadCtx.createAnalyser();
+        vadAnalyser.fftSize = 1024;
+        vadAnalyser.smoothingTimeConstant = 0.2;
+        src.connect(vadAnalyser);
+        vadData = new Uint8Array(vadAnalyser.fftSize);
+      }
+      vadRunning = true; vadCb = cb;
+      const check = () => {
+        if (!vadRunning) return;
+        vadAnalyser.getByteTimeDomainData(vadData);
+        let sum = 0;
+        for (let i = 0; i < vadData.length; i++) { const v = (vadData[i] - 128) / 128; sum += v * v; }
+        const rms = Math.sqrt(sum / vadData.length);
+        if (rms > 0.035) { vadRunning = false; const f = vadCb; vadCb = null; if (f) f(); return; }
+        requestAnimationFrame(check);
+      };
+      requestAnimationFrame(check);
+    } catch (e) {}
+  }
+  function stopVad() { vadRunning = false; vadCb = null; }
+
+  /* ⏹ ปุ่มหยุดพูด — สลี่เงียบแล้วฟังพี่นุทันที */
+  const stopTtsBtn = document.getElementById('stopTtsBtn');
+  stopTtsBtn.onclick = () => {
+    stopSpeaking();
+    stopVad();
+    if (callActive) {
+      setCallState('listening');
+      setCallTrans('', true);
+      try { recog.start(); } catch (e) {}
+    }
+  };
 
   callBtn.onclick = startCall;
   if (chatCallFab) chatCallFab.onclick = startCall;

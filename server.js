@@ -388,6 +388,71 @@ function googleTtsOne(text) {
   });
 }
 /* Google translate_tts จำกัด ~200 ตัวอักษร/ครั้ง → ตัดเป็นท่อน ≤180 ตัว แล้วต่อเสียงให้ยาวได้ไม่จำกัด */
+/* MP3 silence - สร้างเฟรม MPEG-2 Layer III เปล่า (24kHz mono 48kbps = 288B/48ms) เพื่อเว้นจังหวะพูด */
+function mp3Silence(ms) {
+  /* fallback: MPEG-2 Layer III 24kHz mono 48kbps (288B/48ms) */
+  const FRAME = 288, MS_PER_FRAME = 48;
+  const frames = Math.max(1, Math.round(ms / MS_PER_FRAME));
+  const header = Buffer.from([0xFF, 0x83, 0x64, 0xC0]);
+  const frame = Buffer.concat([header, Buffer.alloc(FRAME - 4)]);
+  const out = Buffer.alloc(FRAME * frames);
+  for (let i = 0; i < frames; i++) frame.copy(out, i * FRAME);
+  return out;
+}
+/* สร้าง silence ให้ตรง format ของ mp3 จริง (parse header แรก) — กันเล่นเพี้ยนเวลาต่อไฟล์ */
+function mp3SilenceLike(ms, refHeader) {
+  try {
+    if (!refHeader || refHeader.length < 4 || refHeader[0] !== 0xFF) return mp3Silence(ms);
+    const b1 = refHeader[1], b2 = refHeader[2];
+    if ((b1 & 0xE0) !== 0xE0) return mp3Silence(ms);
+    const ver = (b1 >> 3) & 3;
+    const layer = (b1 >> 1) & 3;
+    const brIdx = (b2 >> 4) & 15;
+    const srIdx = (b2 >> 2) & 3;
+    const pad = (b2 >> 1) & 1;
+    if (layer !== 1) return mp3Silence(ms);
+    const brs1 = [0,32,40,48,56,64,80,96,112,128,160,192,224,256,320];
+    const brs2 = [0,8,16,24,32,40,48,56,64,80,96,112,128,144,160];
+    const srs1 = [44100,48000,32000];
+    const srs2 = [22050,24000,16000];
+    const srs25 = [11025,12000,8000];
+    const bitrate = (ver === 3 ? brs1 : brs2)[brIdx] || 128;
+    const samplerate = (ver === 3 ? srs1 : ver === 2 ? srs2 : srs25)[srIdx] || 44100;
+    const samples = ver === 3 ? 1152 : 576;
+    const frameLen = Math.floor(144 * bitrate * 1000 / samplerate) + pad;
+    const msPerFrame = samples / samplerate * 1000;
+    const frames = Math.max(1, Math.round(ms / msPerFrame));
+    const header = Buffer.from(refHeader.subarray(0, 4));
+    const frame = Buffer.concat([header, Buffer.alloc(Math.max(0, frameLen - 4))]);
+    const out = Buffer.alloc(frameLen * frames);
+    for (let i = 0; i < frames; i++) frame.copy(out, i * frameLen);
+    return out;
+  } catch (e) { return mp3Silence(ms); }
+}
+/* แบ่งข้อความเป็นจังหวะพูด (utterance) - เก็บชนิดวรรคตอนไว้เว้นระยะต่างกัน */
+function splitUtterances(text) {
+  const t = String(text || '').replace(/\r/g, '').trim();
+  if (!t) return [];
+  const parts = [];
+  let cur = '';
+  const push = (br) => { const s = cur.trim(); if (s) parts.push({ t: s, br }); cur = ''; };
+  for (const ch of t) {
+    cur += ch;
+    if (ch === String.fromCharCode(10)) push('newline');
+    else if ('.!?…'.includes(ch)) push('end');
+    else if (',;:'.includes(ch)) push('comma');
+  }
+  if (cur.trim()) parts.push({ t: cur.trim(), br: 'none' });
+  /* รวมท่อนสั้นเกินไปกับท่อนก่อนหน้า (กันพูดกระตุกเป็นคำ ๆ) */
+  const merged = [];
+  for (const p of parts) {
+    if (merged.length && merged[merged.length - 1].br !== 'end' && merged[merged.length - 1].br !== 'newline' && merged[merged.length - 1].t.length + p.t.length <= 80) {
+      merged[merged.length - 1].t += ' ' + p.t;
+      merged[merged.length - 1].br = p.br;
+    } else merged.push({ ...p });
+  }
+  return merged;
+}
 async function googleTtsBuf(text) {
   const MAX = 180;
   const parts = [];
@@ -402,7 +467,12 @@ async function googleTtsBuf(text) {
   const bufs = [];
   for (const p of parts) { try { bufs.push(await googleTtsOne(p)); } catch (e) {} }
   if (!bufs.length) throw new Error('gtts fail');
-  return Buffer.concat(bufs);
+  const out = [];
+  for (let i = 0; i < bufs.length; i++) {
+    out.push(bufs[i]);
+    if (i < bufs.length - 1) out.push(mp3SilenceLike(300, bufs[i + 1].slice(0, 4)));
+  }
+  return Buffer.concat(out);
 }
 /* TTS cache (LRU) - ประโยคซ้ำ พูดซ้ำได้ทันที ไม่ต้องสังเคราะห์ใหม่ */
 const ttsCache = new Map();
@@ -425,43 +495,87 @@ async function elevenLabsTtsBuf(safe) {
 }
 /* สังเคราะห์เสียง -> Buffer (เช็กแคชก่อน) */
 async function ttsBuffer(text, voice) {
-  const safe = String(text).replace(/[^\u0E00-\u0E7Fa-zA-Z0-9 .,!?\u0e2f\u0e46\u0e30\u0e32\u0e34\u0e35\u0e36\u0e37\u0e38\u0e39\u0e40\u0e41\u0e42\u0e43\u0e44\u0e48\u0e49\u0e4a\u0e4b\u0e4c\u0e47\u0e48\u0e49]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 900);
-  const key = (voice || 'silelo') + '|' + safe;
-  const hit = ttsCacheGet(key);
+  /* sanitize: อนุญาต \n , ; : ไว้แบ่งจังหวะพูด (กัน HTML/แท็ก) */
+  const safe = String(text).replace(/[^\u0E00-\u0E7Fa-zA-Z0-9 \n.,!?…,;:\u0e2f\u0e46\u0e30\u0e32\u0e34\u0e35\u0e36\u0e37\u0e38\u0e39\u0e40\u0e41\u0e42\u0e43\u0e44\u0e48\u0e49\u0e4a\u0e4b\u0e4c\u0e47\u0e48\u0e49]/g, ' ').replace(/[ \t]+/g, ' ').trim().slice(0, 900);
+  const utts = splitUtterances(safe);
+  if (!utts.length) throw new Error('empty text');
+  const fullKey = (voice || 'silelo') + '|' + safe;
+  const hit = ttsCacheGet(fullKey);
   if (hit) return { buf: hit, cached: true };
-  let buf = null;
-  if (voice && TTS_VOICES[voice]) {
-    buf = await elevenLabsTtsBuf(safe);
-    if (!buf) {
-      const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'nctts-'));
-      const out = path.join(dir, 'v.mp3');
-      try { await msedgeTtsFile(safe, out, TTS_VOICES[voice]); buf = fs.readFileSync(out); } catch (e) { buf = null; }
-      try { fs.rmSync(dir, { recursive: true, force: true }); } catch (e) {}
-      if (!buf) buf = await googleTtsBuf(safe).catch(() => null);
-    }
-  } else {
-    buf = await googleTtsBuf(safe).catch(() => null);
-    if (!buf) {
-      const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'nctts-'));
-      const out = path.join(dir, 'v.mp3');
-      try { await msedgeTtsFile(safe, out, 'th-TH-PremwadeeNeural'); buf = fs.readFileSync(out); } catch (e) { buf = null; }
-      try { fs.rmSync(dir, { recursive: true, force: true }); } catch (e) {}
+  const voiceName = (voice && TTS_VOICES[voice]) ? TTS_VOICES[voice] : null;
+  /* สร้างเสียงทีละจังหวะพูด (cache ต่อ chunk) แล้วต่อกันแทรก silence */
+  const chunks = [];
+  for (const u of utts) chunks.push(await ttsOneChunk(u.t, voice, voiceName));
+  const out = [];
+  for (let i = 0; i < chunks.length; i++) {
+    out.push(chunks[i]);
+    if (i < chunks.length - 1) {
+      const br = utts[i].br;
+      const ms = br === 'newline' ? 700 : br === 'end' ? 550 : br === 'comma' ? 320 : 200;
+      out.push(mp3SilenceLike(ms, chunks[i + 1].slice(0, 4)));
     }
   }
-  /* retry รอบสอง - กัน flaky บน cold instance (Vercel) */
-  if (!buf) buf = await googleTtsBuf(safe).catch(() => null);
-  if (!buf) {
-    try {
-      const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'nctts-'));
-      const out = path.join(dir, 'v.mp3');
-      await msedgeTtsFile(safe, out, (voice && TTS_VOICES[voice]) || 'th-TH-PremwadeeNeural');
-      buf = fs.readFileSync(out);
-      try { fs.rmSync(dir, { recursive: true, force: true }); } catch (e) {}
-    } catch (e) { buf = null; }
-  }
-  if (!buf) throw new Error('tts unavailable');
-  ttsCacheSet(key, buf);
+  const buf = Buffer.concat(out);
+  ttsCacheSet(fullKey, buf);
   return { buf, cached: false };
+}
+/* TTS หนึ่งจังหวะพูด — google → msedge → google retry (cache แยกต่อ chunk) */
+async function ttsOneChunk(txt, voice, voiceName) {
+  const key = (voice || 'silelo') + '|c|' + txt;
+  const hit = ttsCacheGet(key);
+  if (hit) return hit;
+  let buf = null;
+  if (voiceName) {
+    buf = await elevenLabsTtsBuf(txt);
+    if (!buf) buf = await msedgeTtsOnce(txt, voiceName);
+    if (!buf) buf = await googleTtsBuf(txt).catch(() => null);
+  } else {
+    buf = await googleTtsBuf(txt).catch(() => null);
+    if (!buf) buf = await msedgeTtsOnce(txt, 'th-TH-PremwadeeNeural');
+  }
+  if (!buf) buf = await googleTtsBuf(txt).catch(() => null);
+  if (!buf) buf = await msedgeTtsOnce(txt, voiceName || 'th-TH-PremwadeeNeural');
+  if (!buf) throw new Error('tts chunk fail');
+  ttsCacheSet(key, buf);
+  return buf;
+}
+async function msedgeTtsOnce(txt, voiceName) {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'nctts-'));
+  const out = path.join(dir, 'v.mp3');
+  try {
+    await msedgeTtsFile(txt, out, voiceName);
+    return fs.readFileSync(out);
+  } catch (e) { return null; }
+  finally { try { fs.rmSync(dir, { recursive: true, force: true }); } catch (e) {} }
+}
+/* TTS หนึ่งจังหวะพูด — google → msedge → google retry (cache แยกต่อ chunk) */
+async function ttsOneChunk(txt, voice, voiceName) {
+  const key = (voice || 'silelo') + '|c|' + txt;
+  const hit = ttsCacheGet(key);
+  if (hit) return hit;
+  let buf = null;
+  if (voiceName) {
+    buf = await elevenLabsTtsBuf(txt);
+    if (!buf) buf = await msedgeTtsOnce(txt, voiceName);
+    if (!buf) buf = await googleTtsBuf(txt).catch(() => null);
+  } else {
+    buf = await googleTtsBuf(txt).catch(() => null);
+    if (!buf) buf = await msedgeTtsOnce(txt, 'th-TH-PremwadeeNeural');
+  }
+  if (!buf) buf = await googleTtsBuf(txt).catch(() => null);
+  if (!buf) buf = await msedgeTtsOnce(txt, voiceName || 'th-TH-PremwadeeNeural');
+  if (!buf) throw new Error('tts chunk fail');
+  ttsCacheSet(key, buf);
+  return buf;
+}
+async function msedgeTtsOnce(txt, voiceName) {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'nctts-'));
+  const out = path.join(dir, 'v.mp3');
+  try {
+    await msedgeTtsFile(txt, out, voiceName);
+    return fs.readFileSync(out);
+  } catch (e) { return null; }
+  finally { try { fs.rmSync(dir, { recursive: true, force: true }); } catch (e) {} }
 }
 /* เสียงไทย msedge-tts — เลือกได้หลายเสียง */
 const TTS_VOICES = {
