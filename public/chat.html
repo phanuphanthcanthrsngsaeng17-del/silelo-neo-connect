@@ -570,6 +570,33 @@
     if (/^(def|import|from|class)\s+\w+|print\(|input\(|range\(|if __name__|:\s*$|^@\w+|elif\s|else:|for\s+\w+\s+in\s+range|while\s+\w+:|\bf\"/m.test(s)) return 'python';
     return 'python';
   }
+  function isInstallCmd(t) {
+    const s = String(t || '').trim();
+    return /^(pip|pip3|python3?\s+-m\s+pip|npm|npx)\s+(install|uninstall)\s+\S+/i.test(s);
+  }
+  async function runInstall(mgr, pkg, btn) {
+    btn.disabled = true;
+    btn.textContent = '⏳ กำลังติดตั้ง...';
+    const res = document.createElement('div');
+    res.className = 'msg-run';
+    btn.parentNode.appendChild(res);
+    res.textContent = '⏳ กำลังติดตั้ง ' + pkg + ' (ครั้งแรกใช้เวลา 1-2 นาที)...';
+    try {
+      const r = await fetch('/api/install', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ pkg, mgr }) });
+      const j = await r.json().catch(function () { return {}; });
+      if (!j.ok) { res.innerHTML = '<span class="err">⚠ ' + escHtml(j.error || 'ติดตั้งล้มเหลว') + '</span>'; btn.textContent = '🔄 ลองใหม่'; btn.disabled = false; return; }
+      const lines = String(j.out || '').trim().split('\n');
+      const tail = lines.slice(-6).join('\n');
+      res.innerHTML = (tail ? escHtml(tail) + '<br>' : '') + '<span class="' + (j.code === 0 ? 'ok">✅' : 'err">⚠') + ' ติดตั้ง ' + escHtml(pkg) + ' ' + (j.code === 0 ? 'สำเร็จ! ลองส่งโค้ดที่ใช้ ' + escHtml(pkg) + ' ได้เลย' : 'มีปัญหา (exit ' + j.code + ')') + '</span>';
+      btn.textContent = j.code === 0 ? '✅ ติดตั้งแล้ว' : '🔄 ลองใหม่';
+      if (j.code !== 0) btn.disabled = false;
+    } catch (e) {
+      res.innerHTML = '<span class="err">⚠ ' + escHtml(e.message) + '</span>';
+      btn.textContent = '🔄 ลองใหม่';
+      btn.disabled = false;
+    }
+    msgsEl.scrollTop = msgsEl.scrollHeight;
+  }
   function isLikelyCode(t) {
     const s = String(t || '').trim();
     if (!s || s.length < 2 || s.length > 6000) return false;
@@ -632,7 +659,17 @@
       img.onclick = () => window.open(m.image);
       div.querySelector('.bubble').appendChild(img);
     }
-    if (m.role === 'user' && isLikelyCode(m.content)) {
+    if (m.role === 'user' && isInstallCmd(m.content)) {
+      const pm = m.content.trim().match(/^(pip|pip3|python3?\s+-m\s+pip|npm|npx)\s+(install|uninstall)\s+(.+)$/i);
+      const mgr = /npm|npx/i.test(pm[1]) ? 'npm' : 'pip';
+      const pkg = pm[3].trim().split(/\s+/)[0];
+      const ibtn = document.createElement('button');
+      ibtn.className = 'run-inline inst';
+      ibtn.innerHTML = '📦 ติดตั้ง ' + escHtml(pkg) + ' <span class="run-lang">' + mgr + '</span>';
+      ibtn.onclick = function () { runInstall(mgr, pkg, ibtn); };
+      div.querySelector('.bubble').appendChild(ibtn);
+    }
+    if (m.role === 'user' && !isInstallCmd(m.content) && isLikelyCode(m.content)) {
       const lang = autoDetectLang(m.content);
       const btn = document.createElement('button');
       btn.className = 'run-inline';
@@ -1357,6 +1394,7 @@ if (!isUnlocked()) { lockScreen.classList.add('show'); setTimeout(() => lockInp.
     </div>
     <div class="lc-actions">
       <button class="lc-btn" id="lcRun">▶ รันเลย</button>
+      <button class="lc-btn ghost" id="lcInstall" title="📦 ติดตั้ง package (pip/npm) — เช่น numpy, pandas, express">📦</button>
       <button class="lc-btn ai" id="lcFix" style="display:none">🤖 AI แก้ให้</button>
       <button class="lc-btn ghost" id="lcClear">🗑 ล้าง</button>
       <span class="lc-status" id="lcStatus"></span>
@@ -1423,6 +1461,25 @@ if (!isUnlocked()) { lockScreen.classList.add('show'); setTimeout(() => lockInp.
   const WARN_X = '⚠️', CHECK_X = '✅', HOUR_X = '⏳', ROBOT = '🤖', CLIP = '📋', BULB = '💡';
   let lastLabErr = null;
   let lastFix = null;
+  const lcInstall = document.getElementById('lcInstall');
+  if (lcInstall) lcInstall.onclick = async function () {
+    const p = prompt('📦 ติดตั้ง package\n\nพิมพ์ชื่อ เช่น numpy, pandas, requests, flask\n(ถ้าเป็น Node.js ใช้ npm: เช่น npm:express)');
+    if (!p) return;
+    let mgr = 'pip', name = String(p).trim();
+    if (/^npm:/i.test(name)) { mgr = 'npm'; name = name.replace(/^npm:/i, '').trim(); }
+    if (!name || /[\s;&|<>$]/.test(name)) { toast('⚠ ชื่อ package ไม่ถูกต้อง'); return; }
+    lcStatus.textContent = '📦 กำลังติดตั้ง ' + name + '...';
+    lcOut.innerHTML = '<span class="dim">📦 กำลังติดตั้ง ' + escHtml(name) + ' (ครั้งแรกใช้เวลา 1-2 นาที)...</span>';
+    try {
+      const r = await fetch('/api/install', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ pkg: name, mgr }) });
+      const j = await r.json().catch(function () { return {}; });
+      if (!j.ok) { lcOut.innerHTML = '<span class="err">⚠ ' + escHtml(j.error || 'ติดตั้งล้มเหลว') + '</span>'; lcStatus.textContent = '⚠ ล้มเหลว'; return; }
+      const lines = String(j.out || '').trim().split('\n');
+      lcOut.innerHTML = (lines.length ? escHtml(lines.slice(-8).join('\n')) + '<br>' : '') + '<span class="' + (j.code === 0 ? 'ok">✅' : 'err">⚠') + ' ' + escHtml(name) + ' ' + (j.code === 0 ? 'ติดตั้งสำเร็จ — ลองรันโค้ดที่ใช้ ' + escHtml(name) + ' ได้เลย!' : 'มีปัญหา exit ' + j.code) + '</span>';
+      lcStatus.textContent = j.code === 0 ? '✅ ติดตั้งแล้ว' : '⚠ ล้มเหลว';
+    } catch (e) { lcOut.innerHTML = '<span class="err">⚠ ' + escHtml(e.message) + '</span>'; lcStatus.textContent = ''; }
+    setTimeout(function () { if (lcStatus) lcStatus.textContent = ''; }, 6000);
+  };
   if (lcRun) lcRun.onclick = async function () {
     const src = lcCode.value.trim();
     if (!src) { lcOut.innerHTML = '<span class="err">' + WARN_X + ' \u0e1e\u0e34\u0e21\u0e1e\u0e4c\u0e42\u0e04\u0e49\u0e14\u0e01\u0e48\u0e2d\u0e19\u0e01\u0e14 \u25b6 \u0e23\u0e31\u0e19\u0e40\u0e25\u0e22</span>'; return; }

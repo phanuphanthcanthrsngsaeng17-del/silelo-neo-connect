@@ -865,7 +865,24 @@ app.post('/api/run', async (req, res) => {
       }
     }
 
-    /* 2) fallback: รันผ่าน Wandbox cloud (python บน Vercel ไม่มีในเครื่อง, ภาษาคอมไพล์ ฯลฯ) */
+    /* 2) เครื่องติดตั้ง silelo (Render — มี pip/npm จริง, auto-install import) */
+    if (process.env.RUN_SECRET && (l === 'python' || l === 'javascript' || l === 'bash')) {
+      try {
+        const ctl = new AbortController();
+        const t = setTimeout(() => { try { ctl.abort(); } catch (e) {} }, 9500);
+        const rr = await fetch((process.env.SILELO_URL || 'https://silelo.onrender.com') + '/api/run', {
+          method: 'POST', headers: { 'Content-Type': 'application/json', 'x-run-secret': process.env.RUN_SECRET },
+          body: JSON.stringify({ code: src, lang: l }), signal: ctl.signal
+        });
+        clearTimeout(t);
+        if (rr.ok) {
+          const jj = await rr.json().catch(function () { return {}; });
+          if (jj && jj.ok) return res.json({ ok: true, stdout: jj.stdout || '', stderr: jj.stderr || '', code: jj.code || 0, timeMs: jj.timeMs || (Date.now() - t0), lang: jj.lang || l, engine: 'silelo' });
+        }
+      } catch (e) { /* fallback ต่อไป */ }
+    }
+
+    /* 3) fallback: รันผ่าน Wandbox cloud (python บน Vercel ไม่มีในเครื่อง, ภาษาคอมไพล์ ฯลฯ) */
     try {
       let wbSrc = src;
       if (l === 'java') wbSrc = wbSrc.replace(/public\s+class\s+Main/, 'class Main');
@@ -985,6 +1002,30 @@ app.post('/api/sandbox/install', async (req, res) => {
   } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
 });
 
+
+app.post('/api/install', async (req, res) => {
+  const { pkg, mgr } = req.body || {};
+  const name = String(pkg || '').trim();
+  if (!name || /[\s;&|<>$]/.test(name)) return res.status(400).json({ ok: false, error: 'ชื่อ package ไม่ถูกต้อง' });
+  const m = String(mgr || 'pip').toLowerCase() === 'npm' ? 'npm' : 'pip';
+  if (!process.env.RUN_SECRET) return res.status(503).json({ ok: false, error: 'ยังไม่ได้ตั้ง RUN_SECRET' });
+  const t0 = Date.now();
+  try {
+    const ctl = new AbortController();
+    const t = setTimeout(() => { try { ctl.abort(); } catch (e) {} }, 115000);
+    const rr = await fetch((process.env.SILELO_URL || 'https://silelo.onrender.com') + '/api/run', {
+      method: 'POST', headers: { 'Content-Type': 'application/json', 'x-run-secret': process.env.RUN_SECRET },
+      body: JSON.stringify({ code: m + ' install ' + name, lang: m, install: true }), signal: ctl.signal
+    });
+    clearTimeout(t);
+    const jj = await rr.json().catch(function () { return {}; });
+    if (!jj.ok) return res.status(502).json({ ok: false, error: jj.error || 'ติดตั้งล้มเหลว' });
+    res.json({ ok: true, out: String(jj.stdout || '').slice(0, 5000), code: jj.code, timeMs: Date.now() - t0 });
+  } catch (e) {
+    const msg = e && e.name === 'AbortError' ? 'เกินเวลา 115 วิ' : (e.message || 'unknown');
+    res.status(502).json({ ok: false, error: 'เครื่องติดตั้งไม่ตอบสนอง: ' + msg });
+  }
+});
 
 app.get('/health', (req, res) => res.json({ ok: true, t: Date.now() }));
 
