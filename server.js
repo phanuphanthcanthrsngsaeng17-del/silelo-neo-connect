@@ -176,10 +176,18 @@ async function geminiVision(imageDataUrl, question, sysHint) {
 const { Jimp } = require('jimp');
 const ort = require('onnxruntime-web');
 // Force Vercel nft to bundle onnxruntime-web wasm + model into the lambda
-try { require.resolve('onnxruntime-web/dist/ort-wasm-simd-threaded.wasm'); } catch (e) {}
-try { require.resolve('onnxruntime-web/dist/ort-wasm-simd-threaded.mjs'); } catch (e) {}
-try { require.resolve('onnxruntime-web/dist/ort.node.min.mjs'); } catch (e) {}
-try { require.resolve('../model/bossnusilelo.onnx'); } catch (e) {}
+// (static string paths are traced by nft even though onnxruntime-web loads them dynamically)
+const _ORT_DIST = path.join(__dirname, 'node_modules', 'onnxruntime-web', 'dist');
+const _PIN_FILES = [
+  path.join(_ORT_DIST, 'ort-wasm-simd-threaded.wasm'),
+  path.join(_ORT_DIST, 'ort-wasm-simd-threaded.mjs'),
+  path.join(_ORT_DIST, 'ort.node.min.mjs'),
+  path.join(_ORT_DIST, 'ort.min.mjs'),
+  path.join(__dirname, 'model', 'bossnusilelo.onnx'),
+];
+for (const f of _PIN_FILES) { try { fs.accessSync(f); } catch (e) {} }
+// set wasm path explicitly so onnxruntime-web finds the bundled file
+try { ort.env.wasm.wasmPaths = _ORT_DIST + path.sep; } catch (e) {}
 const BN_CLASSES = ['airplane','automobile','bird','cat','deer','dog','frog','horse','ship','truck'];
 const BN_CLASSES_TH = ['เครื่องบิน','รถยนต์','นก','แมว','กวาง','หมา','กบ','ม้า','เรือ','รถบรรทุก'];
 const BN_THRESHOLD = 0.65;
