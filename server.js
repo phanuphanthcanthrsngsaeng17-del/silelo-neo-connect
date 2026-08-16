@@ -866,7 +866,7 @@ app.post('/api/run', async (req, res) => {
     }
 
     /* 2) เครื่องติดตั้ง silelo (Render — มี pip/npm จริง, auto-install import) */
-    if (process.env.RUN_SECRET && (l === 'python' || l === 'javascript' || l === 'bash')) {
+    if (process.env.RUN_SECRET) {
       try {
         const ctl = new AbortController();
         const t = setTimeout(() => { try { ctl.abort(); } catch (e) {} }, 9500);

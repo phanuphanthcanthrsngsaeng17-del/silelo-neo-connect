@@ -572,7 +572,16 @@
   }
   function isInstallCmd(t) {
     const s = String(t || '').trim();
-    return /^(pip|pip3|python3?\s+-m\s+pip|npm|npx)\s+(install|uninstall)\s+\S+/i.test(s);
+    return /^(pip|pip3|python3?\s+-m\s+pip|npm|npx|apt|apt-get|gem|cargo|composer)\s+(install|uninstall|add|remove|update)\s+\S+/i.test(s);
+  }
+  function installMgrOf(t) {
+    const s = String(t || '').trim();
+    if (/^(npm|npx)\b/i.test(s)) return 'npm';
+    if (/^(apt|apt-get)\b/i.test(s)) return 'apt';
+    if (/^gem\b/i.test(s)) return 'gem';
+    if (/^cargo\b/i.test(s)) return 'cargo';
+    if (/^composer\b/i.test(s)) return 'composer';
+    return 'pip';
   }
   async function runInstall(mgr, pkg, btn) {
     btn.disabled = true;
@@ -660,8 +669,8 @@
       div.querySelector('.bubble').appendChild(img);
     }
     if (m.role === 'user' && isInstallCmd(m.content)) {
-      const pm = m.content.trim().match(/^(pip|pip3|python3?\s+-m\s+pip|npm|npx)\s+(install|uninstall)\s+(.+)$/i);
-      const mgr = /npm|npx/i.test(pm[1]) ? 'npm' : 'pip';
+      const pm = m.content.trim().match(/^(pip|pip3|python3?\s+-m\s+pip|npm|npx|apt|apt-get|gem|cargo|composer)\s+(install|uninstall|add|remove|update)\s+(.+)$/i);
+      const mgr = installMgrOf(m.content);
       const pkg = pm[3].trim().split(/\s+/)[0];
       const ibtn = document.createElement('button');
       ibtn.className = 'run-inline inst';
@@ -1463,10 +1472,11 @@ if (!isUnlocked()) { lockScreen.classList.add('show'); setTimeout(() => lockInp.
   let lastFix = null;
   const lcInstall = document.getElementById('lcInstall');
   if (lcInstall) lcInstall.onclick = async function () {
-    const p = prompt('📦 ติดตั้ง package\n\nพิมพ์ชื่อ เช่น numpy, pandas, requests, flask\n(ถ้าเป็น Node.js ใช้ npm: เช่น npm:express)');
+    const p = prompt('📦 ติดตั้ง package\n\nพิมพ์ชื่อ เช่น numpy, pandas, requests, flask\n\nเลือกตัวจัดการ: pip:ชื่อ (ค่าเริ่มต้น), npm:ชื่อ, apt:ชื่อ, gem:ชื่อ, cargo:ชื่อ\nเช่น: pip:pandas, npm:express, apt:ffmpeg');
     if (!p) return;
     let mgr = 'pip', name = String(p).trim();
-    if (/^npm:/i.test(name)) { mgr = 'npm'; name = name.replace(/^npm:/i, '').trim(); }
+    const mm = name.match(/^(pip|npm|apt|gem|cargo|composer):(.+)$/i);
+    if (mm) { mgr = mm[1].toLowerCase(); name = mm[2].trim(); }
     if (!name || /[\s;&|<>$]/.test(name)) { toast('⚠ ชื่อ package ไม่ถูกต้อง'); return; }
     lcStatus.textContent = '📦 กำลังติดตั้ง ' + name + '...';
     lcOut.innerHTML = '<span class="dim">📦 กำลังติดตั้ง ' + escHtml(name) + ' (ครั้งแรกใช้เวลา 1-2 นาที)...</span>';
