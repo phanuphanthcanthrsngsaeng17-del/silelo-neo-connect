@@ -2,7 +2,16 @@
 <html lang="th">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#00e5ff">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="SILELO">
+<meta name="description" content="SILELO Neo-Connect — แชท 3 ห้อง (SLI / WORK / LAB)">
+<link rel="manifest" href="/manifest.json">
+<link rel="icon" type="image/png" href="/icon-192.png">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <title>SILELO Neo-Connect — แชท</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Prompt:wght@300;400;600;700&display=swap" rel="stylesheet">
@@ -968,6 +977,14 @@ document.getElementById('lockGo').onclick = verifyPin;
 lockInp.addEventListener('keydown', e => { if (e.key === 'Enter') verifyPin(); });
 // ล็อกอัตโนมัติทุกครั้งที่เปิดหน้า (ใช้คนเดียว — ปลดล็อกแล้วจำไว้ในเบราว์เซอร์นี้)
 if (!isUnlocked()) { lockScreen.classList.add('show'); setTimeout(() => lockInp.focus(), 300); }
+</script>
+<script>
+// PWA: ลงทะเบียน Service Worker (โหลดไว + ใช้ได้ออฟไลน์)
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function () {
+    navigator.serviceWorker.register('/sw.js').catch(function () {});
+  });
+}
 </script>
 </body>
 </html>

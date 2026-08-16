@@ -1,0 +1,42 @@
+{
+  "name": "SILELO Neo-Connect — สลี่ออลา",
+  "short_name": "SILELO",
+  "description": "SILELO Neo-Connect — ผู้ช่วยส่วนตัว 3 ห้อง (SLI / WORK / LAB) ใช้ได้ทุกที่",
+  "id": "/",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#01030a",
+  "theme_color": "#00e5ff",
+  "lang": "th",
+  "categories": ["productivity", "lifestyle", "utilities"],
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    {
+      "name": "คุยกับสลี่",
+      "short_name": "SLI",
+      "description": "เปิดห้องส่วนตัวกับสลี่",
+      "url": "/chat?room=private",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "ห้องทำงาน",
+      "short_name": "WORK",
+      "description": "ผู้ช่วยทำงาน — โค้ด วางแผน สรุป",
+      "url": "/chat?room=work",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "ห้องแล็บ",
+      "short_name": "LAB",
+      "description": "นักประดิษฐ์ & นักทดลอง",
+      "url": "/chat?room=lab",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+    }
+  ]
+}
