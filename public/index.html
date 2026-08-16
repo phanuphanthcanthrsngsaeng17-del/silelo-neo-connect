@@ -14,213 +14,274 @@
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <title>SILELO Neo-Connect</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Prompt:wght@300;400;600;700&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&display=swap" rel="stylesheet">
 <style>
   :root {
-    --bg: #01030a; --cyan: #00e5ff; --purple: #a78bfa; --pink: #ff2d95; --amber: #ffb74d;
-    --txt: #e8f6ff; --dim: #5f7k8f;
+    --bg: #020409; --cyan: #00e5ff; --purple: #a78bfa; --pink: #ff2d95; --amber: #ffb74d;
+    --green: #22e584; --txt: #eaf6ff; --dim: rgba(234,246,255,.5);
   }
   * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   html { overflow-x: clip; }
   body {
     background: var(--bg); color: var(--txt); min-height: 100vh; overflow-x: clip; position: relative;
-    font-family: 'Prompt', 'Segoe UI', sans-serif;
+    font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+    -webkit-font-smoothing: antialiased;
   }
-  /* ===== พื้นหลังจักรวาล: aurora + grid + vignette ===== */
+  ::selection { background: rgba(0,229,255,.3); }
+
+  /* ========== พื้นหลัง — GPU เบา: ไม่มี blur filter, ไม่มี canvas ========== */
   .bgfx { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; clip-path: inset(0); }
-  .aurora { position: absolute; border-radius: 50%; filter: blur(90px); opacity: .5; animation: drift 18s ease-in-out infinite alternate; }
-  .aurora.a1 { width: 55vw; height: 55vw; left: -18vw; top: -22vw; background: radial-gradient(circle, rgba(0,229,255,.22), transparent 65%); }
-  .aurora.a2 { width: 50vw; height: 50vw; right: -16vw; top: 8vh; background: radial-gradient(circle, rgba(167,139,250,.2), transparent 65%); animation-delay: -6s; }
-  .aurora.a3 { width: 45vw; height: 45vw; left: 22vw; bottom: -24vw; background: radial-gradient(circle, rgba(255,45,149,.14), transparent 65%); animation-delay: -12s; }
-  @keyframes drift { from { transform: translate(0,0) scale(1); } to { transform: translate(6vw, -4vh) scale(1.15); } }
-  .grid3d {
-    position: absolute; inset: -2%; opacity: .5;
+  /* starfield: 2 ชั้น box-shadow (static, 0 CPU) */
+  .stars, .stars2 {
+    position: absolute; inset: 0;
+    background-image:
+      radial-gradient(1px 1px at 20% 30%, rgba(255,255,255,.9), transparent),
+      radial-gradient(1px 1px at 70% 15%, rgba(160,220,255,.8), transparent),
+      radial-gradient(1.5px 1.5px at 40% 70%, rgba(255,255,255,.7), transparent),
+      radial-gradient(1px 1px at 85% 55%, rgba(160,220,255,.7), transparent),
+      radial-gradient(1px 1px at 10% 85%, rgba(255,255,255,.6), transparent),
+      radial-gradient(1.5px 1.5px at 55% 45%, rgba(160,220,255,.5), transparent),
+      radial-gradient(1px 1px at 90% 85%, rgba(255,255,255,.5), transparent),
+      radial-gradient(1px 1px at 30% 8%, rgba(255,255,255,.6), transparent);
+    background-repeat: repeat;
+    background-size: 420px 420px;
+  }
+  .stars2 { background-size: 260px 260px; opacity: .6; transform: translateY(20px); }
+  /* perspective grid — เคลื่อนช้า ๆ transform-only */
+  .grid {
+    position: absolute; left: -25%; right: -25%; top: 58%; height: 75%;
     background:
-      linear-gradient(rgba(0,229,255,.05) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(0,229,255,.05) 1px, transparent 1px);
-    background-size: 52px 52px;
-    mask-image: radial-gradient(ellipse 90% 70% at 50% 30%, #000 20%, transparent 75%);
-    -webkit-mask-image: radial-gradient(ellipse 90% 70% at 50% 30%, #000 20%, transparent 75%);
-    animation: gridmove 14s linear infinite;
+      linear-gradient(rgba(0,229,255,.14) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,229,255,.14) 1px, transparent 1px);
+    background-size: 46px 46px;
+    transform: perspective(520px) rotateX(62deg);
+    transform-origin: top center;
+    animation: gridroll 22s linear infinite;
+    mask-image: linear-gradient(180deg, transparent, #000 45%, #000);
+    -webkit-mask-image: linear-gradient(180deg, transparent, #000 45%, #000);
   }
-  @keyframes gridmove { from { background-position: 0 0, 0 0; } to { background-position: 0 52px, 52px 0; } }
-  .scanlines { position: absolute; inset: 0; opacity: .07; background: repeating-linear-gradient(0deg, #fff 0 1px, transparent 1px 3px); }
-  .vignette { position: absolute; inset: 0; background: radial-gradient(ellipse 100% 90% at 50% 40%, transparent 45%, rgba(0,0,0,.65)); }
+  @keyframes gridroll { from { background-position: 0 0, 0 0; } to { background-position: 0 46px, 46px 0; } }
+  /* aurora แบบ soft gradient (ไม่ใช้ filter:blur — ถูก GPU มาก) */
+  .glow { position: absolute; border-radius: 50%; opacity: .5; will-change: transform; }
+  .glow.g1 { width: 52vmax; height: 52vmax; left: -20vmax; top: -22vmax;
+    background: radial-gradient(circle, rgba(0,229,255,.16), transparent 62%);
+    animation: drift1 26s ease-in-out infinite alternate; }
+  .glow.g2 { width: 46vmax; height: 46vmax; right: -18vmax; top: 4vh;
+    background: radial-gradient(circle, rgba(167,139,250,.15), transparent 62%);
+    animation: drift2 31s ease-in-out infinite alternate; }
+  .glow.g3 { width: 42vmax; height: 42vmax; left: 18vw; bottom: -26vmax;
+    background: radial-gradient(circle, rgba(255,45,149,.10), transparent 62%);
+    animation: drift1 37s ease-in-out infinite alternate-reverse; }
+  @keyframes drift1 { from { transform: translate(0,0); } to { transform: translate(5vmax,-3vmax); } }
+  @keyframes drift2 { from { transform: translate(0,0); } to { transform: translate(-4vmax,3vmax); } }
+  .scanlines { position: absolute; inset: 0; opacity: .05;
+    background: repeating-linear-gradient(0deg, #fff 0 1px, transparent 1px 3px); }
+  .vignette { position: absolute; inset: 0;
+    background: radial-gradient(ellipse 100% 90% at 50% 40%, transparent 50%, rgba(0,0,0,.7)); }
 
-  #particles { position: fixed; inset: 0; z-index: 0; opacity: .8; pointer-events: none; }
+  .wrap { position: relative; z-index: 2; max-width: 1120px; margin: 0 auto; padding: 24px 20px 54px; }
 
-  .wrap { position: relative; z-index: 2; max-width: 1120px; margin: 0 auto; padding: 26px 20px 60px; overflow: clip; }
-
-  /* ===== HUD สถานะ (JARVIS-style) ===== */
+  /* ========== HUD bar ========== */
   .hud {
-    position: relative; display: flex; flex-wrap: wrap; gap: 8px 22px; justify-content: space-between; align-items: center;
-    padding: 14px 22px; margin-bottom: 8px;
-    background: linear-gradient(90deg, rgba(6,14,34,.7), rgba(10,20,50,.45));
-    border: 1px solid rgba(0,229,255,.28);
-    clip-path: polygon(14px 0, 100% 0, 100% calc(100% - 14px), calc(100% - 14px) 100%, 0 100%, 0 14px);
-    backdrop-filter: blur(18px); font-family: 'Orbitron', monospace;
+    position: relative; display: flex; flex-wrap: wrap; gap: 6px 26px;
+    justify-content: space-between; align-items: center;
+    padding: 12px 20px; margin-bottom: 10px;
+    background: rgba(6,14,32,.72);
+    border: 1px solid rgba(0,229,255,.25);
+    clip-path: polygon(16px 0, 100% 0, 100% calc(100% - 16px), calc(100% - 16px) 100%, 0 100%, 0 16px);
   }
-  .hud::before { content: ''; position: absolute; inset: 0; background: linear-gradient(90deg, transparent, rgba(0,229,255,.14), transparent); animation: hudscan 4s linear infinite; }
-  @keyframes hudscan { from { transform: translateX(-100%); } to { transform: translateX(100%); } }
-  .hud .cell { display: flex; flex-direction: column; gap: 2px; font-size: 10px; letter-spacing: 2px; color: rgba(0,229,255,.75); text-transform: uppercase; }
-  .hud .cell b { font-size: 15px; letter-spacing: 1px; color: var(--txt); font-weight: 700; }
-  .hud .cell b.on { color: #22e584; text-shadow: 0 0 12px rgba(34,229,132,.8); }
+  .hud::before { content: ''; position: absolute; inset: 0; background: linear-gradient(90deg, transparent, rgba(0,229,255,.12), transparent); animation: sheen 5s linear infinite; }
+  @keyframes sheen { from { transform: translateX(-100%); } to { transform: translateX(100%); } }
+  .hud .cell { display: flex; flex-direction: column; gap: 2px; font-size: 9px; letter-spacing: 2.5px; color: rgba(0,229,255,.7); text-transform: uppercase; font-family: 'Orbitron', monospace; }
+  .hud .cell b { font-size: 14px; letter-spacing: 1px; color: var(--txt); font-weight: 700; font-variant-numeric: tabular-nums; }
+  .hud .cell b.on { color: var(--green); text-shadow: 0 0 12px rgba(34,229,132,.8); }
   .hud .cell b.off { color: #ff4d6d; text-shadow: 0 0 12px rgba(255,77,109,.8); }
-  .hud .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #22e584; box-shadow: 0 0 10px #22e584; animation: pulse 1.5s infinite; }
+  .hud .dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--green); box-shadow: 0 0 10px var(--green); animation: pulse 1.5s infinite; }
+  @keyframes pulse { 50% { opacity: .25; transform: scale(.7); } }
 
-  /* ===== โลโก้ ===== */
-  .hero { text-align: center; margin: 34px 0 6px; position: relative; }
-  .hero .ringwrap { position: relative; display: inline-block; }
-  .hero .ringwrap::before, .hero .ringwrap::after {
-    content: ''; position: absolute; inset: -26px; border-radius: 50%; pointer-events: none;
+  /* ========== Hero ========== */
+  .hero { text-align: center; margin: 30px 0 4px; position: relative; }
+  .core { position: relative; display: inline-block; width: 150px; height: 150px; margin-bottom: 14px; }
+  .core .hex {
+    position: absolute; inset: 0;
+    clip-path: polygon(50% 0, 100% 25%, 100% 75%, 50% 100%, 0 75%, 0 25%);
+    background: linear-gradient(160deg, rgba(0,229,255,.12), rgba(167,139,250,.06));
+    border: 1px solid rgba(0,229,255,.5);
+    animation: hexpulse 3.2s ease-in-out infinite;
   }
-  .hero .ringwrap::before { border: 1px dashed rgba(0,229,255,.35); animation: spin 16s linear infinite; }
-  .hero .ringwrap::after {
-    inset: -46px; border: 1px solid transparent;
-    border-top-color: rgba(0,229,255,.5); border-right-color: rgba(167,139,250,.4);
-    border-radius: 50%; animation: spin 9s linear infinite reverse;
+  @keyframes hexpulse { 0%,100% { box-shadow: 0 0 18px rgba(0,229,255,.25), inset 0 0 22px rgba(0,229,255,.12); } 50% { box-shadow: 0 0 42px rgba(0,229,255,.5), inset 0 0 34px rgba(0,229,255,.25); } }
+  .core .hex::before, .core .hex::after {
+    content: ''; position: absolute; inset: 14px;
+    clip-path: polygon(50% 0, 100% 25%, 100% 75%, 50% 100%, 0 75%, 0 25%);
+    border: 1px solid rgba(0,229,255,.3);
   }
+  .core .hex::after { inset: 30px; border-color: rgba(167,139,250,.45); animation: spin 14s linear infinite; }
+  .core .orb {
+    position: absolute; inset: 44px; border-radius: 50%;
+    background: radial-gradient(circle at 35% 30%, #c9f4ff, #00e5ff 55%, #0a4d8f);
+    box-shadow: 0 0 34px rgba(0,229,255,.8), inset 0 0 20px rgba(255,255,255,.5);
+    animation: orbpulse 2.4s ease-in-out infinite;
+  }
+  @keyframes orbpulse { 0%,100% { transform: scale(1); } 50% { transform: scale(.92); } }
   @keyframes spin { to { transform: rotate(360deg); } }
+  .core .seg { position: absolute; inset: -12px; border-radius: 50%; border: 1px dashed rgba(0,229,255,.3); animation: spin 18s linear infinite; }
+  .core .seg.s2 { inset: -26px; border: 1px solid transparent; border-top-color: rgba(167,139,250,.55); border-right-color: rgba(0,229,255,.4); animation-duration: 8s; animation-direction: reverse; }
+
   .hero h1 {
-    font-family: 'Orbitron', sans-serif; font-weight: 900; font-size: clamp(44px, 10vw, 84px); letter-spacing: 10px;
-    background: linear-gradient(180deg, #fff 0%, #9be8ff 35%, #00c8ff 60%, #2b6cff 100%);
+    font-family: 'Orbitron', sans-serif; font-weight: 900; font-size: clamp(42px, 9.5vw, 80px);
+    letter-spacing: 12px; line-height: 1.05;
+    background: linear-gradient(180deg, #fff 0%, #a5ecff 40%, #00c8ff 65%, #2b6cff 100%);
     -webkit-background-clip: text; background-clip: text; color: transparent;
-    filter: drop-shadow(0 0 26px rgba(0,200,255,.55)) drop-shadow(0 4px 30px rgba(0,229,255,.25));
-    text-shadow: none; line-height: 1.1;
   }
   .hero .sub {
-    margin-top: 10px; font-family: 'Orbitron', sans-serif; letter-spacing: 14px; font-size: clamp(11px, 2.6vw, 16px);
-    color: var(--cyan); text-transform: uppercase; text-shadow: 0 0 16px rgba(0,229,255,.8);
+    margin-top: 8px; font-family: 'Orbitron', sans-serif; letter-spacing: 13px; font-size: clamp(10px, 2.4vw, 15px);
+    color: var(--cyan); text-transform: uppercase; text-shadow: 0 0 16px rgba(0,229,255,.7);
   }
-  .hero .sub::before, .hero .sub::after { content: '◆'; margin: 0 14px; font-size: 8px; opacity: .8; }
+  .hero .sub::before, .hero .sub::after { content: '◆'; margin: 0 13px; font-size: 7px; opacity: .85; }
+
+  /* boot terminal */
+  .boot {
+    margin: 16px auto 0; max-width: 430px; text-align: left;
+    padding: 10px 16px; min-height: 58px;
+    background: rgba(2,8,18,.6); border: 1px solid rgba(0,229,255,.18); border-radius: 6px;
+    font-family: 'Orbitron', monospace; font-size: 11px; letter-spacing: 1.5px; color: rgba(0,229,255,.85);
+  }
+  .boot .ln { display: block; white-space: pre-wrap; word-break: break-word; }
+  .boot .ok { color: var(--green); }
+  .boot .cur { display: inline-block; width: 7px; height: 12px; background: var(--cyan); vertical-align: -2px; animation: blink 1s steps(2) infinite; }
+  @keyframes blink { 50% { opacity: 0; } }
+
   .badge {
-    display: inline-flex; align-items: center; gap: 8px; margin-top: 18px; padding: 6px 18px;
-    font-family: 'Orbitron', monospace; font-size: 10px; letter-spacing: 3px; color: #22e584;
+    display: inline-flex; align-items: center; gap: 8px; margin-top: 16px; padding: 6px 18px;
+    font-family: 'Orbitron', monospace; font-size: 10px; letter-spacing: 3px; color: var(--green);
     border: 1px solid rgba(34,229,132,.4); border-radius: 30px;
-    background: rgba(34,229,132,.08); box-shadow: 0 0 18px rgba(34,229,132,.2), inset 0 0 14px rgba(34,229,132,.08);
+    background: rgba(34,229,132,.08); box-shadow: 0 0 18px rgba(34,229,132,.18), inset 0 0 14px rgba(34,229,132,.08);
     text-transform: uppercase;
   }
-  .badge .pulse { width: 7px; height: 7px; border-radius: 50%; background: #22e584; box-shadow: 0 0 10px #22e584; animation: pulse 1.2s infinite; }
-  @keyframes pulse { 50% { opacity: .25; transform: scale(.75); } }
+  .badge .pulse { width: 7px; height: 7px; border-radius: 50%; background: var(--green); box-shadow: 0 0 10px var(--green); animation: pulse 1.2s infinite; }
+  .tagline { text-align: center; color: var(--dim); font-size: 13px; font-weight: 300; letter-spacing: 2px; margin: 18px 0 30px; }
 
-  .tagline { text-align: center; color: rgba(232,246,255,.5); font-size: 13px; font-weight: 300; letter-spacing: 2px; margin: 22px 0 34px; }
-
-  /* ===== Holo-cards ===== */
+  /* ========== Holo cards ========== */
   .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(270px, 1fr)); gap: 22px; }
-
   .card {
     position: relative; display: block; text-decoration: none; color: var(--txt);
-    padding: 30px 24px 22px; border-radius: 6px; overflow: hidden; cursor: pointer;
-    background: linear-gradient(160deg, rgba(10,20,44,.62), rgba(4,8,22,.55));
-    border: 1px solid rgba(0,229,255,.22);
-    backdrop-filter: blur(16px);
-    clip-path: polygon(22px 0, 100% 0, 100% calc(100% - 22px), calc(100% - 22px) 100%, 0 100%, 0 22px);
-    transition: transform .25s ease, box-shadow .25s ease, border-color .25s;
+    padding: 28px 22px 20px; overflow: hidden; cursor: pointer;
+    background: linear-gradient(160deg, rgba(10,20,44,.68), rgba(4,8,22,.62));
+    border: 1px solid color-mix(in srgb, var(--cc) 30%, transparent);
+    clip-path: polygon(24px 0, 100% 0, 100% calc(100% - 24px), calc(100% - 24px) 100%, 0 100%, 0 24px);
+    transition: transform .28s cubic-bezier(.2,.8,.3,1.1), box-shadow .28s, border-color .28s;
+    will-change: transform;
   }
-  /* มุม bracket */
   .card::before, .card::after { content: ''; position: absolute; width: 26px; height: 26px; pointer-events: none; }
   .card::before { top: 8px; left: 8px; border-top: 2px solid var(--cc); border-left: 2px solid var(--cc); filter: drop-shadow(0 0 6px var(--cc)); }
   .card::after { bottom: 8px; right: 8px; border-bottom: 2px solid var(--cc); border-right: 2px solid var(--cc); filter: drop-shadow(0 0 6px var(--cc)); }
-  /* แถบไฟบนสุด */
   .card .topline { position: absolute; top: 0; left: 0; right: 0; height: 2px; background: linear-gradient(90deg, transparent, var(--cc), transparent); opacity: .9; }
   .card:hover, .card:active {
-    transform: translateY(-6px);
-    border-color: color-mix(in srgb, var(--cc) 65%, transparent);
-    box-shadow: 0 18px 50px rgba(0,0,0,.6), 0 0 34px color-mix(in srgb, var(--cc) 28%, transparent), inset 0 0 40px color-mix(in srgb, var(--cc) 6%, transparent);
+    transform: translateY(-7px) scale(1.015);
+    border-color: color-mix(in srgb, var(--cc) 70%, transparent);
+    box-shadow: 0 20px 50px rgba(0,0,0,.65), 0 0 36px color-mix(in srgb, var(--cc) 26%, transparent);
   }
   .card:hover .topline { box-shadow: 0 0 14px var(--cc); }
-  /* avatar + วงแหวนโคจร */
-  .avatar-wrap { position: relative; width: 86px; height: 86px; margin: 6px auto 18px; }
+  .avatar-wrap { position: relative; width: 84px; height: 84px; margin: 4px auto 16px; }
   .avatar-wrap .ring {
     position: absolute; inset: 0; border-radius: 50%;
-    background: conic-gradient(from 0deg, transparent 0 40%, var(--cc) 55%, transparent 70%);
+    background: conic-gradient(from 0deg, transparent 0 40%, var(--cc) 55%, transparent 72%);
     -webkit-mask: radial-gradient(circle, transparent 62%, #000 64%);
     mask: radial-gradient(circle, transparent 62%, #000 64%);
-    animation: spin 3.2s linear infinite;
+    animation: spin 3.4s linear infinite;
   }
-  .avatar-wrap .ring2 { inset: -9px; animation-duration: 7s; animation-direction: reverse; opacity: .6; }
+  .avatar-wrap .ring2 { inset: -9px; animation-duration: 8s; animation-direction: reverse; opacity: .55; }
   .avatar {
     position: absolute; inset: 9px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
-    font-size: 40px;
-    background: radial-gradient(circle at 32% 28%, color-mix(in srgb, var(--cc) 30%, transparent), rgba(3,6,18,.9));
+    font-size: 38px;
+    background: radial-gradient(circle at 32% 28%, color-mix(in srgb, var(--cc) 32%, transparent), rgba(3,6,18,.9));
     border: 1px solid color-mix(in srgb, var(--cc) 55%, transparent);
-    box-shadow: 0 0 24px color-mix(in srgb, var(--cc) 35%, transparent), inset 0 0 18px color-mix(in srgb, var(--cc) 20%, transparent);
+    box-shadow: 0 0 22px color-mix(in srgb, var(--cc) 32%, transparent), inset 0 0 16px color-mix(in srgb, var(--cc) 18%, transparent);
   }
-  .card h2 { text-align: center; font-family: 'Orbitron', sans-serif; font-size: 21px; letter-spacing: 4px; font-weight: 700; }
-  .card .tag { text-align: center; color: var(--cc); font-size: 10px; letter-spacing: 3px; text-transform: uppercase; margin: 5px 0 12px; font-family: 'Orbitron', monospace; }
-  .card p { color: rgba(232,246,255,.62); font-size: 13px; font-weight: 300; line-height: 1.75; text-align: center; min-height: 66px; }
+  .card h2 { text-align: center; font-family: 'Orbitron', sans-serif; font-size: 20px; letter-spacing: 5px; font-weight: 700; }
+  .card .tag { text-align: center; color: var(--cc); font-size: 9.5px; letter-spacing: 3px; text-transform: uppercase; margin: 5px 0 10px; font-family: 'Orbitron', monospace; }
+  .card p { color: rgba(234,246,255,.62); font-size: 12.5px; font-weight: 300; line-height: 1.7; text-align: center; min-height: 62px; }
   .card .enter {
-    margin: 16px auto 0; display: flex; align-items: center; justify-content: center; gap: 10px;
-    padding: 11px 0; border-radius: 4px; font-family: 'Orbitron', sans-serif; font-size: 12px; letter-spacing: 3px; font-weight: 700;
+    margin: 14px auto 0; display: flex; align-items: center; justify-content: center; gap: 10px;
+    padding: 10px 0; border-radius: 4px; font-family: 'Orbitron', sans-serif; font-size: 12px; letter-spacing: 3px; font-weight: 700;
     background: linear-gradient(90deg, color-mix(in srgb, var(--cc) 80%, #000), color-mix(in srgb, var(--cc) 45%, var(--purple)));
     color: #02101a; position: relative; overflow: hidden;
-    box-shadow: 0 0 22px color-mix(in srgb, var(--cc) 35%, transparent);
+    box-shadow: 0 0 20px color-mix(in srgb, var(--cc) 32%, transparent);
   }
-  .card .enter::before { content: ''; position: absolute; top: 0; bottom: 0; width: 40%; background: linear-gradient(90deg, transparent, rgba(255,255,255,.5), transparent); animation: btnglide 2.6s ease-in-out infinite; }
+  .card .enter::before { content: ''; position: absolute; top: 0; bottom: 0; width: 40%; background: linear-gradient(90deg, transparent, rgba(255,255,255,.5), transparent); animation: btnglide 2.8s ease-in-out infinite; }
   @keyframes btnglide { from { left: -50%; } to { left: 110%; } }
   .card .enter::after { content: '▸'; transition: transform .2s; }
   .card:hover .enter::after { transform: translateX(5px); }
-  .card .power {
-    margin-top: 14px; height: 3px; border-radius: 2px; background: rgba(255,255,255,.07); overflow: hidden;
-  }
-  .card .power i { display: block; height: 100%; width: 78%; background: linear-gradient(90deg, var(--cc), color-mix(in srgb, var(--cc) 50%, #fff)); box-shadow: 0 0 8px var(--cc); animation: powerpulse 3s ease-in-out infinite; }
-  .card:nth-child(2) .power i { width: 92%; animation-delay: .8s; }
-  .card:nth-child(3) .power i { width: 86%; animation-delay: 1.6s; }
-  @keyframes powerpulse { 0%,100% { opacity: .6; } 50% { opacity: 1; } }
-  .card .statusline { margin-top: 10px; display: flex; justify-content: space-between; font-size: 10px; color: rgba(232,246,255,.42); font-family: 'Orbitron', monospace; letter-spacing: 1px; }
-  .card .statusline .on { color: #22e584; }
+  .card .statusline { margin-top: 12px; display: flex; justify-content: space-between; font-size: 9.5px; color: rgba(234,246,255,.4); font-family: 'Orbitron', monospace; letter-spacing: 1px; }
+  .card .statusline .on { color: var(--green); }
 
-  .featbar { margin: 26px auto 6px; max-width: 560px; text-align: center; }
-  .feat-ttl { font-family: 'Orbitron', monospace; font-size: 11px; letter-spacing: 3px; color: var(--accent, #00e5ff); margin-bottom: 10px; text-shadow: 0 0 12px rgba(0,229,255,.4); }
+  .featbar { margin: 26px auto 6px; max-width: 580px; text-align: center; }
+  .feat-ttl { font-family: 'Orbitron', monospace; font-size: 10.5px; letter-spacing: 3px; color: var(--cyan); margin-bottom: 10px; text-shadow: 0 0 12px rgba(0,229,255,.4); }
   .feat-row { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
-  .feat { font-size: 11px; color: rgba(232,246,255,.75); background: rgba(0,229,255,.06); border: 1px solid rgba(0,229,255,.22); border-radius: 30px; padding: 6px 12px; font-family: 'Prompt', sans-serif; letter-spacing: .3px; }
-  .foot { text-align: center; margin-top: 46px; color: rgba(232,246,255,.35); font-size: 11px; letter-spacing: 2px; font-family: 'Orbitron', monospace; }
+  .feat { font-size: 11px; color: rgba(234,246,255,.78); background: rgba(0,229,255,.06); border: 1px solid rgba(0,229,255,.22); border-radius: 30px; padding: 6px 12px; letter-spacing: .3px; }
+  .foot { text-align: center; margin-top: 40px; color: rgba(234,246,255,.35); font-size: 10.5px; letter-spacing: 2px; font-family: 'Orbitron', monospace; }
   .foot b { color: var(--cyan); }
 
-  @media (max-width: 640px) { .wrap { padding: 18px 14px 46px; } .card p { min-height: 0; } }
+  @media (max-width: 640px) { .wrap { padding: 16px 14px 44px; } .card p { min-height: 0; } }
 
-  .lock { position: fixed; inset: 0; z-index: 9999; display: none; align-items: center; justify-content: center; background: radial-gradient(ellipse at 50% 30%, #0d1b2a 0%, #030b14 70%); backdrop-filter: blur(6px); }
+  /* ========== Lock ========== */
+  .lock { position: fixed; inset: 0; z-index: 9999; display: none; align-items: center; justify-content: center; background: radial-gradient(ellipse at 50% 30%, #0a1424 0%, #020409 70%); }
   .lock.show { display: flex; }
-  .lock-box { width: min(320px, 88vw); text-align: center; padding: 26px 18px 20px; border: 1px solid rgba(0,229,255,.25); border-radius: 18px; background: rgba(6,18,30,.85); box-shadow: 0 0 40px rgba(0,229,255,.12); }
+  .lock::before { content: ''; position: absolute; inset: 0; opacity: .35;
+    background:
+      linear-gradient(rgba(0,229,255,.07) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,229,255,.07) 1px, transparent 1px);
+    background-size: 40px 40px;
+    mask-image: radial-gradient(ellipse at 50% 45%, #000, transparent 75%);
+    -webkit-mask-image: radial-gradient(ellipse at 50% 45%, #000, transparent 75%);
+  }
+  .lock-box { width: min(320px, 88vw); text-align: center; padding: 30px 20px 22px; position: relative;
+    background: rgba(8,18,32,.88); border: 1px solid rgba(0,229,255,.28); border-radius: 16px;
+    box-shadow: 0 0 50px rgba(0,229,255,.14), inset 0 0 40px rgba(0,229,255,.05);
+    clip-path: polygon(18px 0, 100% 0, 100% calc(100% - 18px), calc(100% - 18px) 100%, 0 100%, 0 18px);
+  }
+  .lock-box::before, .lock-box::after { content: ''; position: absolute; width: 20px; height: 20px; }
+  .lock-box::before { top: 6px; left: 6px; border-top: 2px solid var(--cyan); border-left: 2px solid var(--cyan); }
+  .lock-box::after { bottom: 6px; right: 6px; border-bottom: 2px solid var(--cyan); border-right: 2px solid var(--cyan); }
   .lock-ico { font-size: 34px; animation: lockpulse 2s ease-in-out infinite; }
   @keyframes lockpulse { 0%,100% { filter: drop-shadow(0 0 4px rgba(0,229,255,.5)); } 50% { filter: drop-shadow(0 0 16px rgba(0,229,255,.9)); } }
-  .lock-ttl { font-family: 'Orbitron', monospace; font-size: 14px; letter-spacing: 4px; color: #e8f6ff; margin-top: 8px; }
-  .lock-sub { font-size: 12px; color: rgba(232,246,255,.55); margin: 6px 0 14px; font-family: 'Prompt', sans-serif; }
-  .lock-inp { width: 100%; box-sizing: border-box; padding: 14px 16px; border-radius: 12px; border: 1px solid rgba(0,229,255,.35); background: rgba(0,229,255,.06); color: #e8f6ff; font-size: 20px; letter-spacing: 6px; text-align: center; font-family: 'Orbitron', monospace; outline: none; transition: all .2s; }
+  .lock-ttl { font-family: 'Orbitron', monospace; font-size: 14px; letter-spacing: 4px; color: #eaf6ff; margin-top: 8px; }
+  .lock-sub { font-size: 12px; color: rgba(234,246,255,.55); margin: 6px 0 14px; }
+  .lock-inp { width: 100%; box-sizing: border-box; padding: 14px 16px; border-radius: 10px; border: 1px solid rgba(0,229,255,.35); background: rgba(0,229,255,.06); color: #eaf6ff; font-size: 20px; letter-spacing: 6px; text-align: center; font-family: 'Orbitron', monospace; outline: none; transition: all .2s; }
   .lock-inp:focus { border-color: #00e5ff; box-shadow: 0 0 18px rgba(0,229,255,.35); background: rgba(0,229,255,.1); }
-  .lock-inp::placeholder { letter-spacing: 1px; color: rgba(232,246,255,.35); font-size: 13px; }
-  .lock-go { width: 100%; margin-top: 12px; padding: 13px; border-radius: 12px; border: 1px solid rgba(34,229,132,.45); background: rgba(34,229,132,.1); color: #22e584; font-size: 15px; font-family: 'Prompt', sans-serif; font-weight: 600; cursor: pointer; transition: all .15s; }
+  .lock-inp::placeholder { letter-spacing: 1px; color: rgba(234,246,255,.35); font-size: 13px; }
+  .lock-go { width: 100%; margin-top: 12px; padding: 13px; border-radius: 10px; border: 1px solid rgba(34,229,132,.45); background: rgba(34,229,132,.1); color: var(--green); font-size: 15px; font-weight: 600; cursor: pointer; transition: all .15s; }
   .lock-go:active { transform: scale(.97); background: rgba(34,229,132,.25); }
   .go-kbd { opacity: .6; font-size: 12px; }
-  .lock-msg { min-height: 18px; margin-top: 12px; font-size: 12px; color: #ff5252; font-family: 'Prompt', sans-serif; }
-  /* ===== 📞 ปุ่มโทรลอย — หน้าหลัก กดปุ๊บโทรปั๊บ ===== */
+  .lock-msg { min-height: 18px; margin-top: 12px; font-size: 12px; color: #ff5252; }
+
+  /* ========== call FAB ========== */
   .call-fab {
     position: fixed; bottom: 24px; right: 24px; z-index: 900;
-    width: 66px; height: 66px; border-radius: 50%;
+    width: 64px; height: 64px; border-radius: 50%; text-decoration: none;
     background: linear-gradient(135deg, #1a7a45, #0d4d28);
-    color: #fff; font-size: 28px; text-decoration: none;
-    display: flex; align-items: center; justify-content: center;
+    color: #fff; font-size: 27px; display: flex; align-items: center; justify-content: center;
     box-shadow: 0 6px 20px rgba(52,209,123,.45), inset 0 1px 0 rgba(255,255,255,.3);
     transition: transform .15s;
-    -webkit-tap-highlight-color: transparent;
   }
   .call-fab:active { transform: scale(.92); }
-  .call-fab::after {
-    content: ''; position: absolute; inset: 0; border-radius: 50%;
-    box-shadow: 0 0 0 0 rgba(52,209,123,.5); animation: fabPulse 2.2s infinite;
-  }
+  .call-fab::after { content: ''; position: absolute; inset: 0; border-radius: 50%; box-shadow: 0 0 0 0 rgba(52,209,123,.5); animation: fabPulse 2.2s infinite; }
   @keyframes fabPulse { 0% { box-shadow: 0 0 0 0 rgba(52,209,123,.5); } 100% { box-shadow: 0 0 0 14px rgba(52,209,123,0); } }
-  @media (max-width: 480px) {
-    .call-fab { bottom: 18px; right: 18px; width: 60px; height: 60px; font-size: 26px; }
+  @media (max-width: 480px) { .call-fab { bottom: 18px; right: 18px; width: 60px; height: 60px; font-size: 25px; } }
+
+  /* ========== เบา: หยุด animation ถ้าผู้ใช้ตั้งค่า ========== */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation: none !important; transition: none !important; }
   }
 </style>
 </head>
 <body>
 <div class="bgfx">
-  <div class="aurora a1"></div><div class="aurora a2"></div><div class="aurora a3"></div>
-  <div class="grid3d"></div><div class="scanlines"></div><div class="vignette"></div>
+  <div class="stars"></div><div class="stars2"></div>
+  <div class="glow g1"></div><div class="glow g2"></div><div class="glow g3"></div>
+  <div class="grid"></div><div class="scanlines"></div><div class="vignette"></div>
 </div>
-<canvas id="particles"></canvas>
 
 <div class="wrap">
   <!-- HUD -->
@@ -232,10 +293,13 @@
   </div>
 
   <div class="hero">
-    <div class="ringwrap">
-      <h1>SILELO</h1>
+    <div class="core">
+      <div class="seg"></div><div class="seg s2"></div>
+      <div class="hex"></div><div class="orb"></div>
     </div>
+    <h1>SILELO</h1>
     <div class="sub">Neo-Connect</div>
+    <div class="boot" id="boot" aria-live="polite"></div>
     <div class="badge"><span class="pulse"></span> System Online · AI Core Active</div>
   </div>
   <div class="tagline">— ทุกห้องมีชีวิต · เชื่อมต่อทุกคนทุกที่ —</div>
@@ -251,7 +315,6 @@
       <div class="tag">ผู้ช่วยส่วนตัว</div>
       <p>อบอุ่น จำเรื่องพี่นุได้ ช่วยทุกเรื่อง ตั้งแต่ให้กำลังใจ วางแผน ถึงคุยเล่นยามดึก</p>
       <div class="enter">ACCESS</div>
-      <div class="power"><i></i></div>
       <div class="statusline"><span class="on">● ONLINE</span><span>RESP ~1s</span></div>
     </a>
 
@@ -265,7 +328,6 @@
       <div class="tag">ผู้ช่วยทำงาน</div>
       <p>จริงจัง ตรงประเด็น โค้ด วางแผน สรุปเอกสาร วิเคราะห์ตัวเลข จัดการให้เสร็จ</p>
       <div class="enter">ACCESS</div>
-      <div class="power"><i></i></div>
       <div class="statusline"><span class="on">● ONLINE</span><span>FOCUS 100%</span></div>
     </a>
 
@@ -277,9 +339,8 @@
       </div>
       <h2>LAB</h2>
       <div class="tag">นักประดิษฐ์ & นักทดลอง</div>
-      <p>พลังงานเต็มร้อย ไอเดียสุดล้ำ อธิบายวิทย์ให้สนุก ไม่มีคำว่าทำไม่ได้</p>
+      <p>พลังเต็มร้อย ไอเดียสุดล้ำ อธิบายวิทย์ให้สนุก ไม่มีคำว่าทำไม่ได้</p>
       <div class="enter">ACCESS</div>
-      <div class="power"><i></i></div>
       <div class="statusline"><span class="on">● ONLINE</span><span>IDEAS ∞</span></div>
     </a>
   </div>
@@ -287,17 +348,17 @@
   <div class="featbar">
     <div class="feat-ttl">⚡ NEW ABILITIES · อัปเกรดใหม่ล่าสุด</div>
     <div class="feat-row">
-      <span class="feat">🎨 วาดรูปในแชท — พิมพ์ "วาดรูปแมวอวกาศ"</span>
+      <span class="feat">🎨 วาดรูปในแชท — พิมพ์ "วาดรูปแมวอากาศ"</span>
       <span class="feat">👁️ ส่งรูปให้ AI ดู/บรรยาย</span>
+      <span class="feat">👑 ตาในบ้าน bossnusilelo — AI ฝีมือพี่นุ</span>
       <span class="feat">📺 แชร์หน้าจอ/กล้องสดในโทร</span>
       <span class="feat">🧠 ความทรงจำถาวร — จำพี่นุได้</span>
-      <span class="feat">🎙️ เปลี่ยนเสียงสลี่ได้ 4 แบบ</span>
+      <span class="feat">🎙️ เสียงสลี่ 4 แบบ</span>
+      <span class="feat">⚡ โหมดไร้กฎ</span>
     </div>
   </div>
 
-  <div class="foot">SILELO NEO-CONNECT v1.6 · <b>AI CORE</b>: GROQ ⚡ · GEMINI 🆚 · OPENROUTER · POLLINATIONS · 📞 โทรง่ายแบบแอป</div>
-</div>
-
+  <div class="foot">SILELO NEO-CONNECT v2.0 · <b>AI CORE</b>: GEMINI ⚡ · GROQ · OPENROUTER · POLLINATIONS · 📞 โทรง่ายแบบแอป</div>
 </div>
 
 <!-- 🔒 Lock -->
@@ -312,94 +373,80 @@
   </div>
 </div>
 
+<a class="call-fab" href="/chat?room=private&call=1" title="โทรหาสลี่" aria-label="โทรหาสลี่">📞</a>
+
 <script>
-  /* ===== อนุภาคลอย + เส้นเชื่อม (จักรวาล) ===== */
-  const cv = document.getElementById('particles'), ctx = cv.getContext('2d');
-  let W, H, parts = [];
-  const N = Math.min(90, Math.floor(innerWidth * innerHeight / 16000));
-  function resize() {
-    W = cv.width = innerWidth; H = cv.height = innerHeight;
-    parts = Array.from({ length: N }, () => ({
-      x: Math.random() * W, y: Math.random() * H,
-      vx: (Math.random() - .5) * .35, vy: (Math.random() - .5) * .35,
-      r: Math.random() * 1.8 + .6, a: Math.random() * .5 + .3
-    }));
-  }
-  resize(); addEventListener('resize', resize);
-  (function loop() {
-    ctx.clearRect(0, 0, W, H);
-    for (const p of parts) {
-      p.x += p.vx; p.y += p.vy;
-      if (p.x < 0 || p.x > W) p.vx *= -1;
-      if (p.y < 0 || p.y > H) p.vy *= -1;
-      ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, 7);
-      ctx.fillStyle = `rgba(0,229,255,${p.a})`; ctx.fill();
+  /* ===== Boot terminal — พิมพ์ข้อความ (เบา: text only) ===== */
+  (function () {
+    var el = document.getElementById('boot');
+    var lines = [
+      '> NEO-CONNECT v2.0 — INITIALIZING...',
+      '> AI CORE: GEMINI \u26a1 GROQ \u00b7 LINKED',
+      '> BOSSNUSILELO EYE \u00b7 ONLINE'
+    ];
+    var li = 0, ci = 0, out = '';
+    if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      el.innerHTML = lines.map(function (l) { return '<span class="ln ok">' + l + '</span>'; }).join('');
+      return;
     }
-    for (let i = 0; i < parts.length; i++) for (let j = i + 1; j < parts.length; j++) {
-      const dx = parts[i].x - parts[j].x, dy = parts[i].y - parts[j].y;
-      const d = Math.hypot(dx, dy);
-      if (d < 130) {
-        ctx.beginPath(); ctx.moveTo(parts[i].x, parts[i].y); ctx.lineTo(parts[j].x, parts[j].y);
-        ctx.strokeStyle = `rgba(0,229,255,${(1 - d / 130) * .18})`; ctx.lineWidth = 1; ctx.stroke();
+    (function type() {
+      if (li >= lines.length) { el.innerHTML += '<span class="cur"></span>'; return; }
+      var l = lines[li];
+      out += l[ci] || '';
+      el.innerHTML = '';
+      for (var i = 0; i <= li; i++) {
+        var txt = i < li ? lines[i] : out;
+        el.innerHTML += '<span class="ln' + (i === li && ci >= l.length - 1 ? ' ok' : '') + '">' + txt + '</span>';
       }
-    }
-    requestAnimationFrame(loop);
+      el.innerHTML += '<span class="cur"></span>';
+      ci++;
+      if (ci > l.length) { li++; ci = 0; out = ''; }
+      setTimeout(type, 26);
+    })();
   })();
 
   /* ===== HUD — ของจริงทุกค่า ===== */
-  setInterval(() => { const d = new Date(); document.getElementById('clock').textContent = d.toLocaleTimeString('th-TH', { hour12: false }); }, 1000);
-  async function refreshOnline() {
-    try { const j = await (await fetch('/api/stats')).json(); document.getElementById('onlineCount').textContent = j.online; } catch (e) {}
-  }
-  setInterval(refreshOnline, 15000); refreshOnline();
-  setInterval(() => { try { fetch('/api/presence', { method: 'POST' }); } catch (e) {} }, 20000);
-  try { fetch('/api/presence', { method: 'POST' }); } catch (e) {}
-
+  setInterval(function () { var d = new Date(); document.getElementById('clock').textContent = d.toLocaleTimeString('th-TH', { hour12: false }); }, 1000);
+  async function refreshOnline() { try { var j = await (await fetch('/api/stats')).json(); document.getElementById('onlineCount').textContent = j.online; } catch (e) {} }
+  setInterval(refreshOnline, 30000); refreshOnline();
   async function measureSpeed() {
-    const times = [];
-    for (let i = 0; i < 5; i++) { const t0 = performance.now(); try { await fetch('/api/ping?_=' + Math.random()); times.push(performance.now() - t0); } catch (e) {} }
-    if (times.length) document.getElementById('netSpeed').textContent = (times.reduce((a, b) => a + b, 0) / times.length).toFixed(0) + 'ms';
+    var t0 = performance.now();
+    try { await fetch('/api/ping?_=' + Math.random()); document.getElementById('netSpeed').textContent = (performance.now() - t0).toFixed(0) + 'ms'; } catch (e) {}
   }
-  measureSpeed(); setInterval(measureSpeed, 20000);
-
-  const netB = document.getElementById('netDotB'), netT = document.getElementById('netTxt');
+  measureSpeed(); setInterval(measureSpeed, 30000);
+  var netB = document.getElementById('netDotB'), netT = document.getElementById('netTxt');
   function netStatus() {
     if (navigator.onLine) { netB.className = 'on'; netB.innerHTML = '<span class="dot"></span> ONLINE'; netT.textContent = 'Network'; }
     else { netB.className = 'off'; netB.textContent = 'OFFLINE'; netT.textContent = '⚠ Network'; }
   }
   addEventListener('online', netStatus); addEventListener('offline', netStatus); netStatus();
 
-/* ===== 🔒 Lock ===== */
-const lockScreen = document.getElementById('lockScreen');
-const lockInp = document.getElementById('lockInp');
-const lockMsg = document.getElementById('lockMsg');
-const LOCK_KEY = 'nc_unlocked';
-function isUnlocked() { try { return localStorage.getItem(LOCK_KEY) === '1'; } catch (e) { return false; } }
-async function verifyPin() {
-  const pin = lockInp.value.trim();
-  if (!pin) return;
-  lockMsg.textContent = '...';
-  try {
-    const r = await fetch('/api/unlock', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ pin }) });
-    const j = await r.json();
-    if (j.ok) { try { localStorage.setItem(LOCK_KEY, '1'); } catch (e) {} lockScreen.classList.remove('show'); lockMsg.textContent = ''; lockInp.value = ''; }
-    else { lockMsg.textContent = 'รหัสไม่ถูกต้อง ❌'; lockInp.value = ''; lockInp.focus(); }
-  } catch (e) { lockMsg.textContent = 'เชื่อมต่อเซิร์ฟเวอร์ไม่ได้'; lockInp.value = ''; }
-}
-document.getElementById('lockGo').onclick = verifyPin;
-lockInp.addEventListener('keydown', e => { if (e.key === 'Enter') verifyPin(); });
-if (!isUnlocked()) { lockScreen.classList.add('show'); setTimeout(() => lockInp.focus(), 300); }
+  /* ===== 🔒 Lock ===== */
+  var lockScreen = document.getElementById('lockScreen');
+  var lockInp = document.getElementById('lockInp');
+  var lockMsg = document.getElementById('lockMsg');
+  var LOCK_KEY = 'nc_unlocked';
+  function isUnlocked() { try { return localStorage.getItem(LOCK_KEY) === '1'; } catch (e) { return false; } }
+  async function verifyPin() {
+    var pin = lockInp.value.trim();
+    if (!pin) return;
+    lockMsg.textContent = '...';
+    try {
+      var r = await fetch('/api/unlock', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ pin: pin }) });
+      var j = await r.json();
+      if (j.ok) { try { localStorage.setItem(LOCK_KEY, '1'); } catch (e) {} lockScreen.classList.remove('show'); lockMsg.textContent = ''; lockInp.value = ''; }
+      else { lockMsg.textContent = 'รหัสไม่ถูกต้อง ❌'; lockInp.value = ''; lockInp.focus(); }
+    } catch (e) { lockMsg.textContent = 'เชื่อมต่อเซิร์ฟเวอร์ไม่ได้'; lockInp.value = ''; }
+  }
+  document.getElementById('lockGo').onclick = verifyPin;
+  lockInp.addEventListener('keydown', function (e) { if (e.key === 'Enter') verifyPin(); });
+  if (!isUnlocked()) { lockScreen.classList.add('show'); setTimeout(function () { lockInp.focus(); }, 300); }
 </script>
 <script>
-// PWA: ลงทะเบียน Service Worker (โหลดไว + ใช้ได้ออฟไลน์)
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', function () {
-    navigator.serviceWorker.register('/sw.js').catch(function () {});
-  });
-}
+  // PWA: ลงทะเบียน Service Worker (โหลดไว + ใช้ได้ออฟไลน์)
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', function () { navigator.serviceWorker.register('/sw.js').catch(function () {}); });
+  }
 </script>
-
-<!-- 📞 ปุ่มโทรลอย — กดปุ๊บ เปิดห้องสลี่และโทรทันที -->
-<a class="call-fab" href="/chat?room=private&call=1" title="โทรหาสลี่" aria-label="โทรหาสลี่">📞</a>
 </body>
 </html>

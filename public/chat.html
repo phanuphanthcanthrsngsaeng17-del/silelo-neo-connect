@@ -14,7 +14,8 @@
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <title>SILELO Neo-Connect — แชท</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Prompt:wght@300;400;600;700&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&display=swap" rel="stylesheet">
 <style>
   :root {
     --bg: #01030a; --cyan: #00e5ff; --purple: #a78bfa; --amber: #ffb74d; --pink: #ff2d95;
@@ -28,24 +29,33 @@
   html, body { height: 100%; }
   body {
     background: var(--bg); color: var(--txt); height: 100%; overflow-x: clip;
-    font-family: 'Prompt', 'Segoe UI', sans-serif;
+    font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   }
   .bgfx { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; clip-path: inset(0); }
-  .aurora { position: absolute; border-radius: 50%; filter: blur(80px); opacity: .4; animation: drift 16s ease-in-out infinite alternate; }
-  .aurora.a1 { width: 50vw; height: 50vw; left: -20vw; top: -20vw; background: radial-gradient(circle, color-mix(in srgb, var(--accent) 25%, transparent), transparent 65%); }
-  .aurora.a2 { width: 44vw; height: 44vw; right: -16vw; bottom: -18vw; background: radial-gradient(circle, rgba(167,139,250,.18), transparent 65%); animation-delay: -7s; }
-  @keyframes drift { from { transform: translate(0,0) scale(1); } to { transform: translate(5vw,-4vh) scale(1.12); } }
+  .aurora { position: absolute; border-radius: 50%; opacity: .4; animation: drift 16s ease-in-out infinite alternate; will-change: transform; }
+  .aurora.a1 { width: 62vmax; height: 62vmax; left: -24vmax; top: -22vmax; background: radial-gradient(circle, color-mix(in srgb, var(--accent) 22%, transparent), transparent 62%); }
+  .aurora.a2 { width: 54vmax; height: 54vmax; right: -20vmax; bottom: -22vmax; background: radial-gradient(circle, rgba(167,139,250,.16), transparent 62%); animation-delay: -7s; }
+  @keyframes drift { from { transform: translate(0,0); } to { transform: translate(4vw,-3vh); } }
   .scanlines { position: absolute; inset: 0; opacity: .06; background: repeating-linear-gradient(0deg, #fff 0 1px, transparent 1px 3px); }
   .vignette { position: absolute; inset: 0; background: radial-gradient(ellipse 100% 90% at 50% 35%, transparent 50%, rgba(0,0,0,.6)); }
-  #particles { position: fixed; inset: 0; z-index: 0; opacity: .55; pointer-events: none; }
+  .stars { position: absolute; inset: 0;
+    background-image:
+      radial-gradient(1px 1px at 20% 30%, rgba(255,255,255,.9), transparent),
+      radial-gradient(1px 1px at 70% 15%, rgba(160,220,255,.8), transparent),
+      radial-gradient(1.5px 1.5px at 40% 70%, rgba(255,255,255,.7), transparent),
+      radial-gradient(1px 1px at 85% 55%, rgba(160,220,255,.7), transparent),
+      radial-gradient(1px 1px at 10% 85%, rgba(255,255,255,.6), transparent),
+      radial-gradient(1.5px 1.5px at 55% 45%, rgba(160,220,255,.5), transparent),
+      radial-gradient(1px 1px at 90% 85%, rgba(255,255,255,.5), transparent),
+      radial-gradient(1px 1px at 30% 8%, rgba(255,255,255,.6), transparent);
+    background-repeat: repeat; background-size: 420px 420px; }
 
   .app { position: relative; z-index: 2; display: flex; flex-direction: column; height: 100%; max-width: 880px; margin: 0 auto; width: 100%; overflow-x: clip; }
 
   /* ===== Header ===== */
   header {
     display: flex; align-items: center; gap: 14px; padding: 12px 16px;
-    background: linear-gradient(180deg, rgba(8,16,36,.85), rgba(5,10,26,.6));
-    backdrop-filter: blur(20px);
+    background: linear-gradient(180deg, rgba(8,16,36,.92), rgba(5,10,26,.75));
     border-bottom: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
     box-shadow: 0 0 34px color-mix(in srgb, var(--accent) 12%, transparent);
     position: relative;
@@ -101,7 +111,7 @@
 
   .bubble {
     position: relative; padding: 13px 17px; font-size: 15px; line-height: 1.7; white-space: pre-wrap; word-break: break-word;
-    font-weight: 300; backdrop-filter: blur(10px);
+    font-weight: 300;
   }
   .msg.user .bubble {
     background: linear-gradient(135deg, rgba(0,229,255,.28), rgba(0,140,255,.12));
@@ -130,8 +140,7 @@
   /* ===== Input bar ===== */
   .inputbar {
     display: flex; align-items: center; gap: 10px; padding: 12px 14px calc(14px + env(safe-area-inset-bottom));
-    background: linear-gradient(0deg, rgba(8,16,36,.9), rgba(5,10,26,.6));
-    backdrop-filter: blur(20px);
+    background: linear-gradient(0deg, rgba(8,16,36,.95), rgba(5,10,26,.8));
     border-top: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
     position: relative;
   }
@@ -139,7 +148,7 @@
   #inp {
     flex: 1; min-height: 46px; max-height: 130px; resize: none; border-radius: 6px;
     background: rgba(0,229,255,.05); border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
-    color: var(--txt); font-size: 15px; padding: 12px 15px; outline: none; font-family: 'Prompt', sans-serif; font-weight: 300; line-height: 1.4;
+    color: var(--txt); font-size: 15px; padding: 12px 15px; outline: none; font-family: system-ui, sans-serif; font-weight: 300; line-height: 1.4;
     clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px);
     transition: box-shadow .2s, border-color .2s;
   }
@@ -167,7 +176,7 @@
   .voice-pop {
     position: fixed; bottom: 92px; right: 14px; z-index: 30; display: none; flex-direction: column; gap: 8px;
     background: rgba(8,16,36,.94); border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent);
-    border-radius: 8px; padding: 14px; backdrop-filter: blur(20px);
+    border-radius: 8px; padding: 14px; background: rgba(8,18,36,.96);
     box-shadow: 0 14px 50px rgba(0,0,0,.7), 0 0 24px color-mix(in srgb, var(--accent) 15%, transparent);
   }
   .voice-pop.show { display: flex; }
@@ -190,7 +199,7 @@
   .theme-pop {
     position: fixed; bottom: 92px; right: 14px; z-index: 30; display: none; flex-direction: column; gap: 10px;
     background: rgba(8,16,36,.94); border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent);
-    border-radius: 8px; padding: 14px; backdrop-filter: blur(20px);
+    border-radius: 8px; padding: 14px; background: rgba(8,18,36,.96);
     box-shadow: 0 14px 50px rgba(0,0,0,.7), 0 0 24px color-mix(in srgb, var(--accent) 15%, transparent);
   }
   .theme-pop.show { display: flex; }
@@ -214,8 +223,7 @@
   @keyframes callPulse { 0%,100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 45%, transparent); } 50% { box-shadow: 0 0 0 8px transparent; } }
   #callOverlay {
     position: fixed; inset: 0; z-index: 100; display: none;
-    background: radial-gradient(120% 120% at 50% 0%, rgba(8,14,24,.96), rgba(2,4,9,.99));
-    backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+    background: radial-gradient(120% 120% at 50% 0%, rgba(8,14,24,.98), rgba(2,4,9,.99));
     flex-direction: column; align-items: center;
     justify-content: space-between;
     padding: max(env(safe-area-inset-top), 40px) 24px max(env(safe-area-inset-bottom), 24px);
@@ -289,20 +297,20 @@
   .call-hint { position: static; margin-top: 1vh; font-size: 11px; color: rgba(190,215,230,.4); letter-spacing: .5px; text-align: center; padding: 0 24px; }
 
   /* ===== 🔒 Lock screen ===== */
-  .lock { position: fixed; inset: 0; z-index: 9999; display: none; align-items: center; justify-content: center; background: radial-gradient(ellipse at 50% 30%, #0d1b2a 0%, #030b14 70%); backdrop-filter: blur(6px); }
+  .lock { position: fixed; inset: 0; z-index: 9999; display: none; align-items: center; justify-content: center; background: radial-gradient(ellipse at 50% 30%, #0d1b2a 0%, #030b14 70%); }
   .lock.show { display: flex; }
   .lock-box { width: min(320px, 88vw); text-align: center; padding: 26px 18px 20px; border: 1px solid rgba(0,229,255,.25); border-radius: 18px; background: rgba(6,18,30,.85); box-shadow: 0 0 40px rgba(0,229,255,.12), inset 0 0 30px rgba(0,229,255,.04); }
   .lock-ico { font-size: 34px; animation: lockpulse 2s ease-in-out infinite; }
   @keyframes lockpulse { 0%,100% { filter: drop-shadow(0 0 4px rgba(0,229,255,.5)); } 50% { filter: drop-shadow(0 0 16px rgba(0,229,255,.9)); } }
   .lock-ttl { font-family: 'Orbitron', monospace; font-size: 14px; letter-spacing: 4px; color: #e8f6ff; margin-top: 8px; }
-  .lock-sub { font-size: 12px; color: rgba(232,246,255,.55); margin: 6px 0 14px; font-family: 'Prompt', sans-serif; }
+  .lock-sub { font-size: 12px; color: rgba(232,246,255,.55); margin: 6px 0 14px; font-family: system-ui, sans-serif; }
   .lock-inp { width: 100%; box-sizing: border-box; padding: 14px 16px; border-radius: 12px; border: 1px solid rgba(0,229,255,.35); background: rgba(0,229,255,.06); color: #e8f6ff; font-size: 20px; letter-spacing: 6px; text-align: center; font-family: 'Orbitron', monospace; outline: none; transition: all .2s; }
   .lock-inp:focus { border-color: #00e5ff; box-shadow: 0 0 18px rgba(0,229,255,.35); background: rgba(0,229,255,.1); }
   .lock-inp::placeholder { letter-spacing: 1px; color: rgba(232,246,255,.35); font-size: 13px; }
-  .lock-go { width: 100%; margin-top: 12px; padding: 13px; border-radius: 12px; border: 1px solid rgba(34,229,132,.45); background: rgba(34,229,132,.1); color: #22e584; font-size: 15px; font-family: 'Prompt', sans-serif; font-weight: 600; cursor: pointer; transition: all .15s; }
+  .lock-go { width: 100%; margin-top: 12px; padding: 13px; border-radius: 12px; border: 1px solid rgba(34,229,132,.45); background: rgba(34,229,132,.1); color: #22e584; font-size: 15px; font-family: system-ui, sans-serif; font-weight: 600; cursor: pointer; transition: all .15s; }
   .lock-go:active { transform: scale(.97); background: rgba(34,229,132,.25); }
   .go-kbd { opacity: .6; font-size: 12px; }
-  .lock-msg { min-height: 18px; margin-top: 12px; font-size: 12px; color: #ff5252; font-family: 'Prompt', sans-serif; }
+  .lock-msg { min-height: 18px; margin-top: 12px; font-size: 12px; color: #ff5252; font-family: system-ui, sans-serif; }
   .call-top { width: 46px; height: 46px; border-radius: 50%; background: linear-gradient(145deg, #1a7a45, #0d4d28); color: #fff !important; font-size: 20px; border: none; flex: none; display: flex; align-items: center; justify-content: center; cursor: pointer; animation: callpulse 1.8s ease-in-out infinite; }
   .call-top:active { transform: scale(.9); }
   .chat-call-fab { position: fixed; right: 16px; bottom: 94px; width: 64px; height: 64px; border-radius: 50%; background: linear-gradient(145deg, #1a7a45, #0d4d28); color: #fff; font-size: 27px; display: flex; align-items: center; justify-content: center; box-shadow: 0 6px 22px rgba(13,77,40,.55), 0 0 0 5px rgba(34,229,132,.15); cursor: pointer; border: none; z-index: 60; animation: callpulse 1.8s ease-in-out infinite; }
@@ -360,14 +368,18 @@
   .lc-fixcode { margin-top: 10px; }
   .lc-fixcode pre { background: #0a1020; border: 1px solid #2a3a66; border-radius: 10px; padding: 10px; overflow-x: auto; font-size: 11px; color: #7ee787; }
 
+  /* เบา: หยุด animation ถ้าผู้ใช้ตั้งค่า */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation: none !important; transition: none !important; }
+  }
 </style>
 </head>
 <body>
 <div class="bgfx">
+  <div class="stars"></div>
   <div class="aurora a1"></div><div class="aurora a2"></div>
   <div class="scanlines"></div><div class="vignette"></div>
 </div>
-<canvas id="particles"></canvas>
 <button class="chat-call-fab" id="chatCallFab" title="โทรหาสลี่ออลา">📞</button>
 
 <div class="app">
@@ -1148,37 +1160,10 @@
     if (!e.target.closest('#voicePop') && !e.target.closest('#voiceBtn')) voicePop.classList.remove('show');
   });
 
-  /* ===== อนุภาค ===== */
-  const cv = document.getElementById('particles'), ctx = cv.getContext('2d');
-  let W, H, parts = [];
-  const N = Math.min(60, Math.floor(innerWidth * innerHeight / 22000));
-  function resize() {
-    W = cv.width = innerWidth; H = cv.height = innerHeight;
-    parts = Array.from({ length: N }, () => ({ x: Math.random() * W, y: Math.random() * H, vx: (Math.random() - .5) * .3, vy: (Math.random() - .5) * .3, r: Math.random() * 1.6 + .5, a: Math.random() * .4 + .2 }));
-  }
-  resize(); addEventListener('resize', resize);
-  (function loop() {
-    ctx.clearRect(0, 0, W, H);
-    for (const p of parts) {
-      p.x += p.vx; p.y += p.vy;
-      if (p.x < 0 || p.x > W) p.vx *= -1;
-      if (p.y < 0 || p.y > H) p.vy *= -1;
-      ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, 7);
-      ctx.fillStyle = `rgba(0,229,255,${p.a})`; ctx.fill();
-    }
-    for (let i = 0; i < parts.length; i++) for (let j = i + 1; j < parts.length; j++) {
-      const dx = parts[i].x - parts[j].x, dy = parts[i].y - parts[j].y;
-      const d = Math.hypot(dx, dy);
-      if (d < 110) {
-        ctx.beginPath(); ctx.moveTo(parts[i].x, parts[i].y); ctx.lineTo(parts[j].x, parts[j].y);
-        ctx.strokeStyle = `rgba(0,229,255,${(1 - d / 110) * .14})`; ctx.lineWidth = 1; ctx.stroke();
-      }
-    }
-    requestAnimationFrame(loop);
-  })();
+  /* ===== อนุภาค (CSS only — เบา ไม่มี canvas loop) ===== */
 
   /* ===== Heartbeat ===== */
-  setInterval(() => { try { fetch('/api/presence', { method: 'POST' }); } catch (e) {} }, 20000);
+  setInterval(() => { try { fetch('/api/presence', { method: 'POST' }); } catch (e) {} }, 60000);
   try { fetch('/api/presence', { method: 'POST' }); } catch (e) {}
 
   inp.focus();
