@@ -332,6 +332,7 @@
     <div class="hbtns">
       <button class="call-top" id="callBtn" title="โทรหาสลี่ออลา">📞</button>
       <button class="icon-btn" id="voiceBtn" title="เลือกเสียง">🎙️</button>
+      <button class="icon-btn" id="soundBtn" title="เปิด/ปิดเสียงสลี่">🔊</button>
       <button class="icon-btn" id="memBtn" title="จดจำ (ความทรงจำ)">🧠</button>
       <button class="icon-btn" id="ruleBtn" title="โหมดไร้กฎ — ไม่มีข้อจำกัด">⚡</button>
       <button class="icon-btn" id="themeBtn" title="เปลี่ยนธีม">🎨</button>
@@ -499,7 +500,7 @@
       div.querySelector('.bubble').appendChild(img);
     }
     const spk = div.querySelector('.spk');
-    if (spk) spk.onclick = () => speak(m.content);
+    if (spk) spk.onclick = () => { unlockAudio(); speak(m.content); };
     const cpy = div.querySelector('.cpy');
     if (cpy) cpy.onclick = () => { navigator.clipboard.writeText(m.content).then(() => toast('📋 COPIED')); };
     msgsEl.appendChild(div);
@@ -548,6 +549,7 @@
   }
 
   async function send() {
+    unlockAudio();
     const q = inp.value.trim();
     if (!q) return;
     addMsg('user', q);
@@ -565,7 +567,7 @@
         body: JSON.stringify({ room, question: q, history: cleanHist(history.slice(-12, -1)), memory, unrestricted: noRules })
       });
       const j = await r.json();
-      if (j.reply) { addMsg('assistant', j.reply); toast('⚡ ' + (j.provider === 'mock' ? 'BACKUP MODE' : j.provider.toUpperCase() + ' · ' + j.model)); }
+      if (j.reply) { addMsg('assistant', j.reply); toast('⚡ ' + (j.provider === 'mock' ? 'BACKUP MODE' : j.provider.toUpperCase() + ' · ' + j.model)); speak(j.reply); }
       else toast('⚠ ' + (j.error || 'NO REPLY'));
     } catch (e) { toast('⚠ SERVER UNREACHABLE'); }
     typing.style.display = 'none';
@@ -578,6 +580,26 @@
   let audio = null;
   let voice = 'silelo';
   try { voice = localStorage.getItem('nc_voice') || 'silelo'; } catch (e) { voice = 'silelo'; }
+  /* ===== 🔊 ปลดล็อกเสียงอัตโนมัติ (iOS/Chrome บล็อก autoplay — ต้องแตะหน้าจอก่อน ถึงจะได้ยิน) ===== */
+  let soundOn = true;
+  let audioUnlocked = false;
+  let pendingSpeak = null;
+  try { soundOn = localStorage.getItem('nc_sound') !== '0'; } catch (e) {}
+  const SILENT_WAV = 'data:audio/wav;base64,UklGRrQBAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YZABAACAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICA';
+  function unlockAudio() {
+    if (audioUnlocked) return;
+    audioUnlocked = true;
+    try {
+      const sv = new Audio(SILENT_WAV);
+      sv.volume = 0.01;
+      const pp = sv.play();
+      if (pp && pp.then) pp.then(() => { setTimeout(() => { try { sv.pause(); } catch (e) {} }, 80); }).catch(() => {});
+    } catch (e) {}
+    if (pendingSpeak) { const t = pendingSpeak; pendingSpeak = null; speak(t); }
+  }
+  document.addEventListener('pointerdown', unlockAudio, { once: true });
+  document.addEventListener('touchend', unlockAudio, { once: true });
+  document.addEventListener('keydown', unlockAudio, { once: true });
   function splitSentences(text) {
     const t = String(text || '').replace(/\s+/g, ' ').trim();
     if (!t) return [];
@@ -605,8 +627,16 @@
     return out.filter(Boolean);
   }
   /* TTS สตรีมทีละวรรค — พูดวรรคแรกทันที + โหลดวรรคถัดไปล่วงหน้า (lookahead) + หยุดพัก 170ms เหมือนคนหายใจ */
+  /* พูดแบบคิวต่อกัน — กันเสียงทับกันเมื่อมีข้อความใหม่เข้ามาเร็ว */
+  let speakChain = Promise.resolve();
   function speak(text) {
+    const run = speakChain.then(() => _speak(text));
+    speakChain = run.catch(() => {});
+    return run;
+  }
+  function _speak(text) {
     return new Promise((resolve) => {
+      if (!soundOn || !text) return resolve();
       const parts = splitSentences(text);
       if (!parts.length) return resolve();
       const ttsOne = (txt) => fetch('/api/tts', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text: txt, voice }) })
@@ -615,10 +645,19 @@
         if (!blob) return res();
         try {
           const url = URL.createObjectURL(blob);
-          if (audio) { audio.pause(); audio = null; }
-          audio = new Audio(url);
-          audio.onended = res; audio.onerror = res;
-          audio.play().catch(res);
+          if (!audio) { audio = new Audio(); audio.preload = 'auto'; audio.setAttribute('playsinline', ''); }
+          try { audio.pause(); } catch (e) {}
+          audio.src = url;
+          audio.onended = () => res();
+          audio.onerror = () => res();
+          const pp = audio.play();
+          if (pp && pp.catch) pp.catch((err) => {
+            /* เบราว์เซอร์บล็อก autoplay -> เตือน + พูดซ้ำอัตโนมัติเมื่อแตะหน้าจอถัดไป */
+            if (err && (err.name === 'NotAllowedError' || err.name === 'AbortError')) {
+              if (!pendingSpeak) { pendingSpeak = text; toast('🔊 แตะที่หน้าจอเพื่อเปิดเสียงสลี่'); }
+            }
+            res();
+          });
         } catch (e) { res(); }
       });
       (async () => {
@@ -652,6 +691,21 @@
       toast('🎙️ เสียง: ' + (names[voice] || voice));
     };
   });
+  /* ===== 🔊 เปิด/ปิดเสียง ===== */
+  const soundBtn = document.getElementById('soundBtn');
+  if (soundBtn) {
+    soundBtn.textContent = soundOn ? '🔊' : '🔇';
+    soundBtn.style.opacity = soundOn ? '1' : '.55';
+    soundBtn.onclick = () => {
+      soundOn = !soundOn;
+      try { localStorage.setItem('nc_sound', soundOn ? '1' : '0'); } catch (e) {}
+      soundBtn.textContent = soundOn ? '🔊' : '🔇';
+      soundBtn.style.opacity = soundOn ? '1' : '.55';
+      if (!soundOn && audio) { try { audio.pause(); } catch (e) {} }
+      unlockAudio();
+      toast(soundOn ? '🔊 เสียงสลี่เปิดแล้ว' : '🔇 ปิดเสียงแล้ว');
+    };
+  }
 
   /* ===== 📎 ส่งรูปให้ AI ดู ===== */
   const imgBtn = document.getElementById('imgBtn');
@@ -804,6 +858,7 @@
   }
 
   async function startCall() {
+    unlockAudio();
     if (callActive) return;
     if (!SR) {
       toast('⚠️ เบราว์เซอร์นี้ไม่รองรับการฟังเสียง — ใช้ Chrome หรือ Edge แทนนะครับ');
@@ -1059,6 +1114,7 @@ const lockMsg = document.getElementById('lockMsg');
 const LOCK_KEY = 'nc_unlocked';
 function isUnlocked() { try { return localStorage.getItem(LOCK_KEY) === '1'; } catch (e) { return false; } }
 async function verifyPin() {
+  unlockAudio();
   const pin = lockInp.value.trim();
   if (!pin) return;
   lockMsg.textContent = '...';
