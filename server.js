@@ -175,6 +175,11 @@ async function geminiVision(imageDataUrl, question, sysHint) {
 // EfficientNet-B0 + TinyTransformer → ONNX (79MB) → onnxruntime-web (wasm, ฟรี ไม่ต้อง key)
 const { Jimp } = require('jimp');
 const ort = require('onnxruntime-web');
+// Force Vercel nft to bundle onnxruntime-web wasm + model into the lambda
+try { require.resolve('onnxruntime-web/dist/ort-wasm-simd-threaded.wasm'); } catch (e) {}
+try { require.resolve('onnxruntime-web/dist/ort-wasm-simd-threaded.mjs'); } catch (e) {}
+try { require.resolve('onnxruntime-web/dist/ort.node.min.mjs'); } catch (e) {}
+try { require.resolve('../model/bossnusilelo.onnx'); } catch (e) {}
 const BN_CLASSES = ['airplane','automobile','bird','cat','deer','dog','frog','horse','ship','truck'];
 const BN_CLASSES_TH = ['เครื่องบิน','รถยนต์','นก','แมว','กวาง','หมา','กบ','ม้า','เรือ','รถบรรทุก'];
 const BN_THRESHOLD = 0.65;

@@ -27,5 +27,17 @@
       "src": "/(.*)",
       "dest": "/public/$1"
     }
-  ]
+  ],
+  "functions": {
+    "api/index.js": {
+      "includeFiles": [
+        "model/bossnusilelo.onnx",
+        "node_modules/onnxruntime-web/dist/ort-wasm-simd-threaded.mjs",
+        "node_modules/onnxruntime-web/dist/ort-wasm-simd-threaded.wasm",
+        "node_modules/onnxruntime-web/dist/ort.node.min.mjs",
+        "node_modules/onnxruntime-web/dist/ort.min.mjs",
+        "node_modules/onnxruntime-web/dist/ort.wasm.min.mjs"
+      ]
+    }
+  }
 }
