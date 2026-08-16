@@ -581,15 +581,35 @@
   function splitSentences(text) {
     const t = String(text || '').replace(/\s+/g, ' ').trim();
     if (!t) return [];
-    const parts = t.match(/[^.!?\u2026]+[.!?\u2026]+|[^.!?\u2026]+$/g) || [t];
-    return parts.map(x => x.trim()).filter(Boolean);
+    let parts = t.match(/[^.!?\u2026]+[.!?\u2026]+|[^.!?\u2026]+$/g) || [t];
+    parts = parts.map(x => x.trim()).filter(Boolean);
+    /* รวมวรรคสั้น ๆ เข้ากับวรรคก่อนหน้า -> พูดเป็นประโยคยาวธรรมชาติ ไม่ขาดตอน จับใจความง่าย */
+    const merged = [];
+    for (const p of parts) {
+      if (merged.length && merged[merged.length - 1].length < 30) merged[merged.length - 1] += ' ' + p;
+      else merged.push(p);
+    }
+    /* วรรคยาวเกิน 800 ตัว -> แบ่งตามช่องว่าง (กัน TTS ตัดกลางคำ) */
+    const out = [];
+    for (const m of merged) {
+      if (m.length <= 800) { out.push(m); continue; }
+      let rest = m;
+      while (rest.length > 800) {
+        let cut = rest.lastIndexOf(' ', 800);
+        if (cut < 600) cut = 800;
+        out.push(rest.slice(0, cut).trim());
+        rest = rest.slice(cut).trim();
+      }
+      if (rest) out.push(rest);
+    }
+    return out.filter(Boolean);
   }
   /* TTS สตรีมทีละวรรค — พูดวรรคแรกทันที + โหลดวรรคถัดไปล่วงหน้า (lookahead) + หยุดพัก 170ms เหมือนคนหายใจ */
   function speak(text) {
     return new Promise((resolve) => {
       const parts = splitSentences(text);
       if (!parts.length) return resolve();
-      const ttsOne = (txt) => fetch('/api/tts', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text: txt.slice(0, 240), voice }) })
+      const ttsOne = (txt) => fetch('/api/tts', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text: txt, voice }) })
         .then(r => (r.ok ? r.blob() : null)).catch(() => null);
       const playOne = (blob) => new Promise((res) => {
         if (!blob) return res();
@@ -608,7 +628,7 @@
             const blob = await next;
             if (i + 1 < parts.length) next = ttsOne(parts[i + 1]);
             await playOne(blob);
-            if (i + 1 < parts.length) await new Promise(r => setTimeout(r, 170));
+            if (i + 1 < parts.length) await new Promise(r => setTimeout(r, 140));
           }
         } catch (e) {}
         resolve();

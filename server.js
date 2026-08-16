@@ -148,7 +148,7 @@ async function geminiVision(imageDataUrl, question, sysHint) {
       { text: String(question || 'ช่วยอธิบายรูปนี้ให้หน่อย').slice(0, 600) },
       { inline_data: { mime_type: mime, data } }
     ] }],
-    generationConfig: { temperature: 0.4, maxOutputTokens: 500 }
+    generationConfig: { temperature: 0.4, maxOutputTokens: 700 }
   };
   if (sysHint && String(sysHint).trim()) body.systemInstruction = { parts: [{ text: String(sysHint).slice(0, 1200) }] };
   for (let i = 0; i < n; i++) {
@@ -294,7 +294,7 @@ async function askRoomAI(roomId, question, history, memory, unrestricted) {
 }
 
 /* ---------------- TTS (Google TTS ฟรี หลัก → msedge-tts สำรอง) ---------------- */
-function googleTtsBuf(text) {
+function googleTtsOne(text) {
   return new Promise((resolve, reject) => {
     const url = 'https://translate.google.com/translate_tts?ie=UTF-8&q=' + encodeURIComponent(text) + '&tl=th&client=tw-ob&ttsspeed=1';
     const https = require('https');
@@ -306,6 +306,23 @@ function googleTtsBuf(text) {
       res.on('error', reject);
     }).on('error', reject);
   });
+}
+/* Google translate_tts จำกัด ~200 ตัวอักษร/ครั้ง → ตัดเป็นท่อน ≤180 ตัว แล้วต่อเสียงให้ยาวได้ไม่จำกัด */
+async function googleTtsBuf(text) {
+  const MAX = 180;
+  const parts = [];
+  let rest = String(text || '').trim();
+  while (rest.length > MAX) {
+    let cut = rest.lastIndexOf(' ', MAX);
+    if (cut < MAX * 0.7) cut = MAX;
+    parts.push(rest.slice(0, cut).trim());
+    rest = rest.slice(cut).trim();
+  }
+  if (rest) parts.push(rest);
+  const bufs = [];
+  for (const p of parts) { try { bufs.push(await googleTtsOne(p)); } catch (e) {} }
+  if (!bufs.length) throw new Error('gtts fail');
+  return Buffer.concat(bufs);
 }
 /* TTS cache (LRU) - ประโยคซ้ำ พูดซ้ำได้ทันที ไม่ต้องสังเคราะห์ใหม่ */
 const ttsCache = new Map();
@@ -328,7 +345,7 @@ async function elevenLabsTtsBuf(safe) {
 }
 /* สังเคราะห์เสียง -> Buffer (เช็กแคชก่อน) */
 async function ttsBuffer(text, voice) {
-  const safe = String(text).replace(/[^\u0E00-\u0E7Fa-zA-Z0-9 .,!?\u0e2f\u0e46\u0e30\u0e32\u0e34\u0e35\u0e36\u0e37\u0e38\u0e39\u0e40\u0e41\u0e42\u0e43\u0e44\u0e48\u0e49\u0e4a\u0e4b\u0e4c\u0e47\u0e48\u0e49]/g, ' ').slice(0, 240);
+  const safe = String(text).replace(/[^\u0E00-\u0E7Fa-zA-Z0-9 .,!?\u0e2f\u0e46\u0e30\u0e32\u0e34\u0e35\u0e36\u0e37\u0e38\u0e39\u0e40\u0e41\u0e42\u0e43\u0e44\u0e48\u0e49\u0e4a\u0e4b\u0e4c\u0e47\u0e48\u0e49]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 900);
   const key = (voice || 'silelo') + '|' + safe;
   const hit = ttsCacheGet(key);
   if (hit) return { buf: hit, cached: true };
@@ -369,34 +386,6 @@ async function msedgeTtsFile(safe, out, voiceName) {
   const p = await tts.toFile(out, safe);
   await tts.close().catch(() => {});
   return p;
-}
-async function ttsFile(text, voice) {
-  const safe = String(text).replace(/[^\u0E00-\u0E7Fa-zA-Z0-9 .,!?ฯๆะาิีึืุูเแโใไ่้๊๋์็่้]/g, ' ').slice(0, 240);
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'nctts-'));
-  const out = path.join(dir, 'voice.mp3');
-  // เลือกเสียงเฉพาะ → ใช้ msedge-tts กับเสียงนั้น (ล้มแล้ว fallback google TTS)
-  if (voice && TTS_VOICES[voice]) {
-    try {
-      return await msedgeTtsFile(safe, out, TTS_VOICES[voice]);
-    } catch (e2) {
-      try { return await googleTtsFile(safe, out); }
-      catch (e3) {
-        try { fs.rmSync(dir, { recursive: true, force: true }); } catch (e) {}
-        throw new Error('tts unavailable');
-      }
-    }
-  }
-  // auto → google TTS (เร็ว) ก่อน, msedge Premwadee สำรอง
-  try {
-    return await googleTtsFile(safe, out);
-  } catch (e1) {
-    try {
-      return await msedgeTtsFile(safe, out, 'th-TH-PremwadeeNeural');
-    } catch (e2) {
-      try { fs.rmSync(dir, { recursive: true, force: true }); } catch (e) {}
-      throw new Error('tts unavailable');
-    }
-  }
 }
 
 /* ---------------- API ---------------- */
