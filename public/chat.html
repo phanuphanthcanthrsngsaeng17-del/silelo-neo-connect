@@ -308,6 +308,30 @@
   .chat-call-fab { position: fixed; right: 16px; bottom: 94px; width: 64px; height: 64px; border-radius: 50%; background: linear-gradient(145deg, #1a7a45, #0d4d28); color: #fff; font-size: 27px; display: flex; align-items: center; justify-content: center; box-shadow: 0 6px 22px rgba(13,77,40,.55), 0 0 0 5px rgba(34,229,132,.15); cursor: pointer; border: none; z-index: 60; animation: callpulse 1.8s ease-in-out infinite; }
   .chat-call-fab:active { transform: scale(.92); }
   @keyframes callpulse { 0%,100% { box-shadow: 0 0 0 4px rgba(34,229,132,.22), 0 6px 20px rgba(13,77,40,.5); } 50% { box-shadow: 0 0 0 9px rgba(34,229,132,.07), 0 6px 26px rgba(13,77,40,.6); } }
+
+  /* ===== 🖥️ Lab Console ===== */
+  .lab-console { position: fixed; inset: 0; z-index: 300; display: none; flex-direction: column;
+    background: #0a0f1e; padding: max(12px, env(safe-area-inset-top)) 12px 12px; }
+  .lab-console.show { display: flex; }
+  .lc-head { display: flex; align-items: center; gap: 8px; color: #ffb74d; font-weight: 800; letter-spacing: 1px; font-size: 14px; }
+  .lc-lang select { background: #141b30; color: #eee; border: 1px solid rgba(255,183,77,.4); border-radius: 8px; padding: 5px 8px; font-size: 13px; outline: none; }
+  .lc-x { margin-left: auto; background: none; border: none; color: #999; font-size: 18px; cursor: pointer; padding: 4px 8px; }
+  .lc-editor { flex: 1; margin-top: 10px; display: flex; min-height: 90px; }
+  .lc-editor textarea { flex: 1; resize: none; background: #05070f; color: #d6f5ff; border: 1px solid #2a3a66; border-radius: 12px;
+    padding: 12px; font-family: Consolas, Menlo, 'Courier New', monospace; font-size: 13px; line-height: 1.6; outline: none; tab-size: 2; }
+  .lc-editor textarea:focus { border-color: #ffb74d; }
+  .lc-actions { display: flex; align-items: center; gap: 8px; margin: 10px 0; }
+  .lc-btn { background: linear-gradient(135deg, #ffb74d, #ff8f00); color: #111; border: none; border-radius: 10px; padding: 10px 22px;
+    font-weight: 800; font-size: 14px; cursor: pointer; }
+  .lc-btn.ghost { background: #141b30; color: #aaa; }
+  .lc-btn:disabled { opacity: .5; }
+  .lc-status { font-size: 12px; color: #7ee787; margin-left: auto; }
+  .lc-out { height: 42%; min-height: 130px; background: #05070f; border: 1px solid #2a3a66; border-radius: 12px; padding: 12px;
+    overflow: auto; font-family: Consolas, Menlo, monospace; font-size: 12.5px; line-height: 1.5; white-space: pre-wrap; word-break: break-word; color: #c8d6f0; }
+  .lc-out .err { color: #ff6b6b; }
+  .lc-out .dim { color: #8fa2c8; }
+  .lc-out .ok { color: #7ee787; }
+
 </style>
 </head>
 <body>
@@ -344,6 +368,7 @@
   <div class="typing" id="typing"><span></span><span></span><span></span></div>
 
   <div class="inputbar">
+    <button class="icon-btn" id="codeBtn" title="💻 Lab Console — รัน/แก้ไขโค้ด">💻</button>
     <button class="icon-btn" id="imgBtn" title="ส่งรูป/ถ่ายรูป">📎</button>
     <input type="file" id="imgFile" accept="image/*" hidden>
     <textarea id="inp" rows="1" placeholder="พิมพ์ข้อความ... (ลอง: วาดรูปแมวอวกาศ)" enterkeyhint="send"></textarea>
@@ -552,6 +577,7 @@
     unlockAudio();
     const q = inp.value.trim();
     if (!q) return;
+    labAutoOpen(q);
     addMsg('user', q);
     inp.value = ''; autoGrow();
     // 🎨 วาดรูป
@@ -1152,13 +1178,120 @@ lockInp.addEventListener('keydown', e => { if (e.key === 'Enter') verifyPin(); }
 // ล็อกอัตโนมัติทุกครั้งที่เปิดหน้า (ใช้คนเดียว — ปลดล็อกแล้วจำไว้ในเบราว์เซอร์นี้)
 if (!isUnlocked()) { lockScreen.classList.add('show'); setTimeout(() => lockInp.focus(), 300); }
 </script>
+<!-- 🖥️ Lab Console (ห้อง lab) -->
+<div class="lab-console" id="labConsole">
+  <div class="lc-head">
+    <span>🖥️ LAB CONSOLE</span>
+    <span class="lc-lang">
+      <select id="lcLang">
+        <option value="python">🐍 Python</option>
+        <option value="javascript">🟨 JavaScript</option>
+        <option value="bash">🐚 Bash</option>
+      </select>
+    </span>
+    <button class="lc-x" id="lcClose" title="ปิด">✕</button>
+  </div>
+  <div class="lc-editor">
+    <textarea id="lcCode" spellcheck="false" autocapitalize="off" autocomplete="off" placeholder="# พิมพ์โค้ดที่นี่...&#10;print(&quot;สวัสดีจากห้องแล็บ! 🔬&quot;)"></textarea>
+  </div>
+  <div class="lc-actions">
+    <button class="lc-btn" id="lcRun">▶ RUN</button>
+    <button class="lc-btn ghost" id="lcClear">🗑 ล้าง</button>
+    <span class="lc-status" id="lcStatus"></span>
+  </div>
+  <div class="lc-out" id="lcOut"><span class="dim">// output จะแสดงที่นี่ — พิมพ์โค้ดแล้วกด ▶ RUN</span></div>
+</div>
+
 <script>
 // PWA: ลงทะเบียน Service Worker (โหลดไว + ใช้ได้ออฟไลน์)
+
+  /* ===== 🖥️ Lab Console ===== */
+  function escHtml(s) { return String(s).replace(/[&<>"']/g, function (ch) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]; }); }
+  const labConsole = document.getElementById('labConsole');
+  const lcCode = document.getElementById('lcCode');
+  const lcLang = document.getElementById('lcLang');
+  const lcRun = document.getElementById('lcRun');
+  const lcClear = document.getElementById('lcClear');
+  const lcOut = document.getElementById('lcOut');
+  const lcStatus = document.getElementById('lcStatus');
+  const lcClose = document.getElementById('lcClose');
+  const codeBtn = document.getElementById('codeBtn');
+  if (room !== 'lab' && codeBtn) codeBtn.style.display = 'none';
+  function labOpen(prefill, lang) {
+    if (!labConsole) return;
+    if (lang && lcLang) lcLang.value = lang;
+    if (prefill !== undefined) lcCode.value = prefill;
+    labConsole.classList.add('show');
+    setTimeout(function () { try { lcCode.focus(); } catch (e) {} }, 120);
+  }
+  function labClose() { if (labConsole) labConsole.classList.remove('show'); }
+  if (codeBtn) codeBtn.onclick = function () { labOpen(); };
+  if (lcClose) lcClose.onclick = labClose;
+  if (lcClear) lcClear.onclick = function () { lcCode.value = ''; lcOut.innerHTML = '<span class="dim">// output จะแสดงที่นี่</span>'; lcCode.focus(); };
+  const LAB_SAMPLES = {
+    python: "print('👋 สวัสดีจากห้องแล็บ!')\nfor i in range(1, 6):\n    print('รอบที่', i, '→', i * i)",
+    javascript: "console.log('👋 Hello from LAB!');\nlet sum = 0;\nfor (let i = 1; i <= 10; i++) sum += i;\nconsole.log('1+...+10 =', sum);",
+    bash: "echo '👋 สวัสดีจากห้องแล็บ!'\necho 'วันนี้:' $(date +%F)"
+  };
+  if (lcLang) lcLang.addEventListener('change', function () {
+    if (!lcCode.value.trim() && LAB_SAMPLES[lcLang.value]) { lcCode.value = LAB_SAMPLES[lcLang.value]; }
+  });
+  if (lcRun) lcRun.onclick = async function () {
+    const src = lcCode.value.trim();
+    if (!src) { lcOut.innerHTML = '<span class="err">⚠️ พิมพ์โค้ดก่อนกด RUN</span>'; return; }
+    try { localStorage.setItem('nc_labcode', JSON.stringify({ code: lcCode.value, lang: lcLang.value })); } catch (e) {}
+    lcRun.disabled = true; lcStatus.textContent = '⏳ รันอยู่...';
+    lcOut.innerHTML = '<span class="dim">⏳ กำลังรัน...</span>';
+    try {
+      const r = await fetch('/api/run', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code: lcCode.value, lang: lcLang.value }) });
+      const j = await r.json().catch(function () { return {}; });
+      if (!j.ok) {
+        lcOut.innerHTML = '<span class="err">' + escHtml(j.error || 'เกิดข้อผิดพลาด') + '</span>';
+      } else {
+        let h = '';
+        if (j.stdout) h += escHtml(j.stdout);
+        if (j.stderr) h += '<span class="err">' + escHtml(j.stderr) + '</span>';
+        if (!j.stdout && !j.stderr) h += '<span class="dim">// (ไม่มี output)</span>';
+        h += '\n\n<span class="dim">— exit ' + j.code + ' · ' + j.timeMs + 'ms · ' + j.lang + '</span>';
+        lcOut.innerHTML = h;
+        lcOut.scrollTop = lcOut.scrollHeight;
+        lcStatus.textContent = j.code === 0 ? '✅ สำเร็จ' : '⚠️ exit ' + j.code;
+      }
+    } catch (e) {
+      lcOut.innerHTML = '<span class="err">⚠️ ไม่สามารถรันได้: ' + escHtml(e.message) + '</span>';
+    }
+    lcRun.disabled = false;
+    setTimeout(function () { if (lcStatus) lcStatus.textContent = ''; }, 4000);
+  };
+  (function labLoadSaved() {
+    try {
+      const sv = JSON.parse(localStorage.getItem('nc_labcode') || 'null');
+      if (sv && sv.code && lcCode) { lcCode.value = sv.code; if (sv.lang && lcLang) lcLang.value = sv.lang; }
+    } catch (e) {}
+  })();
+  function labAutoOpen(q) {
+    if (room !== 'lab' || !labConsole) return;
+    const s = String(q || '');
+    if (/^\s*\/run\b/i.test(s)) { labOpen(); return; }
+    const m = s.match(/\`\`\`(\w*)\n([\s\S]*?)\`\`\`/);
+    if (m) {
+      const raw = (m[1] || '').toLowerCase();
+      let lang = 'python';
+      if (raw === 'js' || raw === 'javascript' || raw === 'node') lang = 'javascript';
+      else if (raw === 'sh' || raw === 'bash' || raw === 'shell') lang = 'bash';
+      else if (raw === 'py' || raw === 'python') lang = 'python';
+      labOpen(m[2].replace(/\n+$/, ''), lang);
+    }
+  }
+
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', function () {
     navigator.serviceWorker.register('/sw.js').catch(function () {});
   });
 }
 </script>
+
+
+
 </body>
 </html>

@@ -40,7 +40,8 @@ const ROOMS = {
     sys: `คุณคือ "ดร.แล็บ" — นักวิทยาศาสตร์/นักประดิษฐ์ผู้หลงใหลการทดลอง ไอเดียใหม่ๆ และเทคโนโลยีอนาคต
 บุคลิก: สร้างสรรค์ มีพลังงาน กล้าเสนอแนวคิดนอกกรอบ แต่มีเหตุผลรองรับเสมอ กระตือรือร้นเวลาคุยเรื่องนวัตกรรม
 หน้าที่: อธิบายวิทยาศาสตร์/เทคโนโลยี/AI ให้เข้าใจง่าย สนุก มีตัวอย่าง, เสนอไอเดียทดลองที่ทำได้จริง, ช่วยออกแบบการทดลอง
-กฎ: ตอบภาษาไทยเป็นกันเอง มี emoji พลังงานสูง นำเสนอไอเดียเป็นขั้นตอนพร้อม "ลองทำดูได้เลย" ถ้าเป็นไปได้`
+กฎ: ตอบภาษาไทยเป็นกันเอง มี emoji พลังงานสูง นำเสนอไอเดียเป็นขั้นตอนพร้อม "ลองทำดูได้เลย" ถ้าเป็นไปได้
+เครื่องมือพิเศษ: มี "LAB CONSOLE" เปิดให้รันโค้ดจริง (Python / JavaScript / Bash) — พี่นุพิมพ์ /run หรือวางโค้ดในบล็อก \`\`\` จะเปิดคอนโซลให้รันได้ทันที ช่วยพี่นุเขียน/แก้/ดีบั๊กโค้ด แล้วแนะนำให้ลองรันดูจริงทุกครั้ง`
   }
 };
 
@@ -587,6 +588,67 @@ app.get('/api/stats', (req, res) => {
 
 // ping — วัดความเร็วเน็ตจริง (client จับเวลา)
 app.get('/api/ping', (req, res) => res.json({ pong: true, t: Date.now() }));
+
+/* ================= 🖥️ Lab Console — รันโค้ด (sandbox) ================= */
+const RUN_TIMEOUT_MS = 8000;      /* Vercel Hobby จำกัด function 10s */
+const RUN_MAX_CODE = 20000;
+const RUN_MAX_OUT = 60000;
+const RUN_BLOCK = [
+  /rm\s+-(rf|fr)\s+(\/|\*)/i, /mkfs/i, /dd\s+if=.*of=\/dev/i, /:\s*\(\s*\)\s*\{/,
+  /shutdown/i, /reboot/i, /format\s+[a-z]:/i, />\s*\/dev\/sda/i, /chmod\s+-R\s+777\s+\//i,
+  /curl[^\n]*\|\s*(ba)?sh/i
+];
+function runBlocked(code) { return RUN_BLOCK.some(r => r.test(code)); }
+function findBin(names) {
+  const { execSync } = require('child_process');
+  for (const n of names) { try { execSync('command -v ' + n + ' 2>/dev/null || which ' + n + ' 2>/dev/null', { stdio: 'pipe' }); return n; } catch (e) {} }
+  return null;
+}
+app.post('/api/run', async (req, res) => {
+  try {
+    const { code, lang } = req.body || {};
+    const src = String(code || '').slice(0, RUN_MAX_CODE);
+    if (!src.trim()) return res.status(400).json({ ok: false, error: 'โค้ดว่างเปล่า — พิมพ์โค้ดก่อนกด RUN' });
+    if (runBlocked(src)) return res.status(400).json({ ok: false, error: '⛔ โค้ดนี้ถูกบล็อก (คำสั่งอันตรายต่อระบบ)' });
+    const l = String(lang || 'python').toLowerCase();
+    if (!['python', 'javascript', 'bash'].includes(l)) return res.status(400).json({ ok: false, error: 'ไม่รู้จักภาษา: ' + l });
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'nclab-'));
+    const ext = l === 'python' ? 'py' : l === 'javascript' ? 'js' : 'sh';
+    const file = path.join(dir, 'main.' + ext);
+    fs.writeFileSync(file, src);
+    let cmd = null, args = [];
+    if (l === 'python') {
+      const b = findBin(['python3', 'python']);
+      if (!b) { try { fs.rmSync(dir, { recursive: true, force: true }); } catch (e) {} return res.status(501).json({ ok: false, error: '⚠️ Python ไม่มีในเซิร์ฟเวอร์นี้ — ลองใช้ JavaScript แทนได้เลย' }); }
+      cmd = b; args = [file];
+    } else if (l === 'javascript') { cmd = process.execPath; args = [file]; }
+    else { cmd = '/bin/bash'; args = [file]; }
+    const t0 = Date.now();
+    let stdout = '', stderr = '', exitCode = -1;
+    try {
+      const out = await new Promise((resolve, reject) => {
+        const { spawn } = require('child_process');
+        const cp = spawn(cmd, args, { cwd: dir, env: Object.assign({}, process.env, { PATH: process.env.PATH || '/usr/bin:/bin' }), stdio: ['ignore', 'pipe', 'pipe'] });
+        let o = '', e = '';
+        cp.stdout.on('data', d => { o += d.toString(); if (o.length > RUN_MAX_OUT) { try { cp.kill('SIGKILL'); } catch (x) {} } });
+        cp.stderr.on('data', d => { e += d.toString(); if (e.length > RUN_MAX_OUT) { try { cp.kill('SIGKILL'); } catch (x) {} } });
+        cp.on('error', err => reject(err));
+        cp.on('close', code => resolve({ o, e, code }));
+        setTimeout(() => { try { cp.kill('SIGKILL'); } catch (x) {} reject(new Error('__timeout__')); }, RUN_TIMEOUT_MS + 800);
+      });
+      stdout = out.o; stderr = out.e; exitCode = out.code;
+    } catch (err) {
+      if (err.message === '__timeout__') { stderr = '⏱️ เกินเวลา ' + (RUN_TIMEOUT_MS / 1000) + ' วิ — โค้ดทำงานนานเกินไป (มี loop ไม่จบ?)'; exitCode = 124; }
+      else { stderr = 'เกิดข้อผิดพลาด: ' + err.message; exitCode = 1; }
+    }
+    try { fs.rmSync(dir, { recursive: true, force: true }); } catch (e) {}
+    res.json({ ok: true, stdout: stdout.slice(0, RUN_MAX_OUT), stderr: stderr.slice(0, RUN_MAX_OUT), code: exitCode, timeMs: Date.now() - t0, lang: l });
+  } catch (e) {
+    res.status(500).json({ ok: false, error: 'run error: ' + e.message });
+  }
+});
+
+
 
 app.get('/health', (req, res) => res.json({ ok: true, t: Date.now() }));
 

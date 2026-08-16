@@ -1,5 +1,5 @@
-/* SILELO Neo-Connect Service Worker v1.6 */
-const CACHE = 'silelo-v7';
+/* SILELO Neo-Connect Service Worker v1.7 */
+const CACHE = 'silelo-v8';
 const SHELL = [
   '/',
   '/index.html',
