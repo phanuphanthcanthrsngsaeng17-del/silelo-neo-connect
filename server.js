@@ -711,6 +711,112 @@ app.post('/api/run', async (req, res) => {
   }
 });
 
+
+/* ============ 🧪 LAB SANDBOX — เต็มรูปแบบ (self-host: Render/Railway/local) ============ */
+const IS_SERVERLESS = !!(process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME);
+const WORKSPACE = process.env.SANDBOX_DIR || '/tmp/neo-workspace';
+let sandboxReady = false;
+if (!IS_SERVERLESS) {
+  try { require('fs').mkdirSync(WORKSPACE, { recursive: true }); sandboxReady = true; console.log('[sandbox] 🧪 พร้อมใช้งาน workspace=' + WORKSPACE); }
+  catch (e) { console.log('[sandbox] ❌ ไม่พร้อม: ' + e.message); }
+}
+const SB_BLOCKED = [
+  /(^|[;&|\s])rm\s+(-[a-z]*r[a-z]*f|-rf)\s+\//, /mkfs\./, /dd\s+if=/, /:\(\)\s*\{/, /:\s*\{\s*:\|:&\s*\};:/,
+  /shutdown/, /reboot\b/, /format\s+[a-z]:/, />\s*\/dev\/(sda|sdb|hda)/, /chmod\s+-R\s+777\s+\//,
+  /curl\s+.*\|\s*(ba)?sh/, /wget\s+.*\|\s*(ba)?sh/, /nc\s+-l/, /ncat/, /base64\s+-d.*\|\s*(ba)?sh/
+];
+function sbBlocked(cmd) {
+  const c = String(cmd || '').trim();
+  if (!c) return 'empty';
+  if (c.length > 4000) return 'long';
+  for (const re of SB_BLOCKED) if (re.test(c)) return 'dangerous';
+  return null;
+}
+function sbExec(cmd, cwd, timeoutMs) {
+  const { exec } = require('child_process');
+  return new Promise((resolve) => {
+    exec(String(cmd), {
+      cwd: String(cwd || WORKSPACE), timeout: timeoutMs || 12000, maxBuffer: 3 * 1024 * 1024,
+      env: Object.assign({}, process.env, { PATH: (process.env.PATH || '/usr/local/bin:/usr/bin:/bin') + ':/usr/local/bin' })
+    }, (err, stdout, stderr) => {
+      let code = 0;
+      if (err) code = err.code === null ? 124 : (typeof err.code === 'number' ? err.code : 1);
+      resolve({ code, stdout: String(stdout || ''), stderr: String(stderr || '') });
+    });
+  });
+}
+app.get('/api/sandbox/status', (req, res) => res.json({ ok: true, ready: sandboxReady, serverless: IS_SERVERLESS, workspace: sandboxReady ? WORKSPACE : null }));
+app.post('/api/sandbox/exec', async (req, res) => {
+  if (!sandboxReady) return res.status(503).json({ ok: false, error: 'Sandbox เปิดเฉพาะ self-host (Render/Railway)' });
+  try {
+    const { cmd, cwd } = req.body || {};
+    const blk = sbBlocked(cmd);
+    if (blk) return res.status(400).json({ ok: false, error: blk === 'dangerous' ? '⚠️ คำสั่งอันตราย ถูกบล็อก' : blk === 'empty' ? '⚠️ ไม่มีคำสั่ง' : '⚠️ คำสั่งยาวเกิน 4000 ตัว' });
+    const t0 = Date.now();
+    const out = await sbExec(cmd, cwd, 15000);
+    res.json({ ok: true, code: out.code, stdout: out.stdout.slice(0, 60000), stderr: out.stderr.slice(0, 30000), timeMs: Date.now() - t0, cwd: String(cwd || WORKSPACE) });
+  } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+app.get('/api/sandbox/ls', (req, res) => {
+  if (!sandboxReady) return res.status(503).json({ ok: false, error: 'Sandbox ไม่พร้อม' });
+  try {
+    const fs = require('fs'), path = require('path');
+    const base = path.resolve(WORKSPACE);
+    const p = path.resolve(base, String(req.query.path || '.').replace(/^\/+/, ''));
+    if (!p.startsWith(base)) return res.status(400).json({ ok: false, error: '⚠️ อยู่นอก workspace' });
+    if (!fs.existsSync(p) || !fs.statSync(p).isDirectory()) return res.json({ ok: true, path: p.replace(base, '') || '/', entries: [] });
+    const entries = fs.readdirSync(p, { withFileTypes: true }).map((e) => {
+      let size = null;
+      try { if (e.isFile()) size = fs.statSync(path.join(p, e.name)).size; } catch (err) {}
+      return { name: e.name, dir: e.isDirectory(), size };
+    }).sort((a, b) => (b.dir - a.dir) || a.name.localeCompare(b.name));
+    res.json({ ok: true, path: p.replace(base, '') || '/', entries });
+  } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+app.get('/api/sandbox/read', (req, res) => {
+  if (!sandboxReady) return res.status(503).json({ ok: false, error: 'Sandbox ไม่พร้อม' });
+  try {
+    const fs = require('fs'), path = require('path');
+    const base = path.resolve(WORKSPACE);
+    const p = path.resolve(base, String(req.query.path || '').replace(/^\/+/, ''));
+    if (!p.startsWith(base)) return res.status(400).json({ ok: false, error: '⚠️ นอก workspace' });
+    if (!fs.existsSync(p)) return res.status(404).json({ ok: false, error: 'ไม่พบไฟล์' });
+    const s = fs.statSync(p);
+    if (s.isDirectory()) return res.json({ ok: true, dir: true });
+    if (s.size > 250000) return res.status(400).json({ ok: false, error: 'ไฟล์ใหญ่เกิน 250KB' });
+    res.json({ ok: true, content: fs.readFileSync(p, 'utf8'), size: s.size });
+  } catch (e) { res.status(500).json({ ok: false, error: 'อ่านไม่ได้: ' + e.message }); }
+});
+app.post('/api/sandbox/write', (req, res) => {
+  if (!sandboxReady) return res.status(503).json({ ok: false, error: 'Sandbox ไม่พร้อม' });
+  try {
+    const fs = require('fs'), path = require('path');
+    const { file, content } = req.body || {};
+    if (!file || !String(file).trim()) return res.status(400).json({ ok: false, error: 'ไม่มีชื่อไฟล์' });
+    const base = path.resolve(WORKSPACE);
+    const p = path.resolve(base, String(file).replace(/^\/+/, ''));
+    if (!p.startsWith(base)) return res.status(400).json({ ok: false, error: '⚠️ นอก workspace' });
+    if (String(content || '').length > 250000) return res.status(400).json({ ok: false, error: 'เนื้อหาใหญ่เกิน 250KB' });
+    fs.mkdirSync(path.dirname(p), { recursive: true });
+    fs.writeFileSync(p, String(content === undefined ? '' : content));
+    res.json({ ok: true, path: p.replace(base, '') || '/', bytes: String(content === undefined ? '' : content).length });
+  } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+app.post('/api/sandbox/install', async (req, res) => {
+  if (!sandboxReady) return res.status(503).json({ ok: false, error: 'Sandbox ไม่พร้อม' });
+  try {
+    const { pkg, mgr, cwd } = req.body || {};
+    if (!pkg || !String(pkg).trim()) return res.status(400).json({ ok: false, error: 'ไม่มีแพ็กเกจ' });
+    if (/[\s;&|<>`$]/.test(String(pkg))) return res.status(400).json({ ok: false, error: '⚠️ ชื่อแพ็กเกจไม่ถูกต้อง' });
+    const isNpm = String(mgr || 'npm') === 'npm';
+    const cmd = isNpm ? ('npm install ' + String(pkg) + ' --no-audit --no-fund 2>&1 | tail -10') : ('pip install ' + String(pkg) + ' 2>&1 | tail -10');
+    const t0 = Date.now();
+    const out = await sbExec(cmd, cwd, 70000);
+    res.json({ ok: true, code: out.code, out: (out.stdout + out.stderr).slice(0, 5000), timeMs: Date.now() - t0 });
+  } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+
 app.get('/health', (req, res) => res.json({ ok: true, t: Date.now() }));
 
 // Vercel-ready: export app สำหรับ serverless, listen เฉพาะตอนรันตรง (local/Railway)
