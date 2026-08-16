@@ -303,6 +303,11 @@
   .lock-go:active { transform: scale(.97); background: rgba(34,229,132,.25); }
   .go-kbd { opacity: .6; font-size: 12px; }
   .lock-msg { min-height: 18px; margin-top: 12px; font-size: 12px; color: #ff5252; font-family: 'Prompt', sans-serif; }
+  .call-top { width: 46px; height: 46px; border-radius: 50%; background: linear-gradient(145deg, #1a7a45, #0d4d28); color: #fff !important; font-size: 20px; border: none; flex: none; display: flex; align-items: center; justify-content: center; cursor: pointer; animation: callpulse 1.8s ease-in-out infinite; }
+  .call-top:active { transform: scale(.9); }
+  .chat-call-fab { position: fixed; right: 16px; bottom: 94px; width: 64px; height: 64px; border-radius: 50%; background: linear-gradient(145deg, #1a7a45, #0d4d28); color: #fff; font-size: 27px; display: flex; align-items: center; justify-content: center; box-shadow: 0 6px 22px rgba(13,77,40,.55), 0 0 0 5px rgba(34,229,132,.15); cursor: pointer; border: none; z-index: 60; animation: callpulse 1.8s ease-in-out infinite; }
+  .chat-call-fab:active { transform: scale(.92); }
+  @keyframes callpulse { 0%,100% { box-shadow: 0 0 0 4px rgba(34,229,132,.22), 0 6px 20px rgba(13,77,40,.5); } 50% { box-shadow: 0 0 0 9px rgba(34,229,132,.07), 0 6px 26px rgba(13,77,40,.6); } }
 </style>
 </head>
 <body>
@@ -311,6 +316,7 @@
   <div class="scanlines"></div><div class="vignette"></div>
 </div>
 <canvas id="particles"></canvas>
+<button class="chat-call-fab" id="chatCallFab" title="โทรหาสลี่ออลา">📞</button>
 
 <div class="app">
   <header>
@@ -324,7 +330,7 @@
       <div class="status"><span class="pulse"></span><span id="rtag">ผู้ช่วยส่วนตัว · ONLINE</span></div>
     </div>
     <div class="hbtns">
-      <button class="icon-btn call-btn" id="callBtn" title="โทรคุย">📞</button>
+      <button class="call-top" id="callBtn" title="โทรหาสลี่ออลา">📞</button>
       <button class="icon-btn" id="voiceBtn" title="เลือกเสียง">🎙️</button>
       <button class="icon-btn" id="memBtn" title="จดจำ (ความทรงจำ)">🧠</button>
       <button class="icon-btn" id="ruleBtn" title="โหมดไร้กฎ — ไม่มีข้อจำกัด">⚡</button>
@@ -370,6 +376,7 @@
 <!-- 🎙️ เลือกเสียง -->
 <div class="voice-pop" id="voicePop">
   <div class="ttl">🎙️ VOICE</div>
+  <div class="voice-opt" data-voice="silelo"><span class="vicon">💜</span><span class="vname">สลี่ออลา</span><span class="vsub">เสียงสลี่</span></div>
   <div class="voice-opt" data-voice="auto"><span class="vicon">⚡</span><span class="vname">อัตโนมัติ</span><span class="vsub">เร็วสุด</span></div>
   <div class="voice-opt" data-voice="premwadee"><span class="vicon">👩</span><span class="vname">พรีมาวดี</span><span class="vsub">หญิง อ่อนโยน</span></div>
   <div class="voice-opt" data-voice="niwat"><span class="vicon">👨</span><span class="vname">นิวัฒน์</span><span class="vsub">ชาย</span></div>
@@ -569,8 +576,8 @@
 
   /* ===== TTS ===== */
   let audio = null;
-  let voice = 'auto';
-  try { voice = localStorage.getItem('nc_voice') || 'auto'; } catch (e) { voice = 'auto'; }
+  let voice = 'silelo';
+  try { voice = localStorage.getItem('nc_voice') || 'silelo'; } catch (e) { voice = 'silelo'; }
   function speak(text) {
     return new Promise((resolve) => {
       if (!text) return resolve();
@@ -602,7 +609,7 @@
       try { localStorage.setItem('nc_voice', voice); } catch (e) {}
       document.querySelectorAll('.voice-opt').forEach(x => x.classList.toggle('on', x === o));
       voicePop.classList.remove('show');
-      const names = { auto: 'อัตโนมัติ (เร็วสุด)', premwadee: 'พรีมาวดี (หญิง อ่อนโยน)', niwat: 'นิวัฒน์ (ชาย)', achara: 'อัจฉรา (หญิง ทางการ)' };
+      const names = { silelo: '💜 สลี่ออลา (เสียงสลี่)', auto: 'อัตโนมัติ (เร็วสุด)', premwadee: 'พรีมาวดี (หญิง อ่อนโยน)', niwat: 'นิวัฒน์ (ชาย)', achara: 'อัจฉรา (หญิง ทางการ)' };
       toast('🎙️ เสียง: ' + (names[voice] || voice));
     };
   });
@@ -666,6 +673,7 @@
   const hangBtn = document.getElementById('hangBtn');
   const speakerBtn = document.getElementById('speakerBtn');
   const callBtn = document.getElementById('callBtn');
+  const chatCallFab = document.getElementById('chatCallFab');
 
   let callActive = false, callStateName = 'idle';
   let recog = null, stream = null, callTimer = null, callSec = 0;
@@ -778,6 +786,7 @@
     try { recog.start(); } catch (e) {}
     setCallState('listening');
     toast('📞 สายเชื่อมต่อแล้ว — พูดได้เลย!');
+    speak('สายถึงสลี่แล้วค่า พี่นุพูดกับสลี่ได้เลยนะคะ 💜');
   }
 
   /* ===== 📺📷 แชร์หน้าจอ/กล้อง — AI มองเห็นแบบสด ===== */
@@ -884,6 +893,7 @@
   }
 
   callBtn.onclick = startCall;
+  if (chatCallFab) chatCallFab.onclick = startCall;
   hangBtn.onclick = endCall;
 
   /* ===== 📞 โทรอัตโนมัติจากหน้าหลัก (?call=1) ===== */

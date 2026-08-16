@@ -309,6 +309,7 @@ function googleTtsFile(text, outFile) {
 }
 /* เสียงไทย msedge-tts — เลือกได้หลายเสียง */
 const TTS_VOICES = {
+  silelo: 'th-TH-PremwadeeNeural',
   premwadee: 'th-TH-PremwadeeNeural',
   niwat: 'th-TH-NiwatNeural',
   achara: 'th-TH-AcharaNeural'
@@ -316,7 +317,7 @@ const TTS_VOICES = {
 async function msedgeTtsFile(safe, out, voiceName) {
   const { MsEdgeTTS, OUTPUT_FORMAT } = require('msedge-tts');
   const tts = new MsEdgeTTS();
-  await tts.setMetadata(voiceName || 'th-TH-PremwadeeNeural', OUTPUT_FORMAT.AUDIO_24KHZ_48KBITRATE_MONO_MP3);
+  await tts.setMetadata(voiceName || 'th-TH-PremwadeeNeural', OUTPUT_FORMAT.AUDIO_24KHZ_48KBITRATE_MONO_MP3, 0.95);
   const p = await tts.toFile(out, safe);
   await tts.close().catch(() => {});
   return p;
