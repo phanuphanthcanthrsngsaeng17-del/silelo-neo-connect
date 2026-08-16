@@ -578,22 +578,41 @@
   let audio = null;
   let voice = 'silelo';
   try { voice = localStorage.getItem('nc_voice') || 'silelo'; } catch (e) { voice = 'silelo'; }
+  function splitSentences(text) {
+    const t = String(text || '').replace(/\s+/g, ' ').trim();
+    if (!t) return [];
+    const parts = t.match(/[^.!?\u2026]+[.!?\u2026]+|[^.!?\u2026]+$/g) || [t];
+    return parts.map(x => x.trim()).filter(Boolean);
+  }
+  /* TTS สตรีมทีละวรรค — พูดวรรคแรกทันที + โหลดวรรคถัดไปล่วงหน้า (lookahead) + หยุดพัก 170ms เหมือนคนหายใจ */
   function speak(text) {
     return new Promise((resolve) => {
-      if (!text) return resolve();
-      try {
-        fetch('/api/tts', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text: text.slice(0, 240), voice }) })
-          .then(r => { if (!r.ok) throw new Error(); return r.blob(); })
-          .then(blob => {
-            const url = URL.createObjectURL(blob);
-            if (audio) { audio.pause(); audio = null; }
-            audio = new Audio(url);
-            audio.onended = () => resolve();
-            audio.onerror = () => resolve();
-            audio.play().catch(() => resolve());
-          })
-          .catch(() => resolve());
-      } catch (e) { resolve(); }
+      const parts = splitSentences(text);
+      if (!parts.length) return resolve();
+      const ttsOne = (txt) => fetch('/api/tts', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text: txt.slice(0, 240), voice }) })
+        .then(r => (r.ok ? r.blob() : null)).catch(() => null);
+      const playOne = (blob) => new Promise((res) => {
+        if (!blob) return res();
+        try {
+          const url = URL.createObjectURL(blob);
+          if (audio) { audio.pause(); audio = null; }
+          audio = new Audio(url);
+          audio.onended = res; audio.onerror = res;
+          audio.play().catch(res);
+        } catch (e) { res(); }
+      });
+      (async () => {
+        try {
+          let next = ttsOne(parts[0]);
+          for (let i = 0; i < parts.length; i++) {
+            const blob = await next;
+            if (i + 1 < parts.length) next = ttsOne(parts[i + 1]);
+            await playOne(blob);
+            if (i + 1 < parts.length) await new Promise(r => setTimeout(r, 170));
+          }
+        } catch (e) {}
+        resolve();
+      })();
     });
   }
 

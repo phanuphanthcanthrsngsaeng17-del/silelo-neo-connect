@@ -294,18 +294,66 @@ async function askRoomAI(roomId, question, history, memory, unrestricted) {
 }
 
 /* ---------------- TTS (Google TTS ฟรี หลัก → msedge-tts สำรอง) ---------------- */
-function googleTtsFile(text, outFile) {
+function googleTtsBuf(text) {
   return new Promise((resolve, reject) => {
     const url = 'https://translate.google.com/translate_tts?ie=UTF-8&q=' + encodeURIComponent(text) + '&tl=th&client=tw-ob&ttsspeed=1';
     const https = require('https');
     https.get(url, (res) => {
       if (res.statusCode !== 200) { reject(new Error('gtts ' + res.statusCode)); res.resume(); return; }
-      const w = fs.createWriteStream(outFile);
-      res.pipe(w);
-      w.on('finish', () => w.close(() => resolve(outFile)));
-      w.on('error', reject);
+      const chunks = [];
+      res.on('data', (c) => chunks.push(c));
+      res.on('end', () => resolve(Buffer.concat(chunks)));
+      res.on('error', reject);
     }).on('error', reject);
   });
+}
+/* TTS cache (LRU) - ประโยคซ้ำ พูดซ้ำได้ทันที ไม่ต้องสังเคราะห์ใหม่ */
+const ttsCache = new Map();
+const TTS_CACHE_MAX = 400;
+function ttsCacheGet(k) { const v = ttsCache.get(k); if (v) { ttsCache.delete(k); ttsCache.set(k, v); } return v; }
+function ttsCacheSet(k, buf) { if (ttsCache.size >= TTS_CACHE_MAX) ttsCache.delete(ttsCache.keys().next().value); ttsCache.set(k, buf); }
+/* ElevenLabs (optional) - ตั้ง ELEVENLABS_API_KEY + ELEVENLABS_VOICE_ID เพื่อโคลนเสียงสลี่จริง (ไม่มี key ใช้ msedge อัตโนมัติ) */
+async function elevenLabsTtsBuf(safe) {
+  const key = process.env.ELEVENLABS_API_KEY, vid = process.env.ELEVENLABS_VOICE_ID;
+  if (!key || !vid) return null;
+  try {
+    const r = await fetch('https://api.elevenlabs.io/v1/text-to-speech/' + vid + '?output_format=mp3_44100_128', {
+      method: 'POST',
+      headers: { 'xi-api-key': key, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text: safe, model_id: process.env.ELEVENLABS_MODEL || 'eleven_multilingual_v2', voice_settings: { stability: 0.5, similarity_boost: 0.85, style: 0.4, use_speaker_boost: true } })
+    });
+    if (!r.ok) return null;
+    return Buffer.from(await r.arrayBuffer());
+  } catch (e) { return null; }
+}
+/* สังเคราะห์เสียง -> Buffer (เช็กแคชก่อน) */
+async function ttsBuffer(text, voice) {
+  const safe = String(text).replace(/[^\u0E00-\u0E7Fa-zA-Z0-9 .,!?\u0e2f\u0e46\u0e30\u0e32\u0e34\u0e35\u0e36\u0e37\u0e38\u0e39\u0e40\u0e41\u0e42\u0e43\u0e44\u0e48\u0e49\u0e4a\u0e4b\u0e4c\u0e47\u0e48\u0e49]/g, ' ').slice(0, 240);
+  const key = (voice || 'silelo') + '|' + safe;
+  const hit = ttsCacheGet(key);
+  if (hit) return { buf: hit, cached: true };
+  let buf = null;
+  if (voice && TTS_VOICES[voice]) {
+    buf = await elevenLabsTtsBuf(safe);
+    if (!buf) {
+      const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'nctts-'));
+      const out = path.join(dir, 'v.mp3');
+      try { await msedgeTtsFile(safe, out, TTS_VOICES[voice]); buf = fs.readFileSync(out); } catch (e) { buf = null; }
+      try { fs.rmSync(dir, { recursive: true, force: true }); } catch (e) {}
+      if (!buf) buf = await googleTtsBuf(safe).catch(() => null);
+    }
+  } else {
+    buf = await googleTtsBuf(safe).catch(() => null);
+    if (!buf) {
+      const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'nctts-'));
+      const out = path.join(dir, 'v.mp3');
+      try { await msedgeTtsFile(safe, out, 'th-TH-PremwadeeNeural'); buf = fs.readFileSync(out); } catch (e) { buf = null; }
+      try { fs.rmSync(dir, { recursive: true, force: true }); } catch (e) {}
+    }
+  }
+  if (!buf) throw new Error('tts unavailable');
+  ttsCacheSet(key, buf);
+  return { buf, cached: false };
 }
 /* เสียงไทย msedge-tts — เลือกได้หลายเสียง */
 const TTS_VOICES = {
@@ -378,8 +426,11 @@ app.post('/api/tts', async (req, res) => {
   try {
     const { text, voice } = req.body || {};
     if (!text || !String(text).trim()) return res.status(400).json({ error: 'no text' });
-    const file = await ttsFile(String(text), voice);
-    res.sendFile(file, () => { try { fs.rmSync(path.dirname(file), { recursive: true, force: true }); } catch (e) {} });
+    const { buf, cached } = await ttsBuffer(String(text), voice);
+    res.set('Content-Type', 'audio/mpeg');
+    res.set('X-TTS-Cache', cached ? 'hit' : 'miss');
+    res.set('Cache-Control', 'no-store');
+    res.send(buf);
   } catch (e) { res.status(500).json({ error: 'tts fail: ' + e.message }); }
 });
 
