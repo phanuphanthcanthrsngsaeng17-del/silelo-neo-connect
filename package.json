@@ -3,9 +3,14 @@
   "version": "1.0.0",
   "description": "SILELO Neo-Connect — 3 ห้องแชท Cyberpunk (สลี่ / คุณเวิร์ค / ดร.แล็บ)",
   "main": "server.js",
-  "scripts": { "start": "node server.js" },
+  "scripts": {
+    "start": "node server.js",
+    "postinstall": "node scripts/trim_ort.js"
+  },
   "dependencies": {
     "express": "^4.19.2",
-    "msedge-tts": "^1.1.8"
+    "jimp": "^1.6.1",
+    "msedge-tts": "^1.1.8",
+    "onnxruntime-web": "^1.27.0"
   }
 }

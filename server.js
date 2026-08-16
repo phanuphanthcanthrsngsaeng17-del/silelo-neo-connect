@@ -171,6 +171,72 @@ async function geminiVision(imageDataUrl, question, sysHint) {
   return null;
 }
 
+/* ============ 👑 BOSSNUSILELO — ตาในบ้าน (AI ฝีมือพี่นุ 89.45%) ============ */
+// EfficientNet-B0 + TinyTransformer → ONNX (79MB) → onnxruntime-web (wasm, ฟรี ไม่ต้อง key)
+const { Jimp } = require('jimp');
+const ort = require('onnxruntime-web');
+const BN_CLASSES = ['airplane','automobile','bird','cat','deer','dog','frog','horse','ship','truck'];
+const BN_CLASSES_TH = ['เครื่องบิน','รถยนต์','นก','แมว','กวาง','หมา','กบ','ม้า','เรือ','รถบรรทุก'];
+const BN_THRESHOLD = 0.65;
+const BN_IMG = 32;
+let bnSessionPromise = null, bnModelPath = null;
+
+function bnModelFile() {
+  if (!bnModelPath) {
+    const cand = [
+      path.join(__dirname, 'model', 'bossnusilelo.onnx'),
+      path.join('/var/task', 'model', 'bossnusilelo.onnx'),   // Vercel lambda root
+      path.join(process.cwd(), 'model', 'bossnusilelo.onnx'),
+    ];
+    bnModelPath = cand.find(p => { try { return fs.existsSync(p); } catch (e) { return false; } }) || cand[0];
+  }
+  return bnModelPath;
+}
+
+function getBnSession() {
+  if (!bnSessionPromise) {
+    bnSessionPromise = (async () => {
+      const p = bnModelFile();
+      if (!fs.existsSync(p)) throw new Error('model missing: ' + p);
+      const sess = await ort.InferenceSession.create(p, { executionProviders: ['wasm'], graphOptimizationLevel: 'all' });
+      logAI('bossnusilelo', '👑 เปิดตาแล้ว');
+      return sess;
+    })().catch(e => { bnSessionPromise = null; throw e; });
+  }
+  return bnSessionPromise;
+}
+
+async function classifyBossNusilelo(imageDataUrl) {
+  const b64 = String(imageDataUrl).replace(/^data:[^;]+;base64,/, '');
+  if (!b64) return null;
+  const img = await Jimp.read(Buffer.from(b64, 'base64'));
+  const w = img.bitmap.width, h = img.bitmap.height;
+  const side = Math.min(w, h);
+  img.crop({ x: Math.floor((w - side) / 2), y: Math.floor((h - side) / 2), w: side, h: side });
+  img.resize({ w: BN_IMG, h: BN_IMG });
+  const data = new Float32Array(3 * BN_IMG * BN_IMG);
+  const px = BN_IMG * BN_IMG;           // 1024
+  const d = img.bitmap.data;            // RGBA interleaved
+  for (let p = 0; p < px; p++) {
+    data[p] = d[p * 4];                 // R plane
+    data[px + p] = d[p * 4 + 1];        // G plane
+    data[2 * px + p] = d[p * 4 + 2];    // B plane
+  }
+  const sess = await getBnSession();
+  const feeds = { input: new ort.Tensor('float32', data, [1, 3, BN_IMG, BN_IMG]) };
+  const out = await sess.run(feeds);
+  const logits = Array.from(out.logits.data);
+  const max = Math.max(...logits);
+  const exps = logits.map(v => Math.exp(v - max));
+  const sum = exps.reduce((a, b) => a + b, 0);
+  const probs = exps.map(v => v / sum);
+  const ranked = probs.map((p, i) => ({ i, p })).sort((a, b) => b.p - a.p);
+  return {
+    top1: BN_CLASSES[ranked[0].i], top1Th: BN_CLASSES_TH[ranked[0].i], conf: ranked[0].p,
+    top3: ranked.slice(0, 3).map(r => ({ cls: BN_CLASSES[r.i], clsTh: BN_CLASSES_TH[r.i], p: r.p }))
+  };
+}
+
 /* สรุปความทรงจำจากประวัติสนทนา */
 async function summarizeMemory(history) {
   const lines = (Array.isArray(history) ? history : []).map(m => (m.role === 'assistant' ? 'AI: ' : 'เจ้าของ: ') + String(m.content || '').slice(0, 300)).join('\n').slice(0, 9000);
@@ -447,15 +513,38 @@ app.post('/api/draw', async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-// 👁️ ดูรูป — Gemini vision (round-robin keys)
+// 👁️ ดูรูป — 👑 bossnusilelo (ตาในบ้าน ฟรี) ก่อน → fallback Gemini vision
 app.post('/api/vision', async (req, res) => {
   try {
     const { image, question, room, sys } = req.body || {};
     if (!image || !String(image).startsWith('data:image')) return res.status(400).json({ error: 'ไม่พบรูป' });
+    // 👑 ลองตาในบ้าน bossnusilelo ก่อน (ฟรี ~100ms ไม่ต้อง key)
+    try {
+      const bn = await classifyBossNusilelo(String(image));
+      if (bn && bn.conf >= BN_THRESHOLD) {
+        logAI('bossnusilelo', '👑 ' + bn.top1 + ' ' + (bn.conf * 100).toFixed(0) + '%');
+        const q = String(question || '').trim();
+        let reply = '👁️ ภาพนี้เป็น **' + bn.top1Th + '** (' + bn.top1 + ') — มั่นใจ ' + (bn.conf * 100).toFixed(1) + '% ครับ (ตาในบ้าน 🤖 bossnusilelo — AI ฝีมือพี่นุเอง!)';
+        if (q) reply += '\n\nถามว่า "' + q.slice(0, 120) + '" — นี่คือ' + bn.top1Th + 'นะครับ' + (bn.top3[1] ? ' (รองลงมา: ' + bn.top3[1].clsTh + ' ' + (bn.top3[1].p * 100).toFixed(0) + '%)' : '');
+        return res.json({ reply, provider: 'bossnusilelo', model: 'v4b (89.45%)', t: Date.now() });
+      }
+    } catch (e) { logAI('bossnusilelo', '❌ ' + e.message); }
+    // fallback: Gemini vision (round-robin keys)
     const sysHint = sys || (ROOMS[room] ? ROOMS[room].sys : '');
     const r = await geminiVision(String(image), question || 'ช่วยอธิบายรูปนี้ให้หน่อย', sysHint);
     if (!r) return res.status(503).json({ error: 'ระบบมองรูปไม่พร้อม ลองใหม่ทีหลัง' });
     res.json({ reply: r.reply, provider: r.provider, model: r.model, t: Date.now() });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// 👑 bossnusilelo — จำแนกรูปตรงๆ (ตาในบ้าน ฟรี ไม่ต้อง key)
+app.post('/api/classify', async (req, res) => {
+  try {
+    const { image } = req.body || {};
+    if (!image || !String(image).startsWith('data:image')) return res.status(400).json({ error: 'ไม่พบรูป' });
+    const bn = await classifyBossNusilelo(String(image));
+    if (!bn) return res.status(503).json({ error: 'ตาในบ้านไม่พร้อม ลองใหม่ทีหลัง' });
+    res.json({ classes: bn.top3, top1: bn.top1, top1Th: bn.top1Th, conf: bn.conf, provider: 'bossnusilelo', model: 'v4b (89.45%)', t: Date.now() });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
