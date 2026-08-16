@@ -365,6 +365,15 @@
   #fileEditor:focus { border-color: #ffb74d; }
   .lc-btn.ai { background: #5b3fd4; border-color: #5b3fd4; color: #ffffff; }
   .lc-btn.ai:hover { background: #9378ff; }
+  .lc-auto-badge { font-size: 11px; color: #7ee787; background: #0d1a10; border: 1px solid rgba(126,231,135,.35); border-radius: 20px; padding: 3px 10px; white-space: nowrap; }
+  .run-inline { display: inline-flex; align-items: center; gap: 6px; background: linear-gradient(135deg, #ffb74d, #ff8f00); color: #111; border: none; border-radius: 20px; padding: 8px 16px; font-weight: 800; font-size: 13px; cursor: pointer; margin-top: 8px; transition: filter .15s; }
+  .run-inline:hover { filter: brightness(1.12); }
+  .run-inline:disabled { opacity: .55; cursor: wait; }
+  .run-lang { font-size: 10.5px; background: #141b30; color: #7ee787; border-radius: 10px; padding: 2px 8px; }
+  .msg-run { margin-top: 8px; background: #05070f; border: 1px solid #2a3a66; border-radius: 10px; padding: 8px 12px; font-family: Consolas, Menlo, monospace; font-size: 12px; line-height: 1.5; white-space: pre-wrap; word-break: break-word; color: #c8d6f0; }
+  .msg-run .err { color: #ff6b6b; }
+  .msg-run .dim { color: #8fa2c8; }
+  .msg-run .ok { color: #7ee787; }
   .lc-fixcode { margin-top: 10px; }
   .lc-fixcode pre { background: #0a1020; border: 1px solid #2a3a66; border-radius: 10px; padding: 10px; overflow-x: auto; font-size: 11px; color: #7ee787; }
 
@@ -544,6 +553,59 @@
     return (Array.isArray(h) ? h : []).map(m => m.image ? { role: m.role, content: '[📷 รูปภาพ] ' + (m.content || '') } : m);
   }
 
+  /* ✨ อัตโนมัติ: สลี่เดาภาษาโค้ดให้เอง — ไม่ต้องเลือกโหมด */
+  function autoDetectLang(c) {
+    const s = String(c || '').trim();
+    if (!s) return 'python';
+    if (/^(ls|pwd|cd|echo|cat|mkdir|rm|cp|mv|grep|curl|wget|npm|git|pip|python3?|node|date|whoami|touch|chmod|sudo|apt|yarn|tail|head|find|tar|chown)\b/.test(s) && !/print\(|console\.|=>|def |const |let |for /.test(s)) return 'bash';
+    if (/public\s+(class|static)\b|System\.out\.|import java\./.test(s)) return 'java';
+    if (/#include\s*<iostream>|std::|using namespace/.test(s)) return 'cpp';
+    if (/#include\s*<stdio\.h>|printf\(|scanf\(/.test(s)) return 'c';
+    if (/^package main\b|func main\(|fmt\.(Print|Println|Printf)/.test(s)) return 'go';
+    if (/fn main\(|println!|let mut\b/.test(s)) return 'rust';
+    if (/<\?php|->\w+\(|\$[a-z_]+\s*=/i.test(s)) return 'php';
+    if (/^puts\b|def \w+.*\n.*\bend\b|\#\{.*\}/.test(s)) return 'ruby';
+    if (/:\s*(string|number|boolean|any|void|unknown)\b|interface\s+\w+|type\s+\w+\s*=/.test(s)) return 'typescript';
+    if (/console\.|=>|const |let |var |function\s+\w+|require\(|module\.exports|document\.|window\.|process\.|async\s+function|\bnew Promise\b/.test(s)) return 'javascript';
+    if (/^(def|import|from|class)\s+\w+|print\(|input\(|range\(|if __name__|:\s*$|^@\w+|elif\s|else:|for\s+\w+\s+in\s+range|while\s+\w+:|\bf\"/m.test(s)) return 'python';
+    return 'python';
+  }
+  function isLikelyCode(t) {
+    const s = String(t || '').trim();
+    if (!s || s.length < 2 || s.length > 6000) return false;
+    const noStr = s.replace(/"[^"]*"|'[^']*'|`[^`]*`/g, '');
+    if (/[\u0E00-\u0E7F]/.test(noStr)) return false;
+    const lines = s.split('\n');
+    if (lines.length >= 2) return /[=(){}\[\]<>;:]/.test(s) && /[a-zA-Z_]/.test(s);
+    return /^(print|console\.|echo|ls|pwd|cd|cat|mkdir|rm|cp|mv|git|npm|pip|def |import |from |const |let |var |function |for |while |if |class |#include|System\.out|fmt\.|puts |<\?php|\d+\s*[+\-*\/]\s*\d+)/.test(s);
+  }
+  const LANG_ICON = { python: '🐍', javascript: '🟨', bash: '🐚', java: '☕', cpp: '➕', c: '🔵', go: '🐹', rust: '🦀', typescript: '🔷', ruby: '💎', php: '🐘' };
+  async function runInlineCode(code, lang, btn) {
+    btn.disabled = true;
+    btn.textContent = '⏳ รันอยู่...';
+    const res = document.createElement('div');
+    res.className = 'msg-run';
+    btn.parentNode.appendChild(res);
+    res.textContent = '⏳ กำลังรัน ' + lang + '...';
+    try {
+      const r = await fetch('/api/run', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code, lang }) });
+      const j = await r.json().catch(function () { return {}; });
+      if (!j.ok) { res.innerHTML = '<span class="err">⚠ ' + escHtml(j.error || 'เกิดข้อผิดพลาด') + '</span>'; btn.textContent = '🔄 ลองใหม่'; btn.disabled = false; return; }
+      let h = '';
+      if (j.stdout) h += escHtml(j.stdout);
+      if (j.stderr) h += '<span class="err">' + escHtml(j.stderr) + '</span>';
+      if (!j.stdout && !j.stderr) h += '<span class="dim">// (ไม่มี output)</span>';
+      h += '<br><span class="dim">— exit ' + j.code + ' · ' + j.timeMs + 'ms · ' + j.lang + '</span>';
+      res.innerHTML = h;
+      btn.textContent = '▶ รันอีกครั้ง';
+      btn.disabled = false;
+    } catch (e) {
+      res.innerHTML = '<span class="err">⚠ ' + escHtml(e.message) + '</span>';
+      btn.textContent = '🔄 ลองใหม่';
+      btn.disabled = false;
+    }
+    msgsEl.scrollTop = msgsEl.scrollHeight;
+  }
   function addMsg(role, content, t, image) {
     const m = { role, content, t: t || Date.now() };
     if (image) m.image = image;
@@ -569,6 +631,14 @@
       img.loading = 'lazy';
       img.onclick = () => window.open(m.image);
       div.querySelector('.bubble').appendChild(img);
+    }
+    if (m.role === 'user' && isLikelyCode(m.content)) {
+      const lang = autoDetectLang(m.content);
+      const btn = document.createElement('button');
+      btn.className = 'run-inline';
+      btn.innerHTML = '▶ รันเลย <span class="run-lang">' + (LANG_ICON[lang] || '') + ' ' + lang + '</span>';
+      btn.onclick = function () { runInlineCode(m.content, lang, btn); };
+      div.querySelector('.bubble').appendChild(btn);
     }
     const spk = div.querySelector('.spk');
     if (spk) spk.onclick = () => { unlockAudio(); speak(m.content); };
@@ -1259,6 +1329,7 @@ if (!isUnlocked()) { lockScreen.classList.add('show'); setTimeout(() => lockInp.
     <span>🖥️ LAB CONSOLE</span>
     <span class="lc-lang">
       <select id="lcLang">
+        <option value="auto" selected>✨ อัตโนมัติ (สลี่เดาให้)</option>
         <option value="python">🐍 Python</option>
         <option value="javascript">🟨 JavaScript</option>
         <option value="bash">🐚 Bash</option>
@@ -1271,6 +1342,7 @@ if (!isUnlocked()) { lockScreen.classList.add('show'); setTimeout(() => lockInp.
         <option value="ruby">💎 Ruby</option>
         <option value="php">🐘 PHP</option>
       </select>
+      <span class="lc-auto-badge" id="lcAutoBadge" style="display:none"></span>
     </span>
     <button class="lc-x" id="lcClose" title="ปิด">✕</button>
   </div>
@@ -1281,10 +1353,10 @@ if (!isUnlocked()) { lockScreen.classList.add('show'); setTimeout(() => lockInp.
   </div>
   <div class="lc-pane" id="lcPaneCode" style="display:flex">
     <div class="lc-editor">
-      <textarea id="lcCode" spellcheck="false" autocapitalize="off" autocomplete="off" placeholder="# พิมพ์โค้ดที่นี่...&#10;print(&quot;สวัสดีจากห้องแล็บ! 🔬&quot;)"></textarea>
+      <textarea id="lcCode" spellcheck="false" autocapitalize="off" autocomplete="off" placeholder="# พิมพ์โค้ดอะไรก็ได้ แล้วกด ▶ รันเลย&#10;print(&quot;สวัสดี! 2+2 =&quot;, 2+2)&#10;&#10;สลี่เดาภาษาให้เอง ✨"></textarea>
     </div>
     <div class="lc-actions">
-      <button class="lc-btn" id="lcRun">▶ RUN</button>
+      <button class="lc-btn" id="lcRun">▶ รันเลย</button>
       <button class="lc-btn ai" id="lcFix" style="display:none">🤖 AI แก้ให้</button>
       <button class="lc-btn ghost" id="lcClear">🗑 ล้าง</button>
       <span class="lc-status" id="lcStatus"></span>
@@ -1333,22 +1405,36 @@ if (!isUnlocked()) { lockScreen.classList.add('show'); setTimeout(() => lockInp.
   if (lcClear) lcClear.onclick = function () { lcCode.value = ''; lcOut.innerHTML = '<span class="dim">// output จะแสดงที่นี่</span>'; lcCode.focus(); };
   const LAB_SAMPLES = {"python": "print('👋 สวัสดีจากห้องแล็บ!')\nfor i in range(1, 6):\n    print('รอบที่', i, '→', i * i)", "javascript": "console.log('👋 Hello from LAB!');\nlet sum = 0;\nfor (let i = 1; i <= 10; i++) sum += i;\nconsole.log('1+...+10 =', sum);", "bash": "echo '👋 สวัสดีจากห้องแล็บ!'\necho 'วันนี้:' $(date +%F)", "java": "class Main {\n  public static void main(String[] a) {\n    System.out.println(\"👋 สวัสดีจากห้องแล็บ! (Java)\");\n  }\n}", "cpp": "#include <iostream>\nint main() {\n  std::cout << \"👋 สวัสดีจากห้องแล็บ! (C++)\" << std::endl;\n  return 0;\n}", "c": "#include <stdio.h>\nint main() {\n  printf(\"👋 สวัสดีจากห้องแล็บ! (C)\\n\");\n  return 0;\n}", "go": "package main\nimport \"fmt\"\nfunc main() {\n  fmt.Println(\"👋 สวัสดีจากห้องแล็บ! (Go)\")\n}", "rust": "fn main() {\n  println!(\"👋 สวัสดีจากห้องแล็บ! (Rust)\");\n}", "typescript": "const msg: string = \"👋 สวัสดีจากห้องแล็บ! (TS)\";\nconsole.log(msg);", "ruby": "puts \"👋 สวัสดีจากห้องแล็บ! (Ruby)\"", "php": "<?php\necho \"👋 สวัสดีจากห้องแล็บ! (PHP)\";"};
 
+  const lcAutoBadge = document.getElementById('lcAutoBadge');
+  function lcUpdateBadge() {
+    if (!lcAutoBadge || !lcLang) return;
+    if (lcLang.value !== 'auto') { lcAutoBadge.style.display = 'none'; return; }
+    const l = autoDetectLang(lcCode.value);
+    lcAutoBadge.textContent = (LANG_ICON[l] || '') + ' สลี่เดา: ' + l;
+    lcAutoBadge.style.display = 'inline-block';
+  }
+  if (lcCode) lcCode.addEventListener('input', lcUpdateBadge);
   if (lcLang) lcLang.addEventListener('change', function () {
+    if (lcLang.value === 'auto') { lcUpdateBadge(); return; }
     if (!lcCode.value.trim() && LAB_SAMPLES[lcLang.value]) { lcCode.value = LAB_SAMPLES[lcLang.value]; }
+    lcUpdateBadge();
   });
+  lcUpdateBadge();
   const WARN_X = '⚠️', CHECK_X = '✅', HOUR_X = '⏳', ROBOT = '🤖', CLIP = '📋', BULB = '💡';
   let lastLabErr = null;
   let lastFix = null;
   if (lcRun) lcRun.onclick = async function () {
     const src = lcCode.value.trim();
-    if (!src) { lcOut.innerHTML = '<span class="err">' + WARN_X + ' \u0e1e\u0e34\u0e21\u0e1e\u0e4c\u0e42\u0e04\u0e49\u0e14\u0e01\u0e48\u0e2d\u0e19\u0e01\u0e14 RUN</span>'; return; }
-    try { localStorage.setItem('nc_labcode', JSON.stringify({ code: lcCode.value, lang: lcLang.value })); } catch (e) {}
+    if (!src) { lcOut.innerHTML = '<span class="err">' + WARN_X + ' \u0e1e\u0e34\u0e21\u0e1e\u0e4c\u0e42\u0e04\u0e49\u0e14\u0e01\u0e48\u0e2d\u0e19\u0e01\u0e14 \u25b6 \u0e23\u0e31\u0e19\u0e40\u0e25\u0e22</span>'; return; }
+    let langNow = lcLang.value;
+    if (langNow === 'auto') langNow = autoDetectLang(lcCode.value);
+    try { localStorage.setItem('nc_labcode', JSON.stringify({ code: lcCode.value, lang: langNow })); } catch (e) {}
     if (lcFix) lcFix.style.display = 'none';
     lastLabErr = null; lastFix = null;
-    lcRun.disabled = true; lcStatus.textContent = HOUR_X + ' \u0e23\u0e31\u0e19\u0e2d\u0e22\u0e39\u0e48...';
-    lcOut.innerHTML = '<span class="dim">' + HOUR_X + ' \u0e01\u0e33\u0e25\u0e31\u0e07\u0e23\u0e31\u0e19...</span>';
+    lcRun.disabled = true; lcStatus.textContent = HOUR_X + ' \u0e23\u0e31\u0e19\u0e2d\u0e22\u0e39\u0e48... (' + langNow + ')';
+    lcOut.innerHTML = '<span class="dim">' + HOUR_X + ' \u0e01\u0e33\u0e25\u0e31\u0e07\u0e23\u0e31\u0e19 ' + langNow + '...</span>';
     try {
-      const r = await fetch('/api/run', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code: lcCode.value, lang: lcLang.value }) });
+      const r = await fetch('/api/run', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code: lcCode.value, lang: langNow }) });
       const j = await r.json().catch(function () { return {}; });
       if (!j.ok) {
         lcOut.innerHTML = '<span class="err">' + escHtml(j.error || '\u0e40\u0e01\u0e34\u0e14\u0e02\u0e49\u0e2d\u0e1c\u0e34\u0e14\u0e1e\u0e25\u0e32\u0e14') + '</span>';
@@ -1416,6 +1502,7 @@ if (!isUnlocked()) { lockScreen.classList.add('show'); setTimeout(() => lockInp.
     } catch (e) {}
   })();
   function labAutoOpen(q) {
+    return; /* ปิด auto-open — ใช้ปุ่ม ▶ รันเลย ในแชทแทน (คลิกเดียว) */
     if (room !== 'lab' || !labConsole) return;
     const s = String(q || '');
     if (/^\s*\/run\b/i.test(s)) { labOpen(); return; }
