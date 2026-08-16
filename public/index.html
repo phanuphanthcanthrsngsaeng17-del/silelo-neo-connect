@@ -193,6 +193,26 @@
   .lock-go:active { transform: scale(.97); background: rgba(34,229,132,.25); }
   .go-kbd { opacity: .6; font-size: 12px; }
   .lock-msg { min-height: 18px; margin-top: 12px; font-size: 12px; color: #ff5252; font-family: 'Prompt', sans-serif; }
+  /* ===== 📞 ปุ่มโทรลอย — หน้าหลัก กดปุ๊บโทรปั๊บ ===== */
+  .call-fab {
+    position: fixed; bottom: 24px; right: 24px; z-index: 900;
+    width: 66px; height: 66px; border-radius: 50%;
+    background: linear-gradient(135deg, #2fae66, #147a3e);
+    color: #fff; font-size: 28px; text-decoration: none;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 6px 20px rgba(52,209,123,.45), inset 0 1px 0 rgba(255,255,255,.3);
+    transition: transform .15s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .call-fab:active { transform: scale(.92); }
+  .call-fab::after {
+    content: ''; position: absolute; inset: 0; border-radius: 50%;
+    box-shadow: 0 0 0 0 rgba(52,209,123,.5); animation: fabPulse 2.2s infinite;
+  }
+  @keyframes fabPulse { 0% { box-shadow: 0 0 0 0 rgba(52,209,123,.5); } 100% { box-shadow: 0 0 0 14px rgba(52,209,123,0); } }
+  @media (max-width: 480px) {
+    .call-fab { bottom: 18px; right: 18px; width: 60px; height: 60px; font-size: 26px; }
+  }
 </style>
 </head>
 <body>
@@ -275,7 +295,7 @@
     </div>
   </div>
 
-  <div class="foot">SILELO NEO-CONNECT v1.5 · <b>AI CORE</b>: GROQ ⚡ · GEMINI 🆚 · OPENROUTER · POLLINATIONS</div>
+  <div class="foot">SILELO NEO-CONNECT v1.6 · <b>AI CORE</b>: GROQ ⚡ · GEMINI 🆚 · OPENROUTER · POLLINATIONS · 📞 โทรง่ายแบบแอป</div>
 </div>
 
 </div>
@@ -378,5 +398,8 @@ if ('serviceWorker' in navigator) {
   });
 }
 </script>
+
+<!-- 📞 ปุ่มโทรลอย — กดปุ๊บ เปิดห้องสลี่และโทรทันที -->
+<a class="call-fab" href="/chat?room=private&call=1" title="โทรหาสลี่" aria-label="โทรหาสลี่">📞</a>
 </body>
 </html>

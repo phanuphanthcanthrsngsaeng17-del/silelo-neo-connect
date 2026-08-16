@@ -209,18 +209,21 @@
     clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px);
   }
   #toast.show { transform: translateX(-50%) translateY(0); }
-  /* ===== 📞 VOICE CALL ===== */
+  /* ===== 📞 VOICE CALL — สไตล์แอปโทรศัพท์ ===== */
   .call-btn { font-size: 18px; animation: callPulse 2.2s infinite; }
   @keyframes callPulse { 0%,100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 45%, transparent); } 50% { box-shadow: 0 0 0 8px transparent; } }
   #callOverlay {
     position: fixed; inset: 0; z-index: 100; display: none;
-    background: radial-gradient(120% 120% at 50% 0%, rgba(5,10,18,.92), rgba(2,4,9,.98));
+    background: radial-gradient(120% 120% at 50% 0%, rgba(8,14,24,.96), rgba(2,4,9,.99));
     backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
-    flex-direction: column; align-items: center; justify-content: center; gap: 0;
+    flex-direction: column; align-items: center;
+    justify-content: space-between;
+    padding: max(env(safe-area-inset-top), 40px) 24px max(env(safe-area-inset-bottom), 24px);
     color: #dff3ff;
   }
   #callOverlay.show { display: flex; }
-  .call-avatar { position: relative; width: 130px; height: 130px; margin-bottom: 22px; }
+  .call-top { display: flex; flex-direction: column; align-items: center; margin-top: 1vh; }
+  .call-avatar { position: relative; width: 128px; height: 128px; margin-bottom: 20px; }
   .call-avatar .ring2 {
     position: absolute; inset: 0; border-radius: 50%;
     border: 2px solid var(--accent); animation: ringWave 1.8s ease-out infinite;
@@ -237,29 +240,53 @@
   }
   .call-avatar.speaking .cface { animation: faceGlow 1s ease-in-out infinite alternate; }
   @keyframes faceGlow { from { box-shadow: 0 0 30px color-mix(in srgb, var(--accent) 30%, transparent); } to { box-shadow: 0 0 70px color-mix(in srgb, var(--accent) 80%, transparent); } }
-  #callName { font-size: 22px; font-weight: 700; letter-spacing: 3px; text-shadow: 0 0 16px var(--accent); }
+  #callName { font-size: 24px; font-weight: 700; letter-spacing: 2px; text-shadow: 0 0 16px var(--accent); }
   #callState { font-size: 13px; color: rgba(210,235,250,.65); margin: 8px 0 6px; letter-spacing: 1px; min-height: 18px; }
-  #callTimer { font-size: 30px; font-weight: 300; font-variant-numeric: tabular-nums; margin: 8px 0 4px; color: rgba(230,248,255,.9); }
+  #callTimer { font-size: 32px; font-weight: 300; font-variant-numeric: tabular-nums; margin: 8px 0 0; color: rgba(230,248,255,.92); }
   #callTrans {
-    min-height: 44px; max-width: 86%; width: 320px; text-align: center; font-size: 14px;
-    color: var(--accent); margin: 10px 0 18px; padding: 8px 14px; border-radius: 14px;
+    min-height: 44px; max-width: 88%; width: 320px; text-align: center; font-size: 14px;
+    color: var(--accent); margin: 10px 0 0; padding: 8px 14px; border-radius: 14px;
     background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.07);
     letter-spacing: .3px; display: flex; align-items: center; justify-content: center;
   }
   #callTrans.empty { color: rgba(200,225,240,.35); }
-  .call-btns { display: flex; gap: 34px; align-items: center; margin-top: 14px; }
-  .cbtn {
-    width: 62px; height: 62px; border-radius: 50%; border: none; cursor: pointer;
-    font-size: 24px; display: flex; align-items: center; justify-content: center;
-    background: rgba(255,255,255,.07); color: #eaf6ff;
-    box-shadow: 0 6px 24px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.1);
+  /* ปุ่มแชร์จอ — เล็ก มุมขวาบน */
+  .cshare {
+    position: absolute; top: max(env(safe-area-inset-top), 18px); right: 16px;
+    display: flex; flex-direction: column; align-items: center; gap: 2px;
+    background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.1);
+    color: rgba(220,240,255,.75); border-radius: 12px; padding: 8px 12px; cursor: pointer; font-size: 16px;
+  }
+  .cshare span { font-size: 10px; letter-spacing: .5px; }
+  .cshare.on { background: rgba(0,229,255,.14); border-color: rgba(0,229,255,.5); color: #00e5ff; }
+  /* 3 ปุ่มควบคุม — ใหญ่ กดง่าย */
+  .call-ctrl-row { display: flex; gap: 30px; align-items: center; }
+  .cctrl {
+    width: 68px; height: 68px; border-radius: 50%; border: none; cursor: pointer;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
+    background: rgba(255,255,255,.08); color: #eaf6ff; font-size: 25px;
+    box-shadow: 0 6px 24px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.12);
+    transition: transform .15s, background .2s, box-shadow .2s;
+  }
+  .cctrl span { font-size: 10px; letter-spacing: .5px; color: rgba(220,240,255,.7); }
+  .cctrl:active { transform: scale(.92); }
+  .cctrl.off { background: rgba(255,77,109,.16); color: #ff4d6d; }
+  .cctrl.off span { color: rgba(255,120,140,.85); }
+  .cctrl.on { background: rgba(34,229,132,.16); color: #22e584; box-shadow: 0 0 0 3px rgba(34,229,132,.35); }
+  .cctrl.on span { color: #22e584; }
+  /* ปุ่มวางสาย — ใหญ่สุด แดง ล่างสุด */
+  .cend {
+    width: 88px; height: 88px; border-radius: 50%; border: none; cursor: pointer;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
+    background: linear-gradient(145deg, #ff4d6d, #d4002a); color: #fff; font-size: 30px;
+    box-shadow: 0 10px 34px rgba(255,45,85,.5), inset 0 1px 0 rgba(255,255,255,.25);
     transition: transform .15s;
   }
-  .cbtn:active { transform: scale(.92); }
-  .cbtn.muted { background: rgba(255,255,255,.16); opacity: .55; }
-  .cbtn.hang { width: 74px; height: 74px; background: linear-gradient(145deg, #ff2d55, #c90026); box-shadow: 0 8px 30px rgba(255,45,85,.45); }
-  .cbtn.hang:active { transform: scale(.94); }
-  .call-hint { position: absolute; bottom: 26px; font-size: 11px; color: rgba(190,215,230,.4); letter-spacing: .5px; text-align: center; padding: 0 24px; }
+  .cend span { font-size: 11px; letter-spacing: 1px; font-weight: 600; }
+  .cend .hang-ico { font-size: 32px; line-height: 1; }
+  .cend:active { transform: scale(.92); }
+  .cend .hang-ico { transform: rotate(135deg); display: inline-block; }
+  .call-hint { position: static; margin-top: 1vh; font-size: 11px; color: rgba(190,215,230,.4); letter-spacing: .5px; text-align: center; padding: 0 24px; }
 
   /* ===== 🔒 Lock screen ===== */
   .lock { position: fixed; inset: 0; z-index: 9999; display: none; align-items: center; justify-content: center; background: radial-gradient(ellipse at 50% 30%, #0d1b2a 0%, #030b14 70%); backdrop-filter: blur(6px); }
@@ -351,21 +378,24 @@
 
 <!-- 📞 หน้าจอโทร -->
 <div id="callOverlay">
-  <div class="call-avatar" id="callAvatar">
-    <div class="ring2"></div><div class="ring2"></div><div class="ring2"></div>
-    <div class="cface" id="callFace">💜</div>
+  <button class="cshare" id="screenBtn" title="แชร์หน้าจอให้ AI ดูแบบสด">📺<span>แชร์จอ</span></button>
+  <div class="call-top">
+    <div class="call-avatar" id="callAvatar">
+      <div class="ring2"></div><div class="ring2"></div><div class="ring2"></div>
+      <div class="cface" id="callFace">💜</div>
+    </div>
+    <div id="callName">สลี่ออลา</div>
+    <div id="callState">CONNECTING...</div>
+    <div id="callTimer">00:00</div>
   </div>
-  <div id="callName">SLI</div>
-  <div id="callState">CONNECTING...</div>
-  <div id="callTimer">00:00</div>
   <div id="callTrans" class="empty">🎧 ฟังอยู่ พูดได้เลย...</div>
-  <div class="call-btns">
-    <button class="cbtn" id="muteBtn" title="ปิด/เปิดไมค์">🎙</button>
-    <button class="cbtn" id="screenBtn" title="แชร์หน้าจอให้ AI ดู">📺</button>
-    <button class="cbtn hang" id="hangBtn" title="วางสาย">📵</button>
-    <button class="cbtn" id="camBtn" title="เปิดกล้องให้ AI ดู">📷</button>
+  <div class="call-ctrl-row">
+    <button class="cctrl" id="muteBtn" title="ปิด/เปิดไมค์">🤫<span>ไมค์</span></button>
+    <button class="cctrl" id="speakerBtn" title="ลำโพง/หูฟัง">🔊<span>ลำโพง</span></button>
+    <button class="cctrl" id="camBtn" title="เปิดกล้องให้ AI ดูแบบสด">📹<span>กล้อง</span></button>
   </div>
-  <div class="call-hint">คุยสดกับบอทได้เลย — พูดแล้วบอทฟังและตอบเป็นเสียง · 📺 แชร์หน้าจอ/📷 กล้อง ให้ AI เห็นแบบสด · วางสายได้ทุกเมื่อ</div>
+  <button class="cend" id="hangBtn" title="วางสาย"><span class="hang-ico">📞</span><span>วางสาย</span></button>
+  <div class="call-hint">พูดคุยกับสลี่ได้เลย — ฟังและตอบเป็นเสียง · วางสายได้ทุกเมื่อ</div>
 </div>
 
 <div id="toast"></div>
@@ -634,14 +664,15 @@
   const callTrans = document.getElementById('callTrans');
   const muteBtn = document.getElementById('muteBtn');
   const hangBtn = document.getElementById('hangBtn');
+  const speakerBtn = document.getElementById('speakerBtn');
   const callBtn = document.getElementById('callBtn');
 
   let callActive = false, callStateName = 'idle';
   let recog = null, stream = null, callTimer = null, callSec = 0;
-  let finalText = '', silenceTimer = null, muted = false;
+  let finalText = '', silenceTimer = null, muted = false, speakerOn = true;
 
   callFace.textContent = R.avatar;
-  callName.textContent = R.name;
+  callName.textContent = room === 'private' ? 'สลี่ออลา' : R.name;
 
   function setCallState(s) {
     callStateName = s;
@@ -844,7 +875,8 @@
     if (recog) { try { recog.stop(); } catch (e) {} recog = null; }
     if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; }
     if (audio) { audio.pause(); audio = null; }
-    muted = false; muteBtn.classList.remove('muted'); muteBtn.textContent = '🎙';
+    muted = false; muteBtn.classList.remove('muted'); muteBtn.classList.remove('off'); muteBtn.textContent = '🤫';
+    speakerOn = true; speakerBtn.classList.remove('off'); speakerBtn.textContent = '🔊';
     finalText = '';
     callOverlay.classList.remove('show');
     setCallTrans('', true);
@@ -853,12 +885,27 @@
 
   callBtn.onclick = startCall;
   hangBtn.onclick = endCall;
+
+  /* ===== 📞 โทรอัตโนมัติจากหน้าหลัก (?call=1) ===== */
+  const AUTO_CALL = new URLSearchParams(location.search).get('call') === '1';
+  function maybeAutoCall() { if (AUTO_CALL && !callActive) setTimeout(startCall, 700); }
+  if (AUTO_CALL && isUnlocked()) setTimeout(maybeAutoCall, 700);
   muteBtn.onclick = () => {
     muted = !muted;
-    muteBtn.classList.toggle('muted', muted);
-    muteBtn.textContent = muted ? '🔇' : '🎙';
+    muteBtn.classList.toggle('off', muted);
+    muteBtn.textContent = muted ? '🤫' : '🤫';
     if (stream) stream.getAudioTracks().forEach(t => t.enabled = !muted);
     toast(muted ? '🔇 ไมค์ปิด — บอทจะไม่ได้ยิน' : '🎙 ไมค์เปิดแล้ว');
+  };
+  /* 🔊 ลำโพง — สลับหูฟัง/ลำโพง */
+  speakerBtn.onclick = () => {
+    speakerOn = !speakerOn;
+    speakerBtn.classList.toggle('off', !speakerOn);
+    speakerBtn.textContent = speakerOn ? '🔊' : '🔉';
+    if (audio && typeof audio.setSinkId === 'function') {
+      audio.setSinkId('').catch(() => {});
+    }
+    toast(speakerOn ? '🔊 ลำโพงเปิด' : '🔉 สลับไปหูฟัง');
   };
 
   /* ===== ปุ่มอื่นๆ ===== */
@@ -969,7 +1016,7 @@ async function verifyPin() {
   try {
     const r = await fetch('/api/unlock', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ pin }) });
     const j = await r.json();
-    if (j.ok) { try { localStorage.setItem(LOCK_KEY, '1'); } catch (e) {} lockScreen.classList.remove('show'); lockMsg.textContent = ''; lockInp.value = ''; }
+    if (j.ok) { try { localStorage.setItem(LOCK_KEY, '1'); } catch (e) {} lockScreen.classList.remove('show'); lockMsg.textContent = ''; lockInp.value = ''; if (typeof maybeAutoCall === 'function') setTimeout(maybeAutoCall, 700); }
     else { lockMsg.textContent = 'รหัสไม่ถูกต้อง ❌'; lockInp.value = ''; lockInp.focus(); }
   } catch (e) { lockMsg.textContent = 'เชื่อมต่อเซิร์ฟเวอร์ไม่ได้'; lockInp.value = ''; }
 }
