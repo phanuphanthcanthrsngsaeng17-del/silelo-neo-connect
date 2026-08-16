@@ -1007,7 +1007,8 @@ app.post('/api/install', async (req, res) => {
   const { pkg, mgr } = req.body || {};
   const name = String(pkg || '').trim();
   if (!name || /[\s;&|<>$]/.test(name)) return res.status(400).json({ ok: false, error: 'ชื่อ package ไม่ถูกต้อง' });
-  const m = String(mgr || 'pip').toLowerCase() === 'npm' ? 'npm' : 'pip';
+  let m = String(mgr || 'pip').toLowerCase();
+  if (!['pip', 'npm', 'apt', 'gem', 'cargo', 'composer'].includes(m)) m = 'pip';
   if (!process.env.RUN_SECRET) return res.status(503).json({ ok: false, error: 'ยังไม่ได้ตั้ง RUN_SECRET' });
   const t0 = Date.now();
   try {
