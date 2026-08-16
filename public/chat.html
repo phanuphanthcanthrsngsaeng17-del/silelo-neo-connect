@@ -1204,6 +1204,7 @@ if (!isUnlocked()) { lockScreen.classList.add('show'); setTimeout(() => lockInp.
   </div>
   <div class="lc-actions">
     <button class="lc-btn" id="lcRun">▶ RUN</button>
+    <button class="lc-btn ai" id="lcFix" style="display:none">🤖 AI แก้ให้</button>
     <button class="lc-btn ghost" id="lcClear">🗑 ล้าง</button>
     <span class="lc-status" id="lcStatus"></span>
   </div>
@@ -1241,32 +1242,77 @@ if (!isUnlocked()) { lockScreen.classList.add('show'); setTimeout(() => lockInp.
   if (lcLang) lcLang.addEventListener('change', function () {
     if (!lcCode.value.trim() && LAB_SAMPLES[lcLang.value]) { lcCode.value = LAB_SAMPLES[lcLang.value]; }
   });
+  const WARN_X = '⚠️', CHECK_X = '✅', HOUR_X = '⏳', ROBOT = '🤖', CLIP = '📋', BULB = '💡';
+  let lastLabErr = null;
+  let lastFix = null;
   if (lcRun) lcRun.onclick = async function () {
     const src = lcCode.value.trim();
-    if (!src) { lcOut.innerHTML = '<span class="err">⚠️ พิมพ์โค้ดก่อนกด RUN</span>'; return; }
+    if (!src) { lcOut.innerHTML = '<span class="err">' + WARN_X + ' \u0e1e\u0e34\u0e21\u0e1e\u0e4c\u0e42\u0e04\u0e49\u0e14\u0e01\u0e48\u0e2d\u0e19\u0e01\u0e14 RUN</span>'; return; }
     try { localStorage.setItem('nc_labcode', JSON.stringify({ code: lcCode.value, lang: lcLang.value })); } catch (e) {}
-    lcRun.disabled = true; lcStatus.textContent = '⏳ รันอยู่...';
-    lcOut.innerHTML = '<span class="dim">⏳ กำลังรัน...</span>';
+    if (lcFix) lcFix.style.display = 'none';
+    lastLabErr = null; lastFix = null;
+    lcRun.disabled = true; lcStatus.textContent = HOUR_X + ' \u0e23\u0e31\u0e19\u0e2d\u0e22\u0e39\u0e48...';
+    lcOut.innerHTML = '<span class="dim">' + HOUR_X + ' \u0e01\u0e33\u0e25\u0e31\u0e07\u0e23\u0e31\u0e19...</span>';
     try {
       const r = await fetch('/api/run', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code: lcCode.value, lang: lcLang.value }) });
       const j = await r.json().catch(function () { return {}; });
       if (!j.ok) {
-        lcOut.innerHTML = '<span class="err">' + escHtml(j.error || 'เกิดข้อผิดพลาด') + '</span>';
+        lcOut.innerHTML = '<span class="err">' + escHtml(j.error || '\u0e40\u0e01\u0e34\u0e14\u0e02\u0e49\u0e2d\u0e1c\u0e34\u0e14\u0e1e\u0e25\u0e32\u0e14') + '</span>';
+        lastLabErr = { code: lcCode.value, lang: lcLang.value, stderr: j.error || '', stdout: '' };
+        if (lcFix) lcFix.style.display = 'inline-block';
       } else {
         let h = '';
         if (j.stdout) h += escHtml(j.stdout);
         if (j.stderr) h += '<span class="err">' + escHtml(j.stderr) + '</span>';
-        if (!j.stdout && !j.stderr) h += '<span class="dim">// (ไม่มี output)</span>';
-        h += '\n\n<span class="dim">— exit ' + j.code + ' · ' + j.timeMs + 'ms · ' + j.lang + (j.engine ? ' · ' + j.engine : '') + '</span>';
+        if (!j.stdout && !j.stderr) h += '<span class="dim">// (\u0e44\u0e21\u0e48\u0e21\u0e35 output)</span>';
+        h += '\n\n<span class="dim">\u2014 exit ' + j.code + ' \u00b7 ' + j.timeMs + 'ms \u00b7 ' + j.lang + (j.engine ? ' \u00b7 ' + j.engine : '') + '</span>';
         lcOut.innerHTML = h;
         lcOut.scrollTop = lcOut.scrollHeight;
-        lcStatus.textContent = j.code === 0 ? '✅ สำเร็จ' : '⚠️ exit ' + j.code;
+        lcStatus.textContent = j.code === 0 ? CHECK_X + ' \u0e2a\u0e33\u0e40\u0e23\u0e47\u0e08' : WARN_X + ' exit ' + j.code;
+        if (j.code !== 0 || j.stderr) {
+          lastLabErr = { code: lcCode.value, lang: lcLang.value, stderr: j.stderr || '', stdout: j.stdout || '' };
+          if (lcFix) lcFix.style.display = 'inline-block';
+        }
       }
     } catch (e) {
-      lcOut.innerHTML = '<span class="err">⚠️ ไม่สามารถรันได้: ' + escHtml(e.message) + '</span>';
+      lcOut.innerHTML = '<span class="err">' + WARN_X + ' \u0e44\u0e21\u0e48\u0e2a\u0e32\u0e21\u0e32\u0e23\u0e16\u0e23\u0e31\u0e19\u0e44\u0e14\u0e49: ' + escHtml(e.message) + '</span>';
+      lastLabErr = { code: lcCode.value, lang: lcLang.value, stderr: e.message, stdout: '' };
+      if (lcFix) lcFix.style.display = 'inline-block';
     }
     lcRun.disabled = false;
     setTimeout(function () { if (lcStatus) lcStatus.textContent = ''; }, 4000);
+  };
+
+  /* ' + ROBOT + ' AI \u0e41\u0e01\u0e49\u0e42\u0e04\u0e49\u0e14\u0e40\u0e21\u0e37\u0e48\u0e2d error */
+  function labUseFix() { if (lastFix && lastFix.code) { lcCode.value = lastFix.code; try { lcCode.focus(); } catch (e) {} } }
+  function labCopyFix() { if (lastFix && lastFix.code) navigator.clipboard.writeText(lastFix.code).then(function () { toast('' + CLIP + ' \u0e04\u0e31\u0e14\u0e25\u0e2d\u0e01\u0e42\u0e04\u0e49\u0e14\u0e17\u0e35\u0e48\u0e41\u0e01\u0e49\u0e41\u0e25\u0e49\u0e27'); }); }
+  if (lcFix) lcFix.onclick = async function () {
+    const e = lastLabErr;
+    if (!e || !e.code) { toast('' + WARN_X + ' \u0e23\u0e31\u0e19\u0e01\u0e48\u0e2d\u0e19\u0e41\u0e25\u0e49\u0e27\u0e04\u0e48\u0e2d\u0e22\u0e01\u0e14 AI \u0e41\u0e01\u0e49\u0e43\u0e2b\u0e49'); return; }
+    lcFix.disabled = true; lcStatus.textContent = '' + ROBOT + ' AI \u0e01\u0e33\u0e25\u0e31\u0e07\u0e41\u0e01\u0e49...';
+    lcOut.innerHTML = '<span class="dim">' + ROBOT + ' \u0e01\u0e33\u0e25\u0e31\u0e07\u0e43\u0e2b\u0e49 AI \u0e27\u0e34\u0e40\u0e04\u0e23\u0e32\u0e30\u0e2b\u0e4c\u0e02\u0e49\u0e2d\u0e1c\u0e34\u0e14\u0e1e\u0e25\u0e32\u0e14...</span>';
+    try {
+      const r = await fetch('/api/fix', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(e) });
+      const j = await r.json().catch(function () { return {}; });
+      if (!j.ok) {
+        lcOut.innerHTML = '<span class="err">' + WARN_X + ' ' + escHtml(j.error || '\u0e44\u0e21\u0e48\u0e2a\u0e32\u0e21\u0e32\u0e23\u0e16\u0e43\u0e2b\u0e49 AI \u0e41\u0e01\u0e49\u0e44\u0e14\u0e49') + '</span>';
+      } else if (j.code) {
+        lastFix = { code: j.code };
+        const ex = j.explain ? '<span class="ok">' + BULB + ' ' + escHtml(j.explain) + '</span>' : '';
+        lcOut.innerHTML = ex + '<div class="lc-fixcode"><pre>' + escHtml(j.code) + '</pre></div>'
+          + '<div class="lc-actions"><button class="lc-btn" onclick="labUseFix()">' + CHECK_X + ' \u0e43\u0e0a\u0e49\u0e42\u0e04\u0e49\u0e14\u0e19\u0e35\u0e49</button>'
+          + '<button class="lc-btn ghost" onclick="labCopyFix()">' + CLIP + ' \u0e04\u0e31\u0e14\u0e25\u0e2d\u0e01</button>'
+          + '<span class="dim" style="font-size:11px">\u2014 ' + escHtml(j.provider || 'ai') + '</span></div>';
+        lcOut.scrollTop = 0;
+        lcStatus.textContent = '' + ROBOT + ' \u0e41\u0e01\u0e49\u0e43\u0e2b\u0e49\u0e41\u0e25\u0e49\u0e27 \u2014 \u0e01\u0e14 ' + CHECK_X + ' \u0e43\u0e0a\u0e49\u0e42\u0e04\u0e49\u0e14\u0e19\u0e35\u0e49 \u0e41\u0e25\u0e49\u0e27 RUN \u0e43\u0e2b\u0e21\u0e48\u0e44\u0e14\u0e49\u0e40\u0e25\u0e22';
+      } else {
+        lcOut.innerHTML = '<span class="dim">' + ROBOT + ' \u0e04\u0e33\u0e15\u0e2d\u0e1a\u0e08\u0e32\u0e01 AI:</span><pre>' + escHtml(j.raw || '') + '</pre>';
+      }
+    } catch (err) {
+      lcOut.innerHTML = '<span class="err">' + WARN_X + ' \u0e44\u0e21\u0e48\u0e2a\u0e32\u0e21\u0e32\u0e23\u0e16\u0e43\u0e2b\u0e49 AI \u0e41\u0e01\u0e49\u0e44\u0e14\u0e49: ' + escHtml(err.message) + '</span>';
+    }
+    lcFix.disabled = false;
+    setTimeout(function () { if (lcStatus) lcStatus.textContent = ''; }, 6000);
   };
 
   (function labLoadSaved() {

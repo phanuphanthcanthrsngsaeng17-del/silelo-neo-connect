@@ -501,6 +501,26 @@ app.post('/api/chat', async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+
+// 🤖 AI แก้โค้ด (Lab Console) — ส่งโค้ด+error ให้ AI วิเคราะห์และแก้ให้
+app.post('/api/fix', async (req, res) => {
+  try {
+    const { code, lang, stderr, stdout } = req.body || {};
+    if (!code || !String(code).trim()) return res.status(400).json({ error: 'ไม่มีโค้ดให้แก้' });
+    const sys = 'คุณคือผู้ช่วยแก้โค้ด (AI Fixer) ผู้เชี่ยวชาญทุกภาษา โค้ดที่รันแล้ว error ถูกส่งมาให้ คุณต้องวิเคราะห์สาเหตุและแก้ไขให้ถูกต้อง ตอบเป็น JSON เท่านั้น โดยไม่มีข้อความอื่นนอก JSON: {"code":"<โค้ดที่แก้แล้วทั้งหมด>","explain":"<อธิบายสั้นๆ 1-2 ประโยค ภาษาไทย ว่าปัญหาคืออะไรและแก้ยังไง>"}';
+    const user = 'ภาษา: ' + (lang || 'unknown') + '\n\nโค้ดที่รัน:\n```\n' + String(code).slice(0, 6000) + '\n```\n\nstdout:\n' + String(stdout || '').slice(0, 3000) + '\n\nstderr/error:\n' + String(stderr || 'ไม่มี error').slice(0, 3000) + '\n\nแก้โค้ดให้ทำงานได้ ตอบ JSON เท่านั้น';
+    const r = await geminiChat([{ role: 'system', content: sys }, { role: 'user', content: user }]);
+    if (!r) return res.status(502).json({ error: 'AI ไม่ว่าง ลองใหม่อีกครั้ง' });
+    let fixed = null, explain = '';
+    try {
+      const m = String(r.reply).match(/\{[\s\S]*\}/);
+      if (m) { const j = JSON.parse(m[0]); fixed = j.code || null; explain = j.explain || ''; }
+    } catch (e) {}
+    if (!fixed) return res.json({ ok: true, raw: String(r.reply).slice(0, 4000), provider: r.provider, model: r.model });
+    res.json({ ok: true, code: fixed, explain: explain.slice(0, 800), provider: r.provider, model: r.model });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 // TTS — ข้อความ → เสียง mp3 (เลือกเสียงได้)
 app.post('/api/tts', async (req, res) => {
   try {
