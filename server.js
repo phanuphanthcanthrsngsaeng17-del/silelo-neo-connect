@@ -599,6 +599,32 @@ const RUN_BLOCK = [
   /curl[^\n]*\|\s*(ba)?sh/i
 ];
 function runBlocked(code) { return RUN_BLOCK.some(r => r.test(code)); }
+
+const WANDBOX_URL = 'https://wandbox.org/api/compile.json';
+const WB_COMPILERS = {
+  python: 'cpython-3.13.8', javascript: 'nodejs-20.17.0', bash: 'bash',
+  java: 'openjdk-jdk-21+35', c: 'gcc-13.2.0-c', cpp: 'clang-17.0.1',
+  go: 'go-1.23.2', rust: 'rust-1.82.0', typescript: 'typescript-5.6.2',
+  ruby: 'ruby-3.4.9', php: 'php-8.3.12'
+};
+async function wandboxRun(compiler, src, timeoutMs) {
+  const ctl = new AbortController();
+  const t = setTimeout(function () { try { ctl.abort(); } catch (e) {} }, timeoutMs);
+  try {
+    const r = await fetch(WANDBOX_URL, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code: src, compiler }), signal: ctl.signal
+    });
+    const j = await r.json().catch(function () { return {}; });
+    let stderr = String(j.compiler_error || '');
+    if (j.program_error) stderr += (stderr ? '\n' : '') + String(j.program_error);
+    let code = 0;
+    if (typeof j.status_code === 'number' && j.status_code !== 0) code = j.status_code;
+    else if (j.status && j.status !== 0) code = j.status;
+    return { stdout: String(j.program_output || ''), stderr: stderr, code: code };
+  } finally { clearTimeout(t); }
+}
+
 function findBin(names) {
   const { execSync } = require('child_process');
   for (const n of names) { try { execSync('command -v ' + n + ' 2>/dev/null || which ' + n + ' 2>/dev/null', { stdio: 'pipe' }); return n; } catch (e) {} }
@@ -610,45 +636,60 @@ app.post('/api/run', async (req, res) => {
     const src = String(code || '').slice(0, RUN_MAX_CODE);
     if (!src.trim()) return res.status(400).json({ ok: false, error: 'โค้ดว่างเปล่า — พิมพ์โค้ดก่อนกด RUN' });
     if (runBlocked(src)) return res.status(400).json({ ok: false, error: '⛔ โค้ดนี้ถูกบล็อก (คำสั่งอันตรายต่อระบบ)' });
-    const l = String(lang || 'python').toLowerCase();
-    if (!['python', 'javascript', 'bash'].includes(l)) return res.status(400).json({ ok: false, error: 'ไม่รู้จักภาษา: ' + l });
-    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'nclab-'));
-    const ext = l === 'python' ? 'py' : l === 'javascript' ? 'js' : 'sh';
-    const file = path.join(dir, 'main.' + ext);
-    fs.writeFileSync(file, src);
-    let cmd = null, args = [];
-    if (l === 'python') {
-      const b = findBin(['python3', 'python']);
-      if (!b) { try { fs.rmSync(dir, { recursive: true, force: true }); } catch (e) {} return res.status(501).json({ ok: false, error: '⚠️ Python ไม่มีในเซิร์ฟเวอร์นี้ — ลองใช้ JavaScript แทนได้เลย' }); }
-      cmd = b; args = [file];
-    } else if (l === 'javascript') { cmd = process.execPath; args = [file]; }
-    else { cmd = '/bin/bash'; args = [file]; }
+    let l = String(lang || 'python').toLowerCase();
+    if (l === 'js' || l === 'node') l = 'javascript';
+    if (l === 'sh' || l === 'shell') l = 'bash';
+    if (l === 'py') l = 'python';
+    if (!WB_COMPILERS[l]) return res.status(400).json({ ok: false, error: 'ไม่รู้จักภาษา: ' + l + ' (รองรับ: python, javascript, bash, java, c, cpp, go, rust, typescript, ruby, php)' });
     const t0 = Date.now();
-    let stdout = '', stderr = '', exitCode = -1;
-    try {
-      const out = await new Promise((resolve, reject) => {
-        const { spawn } = require('child_process');
-        const cp = spawn(cmd, args, { cwd: dir, env: Object.assign({}, process.env, { PATH: process.env.PATH || '/usr/bin:/bin' }), stdio: ['ignore', 'pipe', 'pipe'] });
-        let o = '', e = '';
-        cp.stdout.on('data', d => { o += d.toString(); if (o.length > RUN_MAX_OUT) { try { cp.kill('SIGKILL'); } catch (x) {} } });
-        cp.stderr.on('data', d => { e += d.toString(); if (e.length > RUN_MAX_OUT) { try { cp.kill('SIGKILL'); } catch (x) {} } });
-        cp.on('error', err => reject(err));
-        cp.on('close', code => resolve({ o, e, code }));
-        setTimeout(() => { try { cp.kill('SIGKILL'); } catch (x) {} reject(new Error('__timeout__')); }, RUN_TIMEOUT_MS + 800);
-      });
-      stdout = out.o; stderr = out.e; exitCode = out.code;
-    } catch (err) {
-      if (err.message === '__timeout__') { stderr = '⏱️ เกินเวลา ' + (RUN_TIMEOUT_MS / 1000) + ' วิ — โค้ดทำงานนานเกินไป (มี loop ไม่จบ?)'; exitCode = 124; }
-      else { stderr = 'เกิดข้อผิดพลาด: ' + err.message; exitCode = 1; }
+
+    /* 1) ลอง interpreter ในเครื่องก่อน (เร็วสุด) — python/js/bash */
+    if (l === 'python' || l === 'javascript' || l === 'bash') {
+      let cmd = null, args = [];
+      if (l === 'python') cmd = findBin(['python3', 'python']);
+      else if (l === 'javascript') cmd = process.execPath;
+      else cmd = '/bin/bash';
+      if (cmd) {
+        const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'nclab-'));
+        const file = path.join(dir, 'main.' + (l === 'python' ? 'py' : l === 'javascript' ? 'js' : 'sh'));
+        fs.writeFileSync(file, src);
+        args = [file];
+        let stdout = '', stderr = '', exitCode = -1;
+        try {
+          const out = await new Promise((resolve, reject) => {
+            const { spawn } = require('child_process');
+            const cp = spawn(cmd, args, { cwd: dir, env: Object.assign({}, process.env, { PATH: process.env.PATH || '/usr/bin:/bin' }), stdio: ['ignore', 'pipe', 'pipe'] });
+            let o = '', e = '';
+            cp.stdout.on('data', d => { o += d.toString(); if (o.length > RUN_MAX_OUT) { try { cp.kill('SIGKILL'); } catch (x) {} } });
+            cp.stderr.on('data', d => { e += d.toString(); if (e.length > RUN_MAX_OUT) { try { cp.kill('SIGKILL'); } catch (x) {} } });
+            cp.on('error', err => reject(err));
+            cp.on('close', code => resolve({ o, e, code }));
+            setTimeout(() => { try { cp.kill('SIGKILL'); } catch (x) {} reject(new Error('__timeout__')); }, RUN_TIMEOUT_MS + 800);
+          });
+          stdout = out.o; stderr = out.e; exitCode = out.code;
+        } catch (err) {
+          if (err.message === '__timeout__') { stderr = '⏱️ เกินเวลา ' + (RUN_TIMEOUT_MS / 1000) + ' วิ — โค้ดทำงานนานเกินไป (มี loop ไม่จบ?)'; exitCode = 124; }
+          else { stderr = 'เกิดข้อผิดพลาด: ' + err.message; exitCode = 1; }
+        }
+        try { fs.rmSync(dir, { recursive: true, force: true }); } catch (e) {}
+        return res.json({ ok: true, stdout: stdout.slice(0, RUN_MAX_OUT), stderr: stderr.slice(0, RUN_MAX_OUT), code: exitCode, timeMs: Date.now() - t0, lang: l, engine: 'local' });
+      }
     }
-    try { fs.rmSync(dir, { recursive: true, force: true }); } catch (e) {}
-    res.json({ ok: true, stdout: stdout.slice(0, RUN_MAX_OUT), stderr: stderr.slice(0, RUN_MAX_OUT), code: exitCode, timeMs: Date.now() - t0, lang: l });
+
+    /* 2) fallback: รันผ่าน Wandbox cloud (python บน Vercel ไม่มีในเครื่อง, ภาษาคอมไพล์ ฯลฯ) */
+    try {
+      let wbSrc = src;
+      if (l === 'java') wbSrc = wbSrc.replace(/public\s+class\s+Main/, 'class Main');
+      const out = await wandboxRun(WB_COMPILERS[l], wbSrc, RUN_TIMEOUT_MS + 1000);
+      return res.json({ ok: true, stdout: out.stdout.slice(0, RUN_MAX_OUT), stderr: out.stderr.slice(0, RUN_MAX_OUT), code: out.code, timeMs: Date.now() - t0, lang: l, engine: 'cloud' });
+    } catch (e) {
+      const msg = e && e.name === 'AbortError' ? '⏱️ cloud เกินเวลา 8 วิ — ลองโค้ดที่สั้นลง' : (e && e.message ? e.message : 'unknown');
+      return res.status(502).json({ ok: false, error: '⚠️ cloud runner ล้ม: ' + msg + ' — ลองใหม่ในอีกสักครู่' });
+    }
   } catch (e) {
     res.status(500).json({ ok: false, error: 'run error: ' + e.message });
   }
 });
-
-
 
 app.get('/health', (req, res) => res.json({ ok: true, t: Date.now() }));
 

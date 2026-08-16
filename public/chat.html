@@ -1187,6 +1187,14 @@ if (!isUnlocked()) { lockScreen.classList.add('show'); setTimeout(() => lockInp.
         <option value="python">🐍 Python</option>
         <option value="javascript">🟨 JavaScript</option>
         <option value="bash">🐚 Bash</option>
+        <option value="java">☕ Java</option>
+        <option value="cpp">➕ C++</option>
+        <option value="c">🔵 C</option>
+        <option value="go">🐹 Go</option>
+        <option value="rust">🦀 Rust</option>
+        <option value="typescript">🔷 TypeScript</option>
+        <option value="ruby">💎 Ruby</option>
+        <option value="php">🐘 PHP</option>
       </select>
     </span>
     <button class="lc-x" id="lcClose" title="ปิด">✕</button>
@@ -1228,11 +1236,8 @@ if (!isUnlocked()) { lockScreen.classList.add('show'); setTimeout(() => lockInp.
   if (codeBtn) codeBtn.onclick = function () { labOpen(); };
   if (lcClose) lcClose.onclick = labClose;
   if (lcClear) lcClear.onclick = function () { lcCode.value = ''; lcOut.innerHTML = '<span class="dim">// output จะแสดงที่นี่</span>'; lcCode.focus(); };
-  const LAB_SAMPLES = {
-    python: "print('👋 สวัสดีจากห้องแล็บ!')\nfor i in range(1, 6):\n    print('รอบที่', i, '→', i * i)",
-    javascript: "console.log('👋 Hello from LAB!');\nlet sum = 0;\nfor (let i = 1; i <= 10; i++) sum += i;\nconsole.log('1+...+10 =', sum);",
-    bash: "echo '👋 สวัสดีจากห้องแล็บ!'\necho 'วันนี้:' $(date +%F)"
-  };
+  const LAB_SAMPLES = {"python": "print('👋 สวัสดีจากห้องแล็บ!')\nfor i in range(1, 6):\n    print('รอบที่', i, '→', i * i)", "javascript": "console.log('👋 Hello from LAB!');\nlet sum = 0;\nfor (let i = 1; i <= 10; i++) sum += i;\nconsole.log('1+...+10 =', sum);", "bash": "echo '👋 สวัสดีจากห้องแล็บ!'\necho 'วันนี้:' $(date +%F)", "java": "class Main {\n  public static void main(String[] a) {\n    System.out.println(\"👋 สวัสดีจากห้องแล็บ! (Java)\");\n  }\n}", "cpp": "#include <iostream>\nint main() {\n  std::cout << \"👋 สวัสดีจากห้องแล็บ! (C++)\" << std::endl;\n  return 0;\n}", "c": "#include <stdio.h>\nint main() {\n  printf(\"👋 สวัสดีจากห้องแล็บ! (C)\\n\");\n  return 0;\n}", "go": "package main\nimport \"fmt\"\nfunc main() {\n  fmt.Println(\"👋 สวัสดีจากห้องแล็บ! (Go)\")\n}", "rust": "fn main() {\n  println!(\"👋 สวัสดีจากห้องแล็บ! (Rust)\");\n}", "typescript": "const msg: string = \"👋 สวัสดีจากห้องแล็บ! (TS)\";\nconsole.log(msg);", "ruby": "puts \"👋 สวัสดีจากห้องแล็บ! (Ruby)\"", "php": "<?php\necho \"👋 สวัสดีจากห้องแล็บ! (PHP)\";"};
+
   if (lcLang) lcLang.addEventListener('change', function () {
     if (!lcCode.value.trim() && LAB_SAMPLES[lcLang.value]) { lcCode.value = LAB_SAMPLES[lcLang.value]; }
   });
@@ -1252,7 +1257,7 @@ if (!isUnlocked()) { lockScreen.classList.add('show'); setTimeout(() => lockInp.
         if (j.stdout) h += escHtml(j.stdout);
         if (j.stderr) h += '<span class="err">' + escHtml(j.stderr) + '</span>';
         if (!j.stdout && !j.stderr) h += '<span class="dim">// (ไม่มี output)</span>';
-        h += '\n\n<span class="dim">— exit ' + j.code + ' · ' + j.timeMs + 'ms · ' + j.lang + '</span>';
+        h += '\n\n<span class="dim">— exit ' + j.code + ' · ' + j.timeMs + 'ms · ' + j.lang + (j.engine ? ' · ' + j.engine : '') + '</span>';
         lcOut.innerHTML = h;
         lcOut.scrollTop = lcOut.scrollHeight;
         lcStatus.textContent = j.code === 0 ? '✅ สำเร็จ' : '⚠️ exit ' + j.code;
@@ -1263,6 +1268,7 @@ if (!isUnlocked()) { lockScreen.classList.add('show'); setTimeout(() => lockInp.
     lcRun.disabled = false;
     setTimeout(function () { if (lcStatus) lcStatus.textContent = ''; }, 4000);
   };
+
   (function labLoadSaved() {
     try {
       const sv = JSON.parse(localStorage.getItem('nc_labcode') || 'null');
