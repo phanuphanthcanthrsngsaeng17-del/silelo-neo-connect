@@ -650,6 +650,160 @@ async function msedgeTtsFile(safe, out, voiceName) {
 
 /* ---------------- API ---------------- */
 // 🔒 ปลดล็อกแอพ (PIN)
+/* ================= 🔐 OAuth Login (LINE / Google / Facebook) ================= */
+const crypto = require('crypto');
+const AUTH_SECRET = process.env.AUTH_SECRET || 'nc-dev-secret';
+const AUTH_WHITELIST = (process.env.AUTH_WHITELIST || '').split(',').map(s => s.trim()).filter(Boolean);
+const OWNER_EMAILS = ['phanuphanthcanthrsngsaeng17@gmail.com', 'phanuphanthcanthrsngsaeng6@gmail.com', 'bossnu@gmail.com'];
+const OWNER_LINE_IDS = ['U4529156e4ce2270579f3b26afb463cdb'];
+const OWNER_FB_IDS = [];
+const APP_URL = process.env.APP_URL || 'https://neo-connect-ten.vercel.app';
+
+function signToken(payload) {
+  const b = Buffer.from(JSON.stringify(payload)).toString('base64url');
+  const sig = crypto.createHmac('sha256', AUTH_SECRET).update(b).digest('base64url');
+  return b + '.' + sig;
+}
+function verifyToken(token) {
+  try {
+    const [b, sig] = String(token || '').split('.');
+    const expect = crypto.createHmac('sha256', AUTH_SECRET).update(b || '').digest('base64url');
+    if (!sig || !b || sig !== expect) return null;
+    const p = JSON.parse(Buffer.from(b, 'base64url').toString());
+    if (p.exp && Date.now() > p.exp) return null;
+    return p;
+  } catch (e) { return null; }
+}
+function authCookieStr(payload) {
+  const token = signToken(Object.assign({ exp: Date.now() + 90 * 24 * 3600 * 1000 }, payload));
+  return `nc_auth=${token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${90 * 24 * 3600}; Secure`;
+}
+function clearAuthCookie() { return 'nc_auth=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0'; }
+function getAuthUser(req) {
+  const m = /(?:^|;\s*)nc_auth=([^;]+)/.exec(req.headers.cookie || '');
+  return m ? verifyToken(decodeURIComponent(m[1])) : null;
+}
+function setStateCookie(res, state) {
+  res.setHeader('Set-Cookie', `nc_oauth=${state}; Path=/; HttpOnly; SameSite=Lax; Max-Age=600`);
+}
+function getStateCookie(req) {
+  const m = /(?:^|;\s*)nc_oauth=([^;]+)/.exec(req.headers.cookie || '');
+  return m ? decodeURIComponent(m[1]) : null;
+}
+function postForm(url, data) {
+  return new Promise((resolve, reject) => {
+    const body = new URLSearchParams(data).toString();
+    const u = new URL(url);
+    const mod = u.protocol === 'https:' ? require('https') : require('http');
+    const r = mod.request(u, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'Content-Length': Buffer.byteLength(body), 'User-Agent': 'NeoConnect-Auth/1.0' }
+    }, (res) => {
+      let d = ''; res.on('data', c => d += c); res.on('end', () => { try { resolve(JSON.parse(d)); } catch (e) { reject(new Error('bad json: ' + d.slice(0, 120))); } });
+    });
+    r.on('error', reject); r.write(body); r.end();
+  });
+}
+function getJson(url, headers) {
+  return new Promise((resolve, reject) => {
+    const u = new URL(url);
+    const mod = u.protocol === 'https:' ? require('https') : require('http');
+    const r = mod.get(u, { headers: Object.assign({ 'User-Agent': 'NeoConnect-Auth/1.0' }, headers || {}) }, (res) => {
+      let d = ''; res.on('data', c => d += c); res.on('end', () => { try { resolve({ status: res.statusCode, body: JSON.parse(d) }); } catch (e) { resolve({ status: res.statusCode, body: d }); } });
+    });
+    r.on('error', reject); r.end();
+  });
+}
+
+/* -- LINE Login -- */
+app.get('/api/auth/line', (req, res) => {
+  const id = process.env.LINE_LOGIN_CHANNEL_ID;
+  if (!id) return res.status(501).json({ error: 'LINE Login ยังไม่ได้ตั้งค่า (LINE_LOGIN_CHANNEL_ID)' });
+  const state = crypto.randomBytes(16).toString('hex');
+  setStateCookie(res, state);
+  res.redirect(`https://access.line.me/oauth2/v2.1/authorize?response_type=code&client_id=${id}&redirect_uri=${encodeURIComponent(APP_URL + '/api/auth/line/callback')}&state=${state}&scope=${encodeURIComponent('profile openid')}`);
+});
+app.get('/api/auth/line/callback', async (req, res) => {
+  try {
+    const code = req.query.code, state = req.query.state;
+    if (!code || !getStateCookie(req) || getStateCookie(req) !== state) return res.status(403).send('⚠ state mismatch — ลองใหม่');
+    if (!process.env.LINE_LOGIN_CHANNEL_SECRET) return res.status(501).send('LINE Login ยังไม่ได้ตั้งค่า');
+    const t = await postForm('https://api.line.me/oauth2/v2.1/token', {
+      grant_type: 'authorization_code', code,
+      redirect_uri: APP_URL + '/api/auth/line/callback',
+      client_id: process.env.LINE_LOGIN_CHANNEL_ID, client_secret: process.env.LINE_LOGIN_CHANNEL_SECRET
+    });
+    if (!t.access_token) return res.status(401).send('LINE token error: ' + JSON.stringify(t).slice(0, 200));
+    const p = await getJson('https://api.line.me/v2/profile', { Authorization: 'Bearer ' + t.access_token });
+    const uid = p.body.userId;
+    if (!OWNER_LINE_IDS.includes(uid) && !AUTH_WHITELIST.includes(uid)) return res.status(403).send('❌ บัญชี LINE นี้ไม่ได้รับอนุญาต');
+    res.setHeader('Set-Cookie', [authCookieStr({ u: 'line:' + uid, n: p.body.displayName || 'LINE User', p: 'line' }), 'nc_oauth=; Path=/; Max-Age=0']);
+    res.redirect('/?auth=ok');
+  } catch (e) { res.status(500).send('LINE login error: ' + e.message); }
+});
+
+/* -- Google Login -- */
+app.get('/api/auth/google', (req, res) => {
+  const id = process.env.GOOGLE_CLIENT_ID;
+  if (!id) return res.status(501).json({ error: 'Google Login ยังไม่ได้ตั้งค่า (GOOGLE_CLIENT_ID)' });
+  const state = crypto.randomBytes(16).toString('hex');
+  setStateCookie(res, state);
+  res.redirect(`https://accounts.google.com/o/oauth2/v2/auth?response_type=code&client_id=${id}&redirect_uri=${encodeURIComponent(APP_URL + '/api/auth/google/callback')}&scope=${encodeURIComponent('openid email profile')}&state=${state}&prompt=select_account`);
+});
+app.get('/api/auth/google/callback', async (req, res) => {
+  try {
+    const code = req.query.code, state = req.query.state;
+    if (!code || !getStateCookie(req) || getStateCookie(req) !== state) return res.status(403).send('⚠ state mismatch — ลองใหม่');
+    if (!process.env.GOOGLE_CLIENT_SECRET) return res.status(501).send('Google Login ยังไม่ได้ตั้งค่า');
+    const t = await postForm('https://oauth2.googleapis.com/token', {
+      code, client_id: process.env.GOOGLE_CLIENT_ID, client_secret: process.env.GOOGLE_CLIENT_SECRET,
+      redirect_uri: APP_URL + '/api/auth/google/callback', grant_type: 'authorization_code'
+    });
+    if (!t.access_token) return res.status(401).send('Google token error');
+    const p = await getJson('https://www.googleapis.com/oauth2/v2/userinfo', { Authorization: 'Bearer ' + t.access_token });
+    const email = String(p.body.email || '').toLowerCase();
+    const allow = OWNER_EMAILS.includes(email) || AUTH_WHITELIST.includes(email);
+    if (!allow) return res.status(403).send('❌ อีเมลนี้ไม่ได้รับอนุญาต: ' + email);
+    res.setHeader('Set-Cookie', [authCookieStr({ u: 'google:' + (p.body.id || email), n: p.body.name || email, p: 'google', e: email }), 'nc_oauth=; Path=/; Max-Age=0']);
+    res.redirect('/?auth=ok');
+  } catch (e) { res.status(500).send('Google login error: ' + e.message); }
+});
+
+/* -- Facebook Login -- */
+app.get('/api/auth/fb', (req, res) => {
+  const id = process.env.FB_APP_ID;
+  if (!id) return res.status(501).json({ error: 'Facebook Login ยังไม่ได้ตั้งค่า (FB_APP_ID)' });
+  const state = crypto.randomBytes(16).toString('hex');
+  setStateCookie(res, state);
+  res.redirect(`https://www.facebook.com/v19.0/dialog/oauth?client_id=${id}&redirect_uri=${encodeURIComponent(APP_URL + '/api/auth/fb/callback')}&state=${state}&scope=${encodeURIComponent('email public_profile')}`);
+});
+app.get('/api/auth/fb/callback', async (req, res) => {
+  try {
+    const code = req.query.code, state = req.query.state;
+    if (!code || !getStateCookie(req) || getStateCookie(req) !== state) return res.status(403).send('⚠ state mismatch — ลองใหม่');
+    if (!process.env.FB_APP_SECRET) return res.status(501).send('Facebook Login ยังไม่ได้ตั้งค่า');
+    const t = await getJson(`https://graph.facebook.com/v19.0/oauth/access_token?client_id=${process.env.FB_APP_ID}&redirect_uri=${encodeURIComponent(APP_URL + '/api/auth/fb/callback')}&client_secret=${process.env.FB_APP_SECRET}&code=${code}`);
+    if (!t.body.access_token) return res.status(401).send('FB token error');
+    const p = await getJson(`https://graph.facebook.com/v19.0/me?fields=id,name,email&access_token=${t.body.access_token}`);
+    const email = String(p.body.email || '').toLowerCase();
+    const fid = String(p.body.id || '');
+    const allow = (email && (OWNER_EMAILS.includes(email) || AUTH_WHITELIST.includes(email))) || OWNER_FB_IDS.includes(fid);
+    if (!allow) return res.status(403).send('❌ บัญชีนี้ไม่ได้รับอนุญาต');
+    res.setHeader('Set-Cookie', [authCookieStr({ u: 'fb:' + fid, n: p.body.name || 'FB User', p: 'fb', e: email }), 'nc_oauth=; Path=/; Max-Age=0']);
+    res.redirect('/?auth=ok');
+  } catch (e) { res.status(500).send('FB login error: ' + e.message); }
+});
+
+/* -- Session check / logout -- */
+app.get('/api/auth/me', (req, res) => {
+  const u = getAuthUser(req);
+  res.json(u ? { ok: true, name: u.n, provider: u.p } : { ok: false });
+});
+app.post('/api/auth/logout', (req, res) => {
+  res.setHeader('Set-Cookie', clearAuthCookie());
+  res.json({ ok: true });
+});
+
 app.post('/api/unlock', (req, res) => {
   try {
     const { pin } = req.body || {};

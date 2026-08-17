@@ -275,6 +275,16 @@
   .lock-go:active { transform: scale(.97); background: rgba(34,229,132,.25); }
   .go-kbd { opacity: .6; font-size: 12px; }
   .lock-msg { min-height: 18px; margin-top: 12px; font-size: 12px; color: #ff5252; }
+  .lock-divider { margin: 14px 0 10px; display: flex; align-items: center; gap: 8px; color: #8b8f98; font-size: 11px; letter-spacing: .06em; white-space: nowrap; }
+  .lock-divider::before, .lock-divider::after { content: ''; flex: 1; height: 1px; background: rgba(255,255,255,.08); }
+  .lock-oauth { display: flex; gap: 8px; }
+  .oauth-btn { flex: 1; padding: 10px 4px; border-radius: 10px; text-align: center; font-size: 12px; font-weight: 700; color: #fff; text-decoration: none; border: 1px solid rgba(255,255,255,.14); background: rgba(255,255,255,.04); transition: all .15s; cursor: pointer; }
+  .oauth-btn:hover { transform: translateY(-1px); background: rgba(255,255,255,.09); }
+  .oauth-btn:active { transform: scale(.97); }
+  .oa-line { border-color: rgba(6,199,85,.55); color: #06c755; }
+  .oa-google { border-color: rgba(66,133,244,.55); color: #4285f4; }
+  .oa-fb { border-color: rgba(24,119,242,.55); color: #58a0ff; }
+  .lock-note { margin-top: 12px; font-size: 10.5px; color: rgba(234,246,255,.35); text-align: center; }
 
   /* ========== call FAB ========== */
   .call-fab {
@@ -398,6 +408,13 @@
     <input class="lock-inp" id="lockInp" type="password" placeholder="รหัสปลดล็อก" autocomplete="off" autocapitalize="off" spellcheck="false">
     <button class="lock-go" id="lockGo">ปลดล็อก <span class="go-kbd">⏎</span></button>
     <div class="lock-msg" id="lockMsg"></div>
+    <div class="lock-divider"><span>หรือเข้าสู่ระบบด้วย</span></div>
+    <div class="lock-oauth">
+      <a class="oauth-btn oa-line" href="/api/auth/line" title="เข้าสู่ระบบด้วย LINE">💬 LINE</a>
+      <a class="oauth-btn oa-google" href="/api/auth/google" title="เข้าสู่ระบบด้วย Google">🌐 Google</a>
+      <a class="oauth-btn oa-fb" href="/api/auth/fb" title="เข้าสู่ระบบด้วย Facebook">👤 Meta</a>
+    </div>
+    <div class="lock-note">🔒 เฉพาะเจ้าของเท่านั้น · รหัสผ่านยังใช้ได้</div>
   </div>
 </div>
 
@@ -469,6 +486,14 @@
   document.getElementById('lockGo').onclick = verifyPin;
   lockInp.addEventListener('keydown', function (e) { if (e.key === 'Enter') verifyPin(); });
   if (!isUnlocked()) { lockScreen.classList.add('show'); setTimeout(function () { lockInp.focus(); }, 300); }
+  /* ===== 🔐 OAuth: ล็อกอินอัตโนมัติถ้ามี session ===== */
+  fetch('/api/auth/me').then(function (r) { return r.json(); }).then(function (j) {
+    if (j.ok) { try { localStorage.setItem(LOCK_KEY, '1'); } catch (e) {} lockScreen.classList.remove('show'); }
+  }).catch(function () {});
+  if (/[?&]auth=ok/.test(location.search)) {
+    setTimeout(function () { var el = document.getElementById('lockMsg'); if (el) el.textContent = '✅ เข้าสู่ระบบสำเร็จ'; }, 300);
+    history.replaceState(null, '', location.pathname);
+  }
 </script>
 <script>
   // PWA: ลงทะเบียน Service Worker (โหลดไว + ใช้ได้ออฟไลน์)
