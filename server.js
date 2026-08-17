@@ -306,7 +306,16 @@ async function summarizeMemory(history) {
     { role: 'user', content: 'บทสนทนา:\n' + lines }
   ];
   const r = await geminiChat(msgs);
-  return r ? String(r.reply).trim().slice(0, 1500) : null;
+  if (r && r.reply) return String(r.reply).trim().slice(0, 1500);
+  /* Gemini quota หมด → fallback chain เหมือนแชท (กันความทรงจำเสีย) */
+  logAI('summarize', 'gemini ไม่ตอบ → fallback');
+  for (const fb of [groqChat, openrouterChat, pollinationsChat]) {
+    try {
+      const rr = await fb(msgs);
+      if (rr && rr.reply) return String(rr.reply).trim().slice(0, 1500);
+    } catch (e) { /* ข้ามไปตัวถัดไป */ }
+  }
+  return null;
 }
 
 /* OpenRouter — :free models, timeout 8 วิ */
