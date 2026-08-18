@@ -1387,6 +1387,16 @@ app.get('/api/stats', (req, res) => {
 // ping — วัดความเร็วเน็ตจริง (client จับเวลา)
 app.get('/api/ping', (req, res) => res.json({ pong: true, t: Date.now() }));
 
+// 🐋 system prompt ต่อห้อง — ให้ client (Puter.js) สร้าง context เดียวกับเซิร์ฟเวอร์
+app.get('/api/sysprompt', (req, res) => {
+  try {
+    const rid = ROOMS[req.query.room] ? req.query.room : 'private';
+    let sys = ROOMS[rid].sys;
+    if (rid === 'private') sys += '\n\n' + PROJECT_KNOWLEDGE;
+    res.json({ room: rid, sys });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 /* ================= 🖥️ Lab Console — รันโค้ด (sandbox) ================= */
 const RUN_TIMEOUT_MS = 8000;      /* Vercel Hobby จำกัด function 10s */
 const RUN_MAX_CODE = 20000;
