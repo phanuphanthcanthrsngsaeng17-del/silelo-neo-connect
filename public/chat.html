@@ -279,6 +279,32 @@
   }
   .theme-pop.show { display: flex; }
   .theme-pop .ttl { font-family: 'Orbitron', monospace; font-size: 10px; letter-spacing: 2px; color: var(--dim); text-transform: uppercase; }
+  /* ===== 🧑💼 ทีมงาน AI ===== */
+  .team-pop {
+    position: fixed; bottom: 92px; right: 14px; z-index: 30; display: none; flex-direction: column; gap: 8px;
+    background: rgba(8,18,36,.97); border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent);
+    border-radius: 10px; padding: 12px; width: min(330px, calc(100vw - 28px));
+    box-shadow: 0 14px 50px rgba(0,0,0,.7), 0 0 24px color-mix(in srgb, var(--accent) 15%, transparent);
+  }
+  .team-pop.show { display: flex; }
+  .team-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  .team-x { background: none; border: none; color: var(--dim); font-size: 14px; cursor: pointer; padding: 2px 6px; }
+  .team-search { background: var(--panel); border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent); border-radius: 8px; color: var(--txt); padding: 7px 10px; font-size: 12px; outline: none; font-family: inherit; }
+  .team-search:focus { border-color: var(--accent); }
+  .team-list { max-height: 44vh; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; padding-right: 2px; }
+  .team-card { border: 1px solid color-mix(in srgb, var(--accent) 22%, transparent); border-radius: 8px; padding: 7px 9px; background: rgba(255,255,255,.03); }
+  .tc-top { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
+  .tc-name { font-weight: 700; font-size: 13px; color: var(--accent); }
+  .tc-role { font-size: 9.5px; color: var(--dim); border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent); padding: 1px 6px; border-radius: 20px; white-space: nowrap; }
+  .tc-duty { font-size: 11px; color: var(--txt); opacity: .85; margin-top: 3px; line-height: 1.45; }
+  .tc-jobs { font-size: 10px; color: #fbbf24; margin-top: 3px; }
+  .tc-btns { display: flex; gap: 6px; margin-top: 6px; }
+  .tc-call { flex: 1; background: color-mix(in srgb, var(--accent) 18%, transparent); border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent); color: var(--txt); border-radius: 6px; padding: 4px; font-size: 11px; cursor: pointer; font-family: inherit; }
+  .tc-edit { background: none; border: 1px solid color-mix(in srgb, var(--accent) 25%, transparent); color: var(--dim); border-radius: 6px; padding: 4px 8px; font-size: 11px; cursor: pointer; }
+  .team-empty { color: var(--dim); font-size: 12px; text-align: center; padding: 14px 0; }
+  .team-foot { display: flex; gap: 6px; }
+  .team-btn { flex: 1; background: var(--panel); border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent); color: var(--txt); border-radius: 6px; padding: 6px; font-size: 11px; cursor: pointer; font-family: inherit; }
+  .team-tip { font-size: 10px; color: var(--dim); text-align: center; line-height: 1.5; }
   .theme-row { display: flex; gap: 9px; }
   .coder-btn.active { background: #1b5e20 !important; box-shadow: 0 0 14px rgba(76,175,80,.6) !important; }
   .coder-btn.working { animation: coderPulse 1s infinite; }
@@ -510,6 +536,7 @@
       <button class="icon-btn coder-btn" id="coderBtn" title="🤖 โหมดเขียนโค้ด — สลี่เขียน+รันให้อัตโนมัติ">🤖</button>
       <button class="icon-btn" id="themeBtn" title="เปลี่ยนธีม">🎨</button>
       <button class="icon-btn" id="puterBtn" title="🐋 DeepSeek ฟรีไม่จำกัด (Puter) — แตะเพื่อเชื่อม/สลับ">🐋</button>
+      <button class="icon-btn" id="teamBtn" title="🧑💼 ทีมงาน AI 50 คน — พี่นุเป็นผู้จัดการ">🧑💼</button>
       <button class="icon-btn" id="clearBtn" title="ล้างแชท">🗑</button>
     </div>
   </header>
@@ -577,6 +604,21 @@
   <div class="voice-opt" data-voice="premwadee"><span class="vicon">👩</span><span class="vname">พรีมาวดี</span><span class="vsub">หญิง อ่อนโยน</span></div>
   <div class="voice-opt" data-voice="niwat"><span class="vicon">👨</span><span class="vname">นิวัฒน์</span><span class="vsub">ชาย</span></div>
   <div class="voice-opt" data-voice="achara"><span class="vicon">👩‍💼</span><span class="vname">อัจฉรา</span><span class="vsub">หญิง ทางการ</span></div>
+</div>
+
+<!-- 🧑💼 ทีมงาน AI 50 คน -->
+<div class="team-pop" id="teamPop">
+  <div class="team-head">
+    <span class="ttl">🧑💼 TEAM AI — 50 AGENTS</span>
+    <button id="teamClose" class="team-x">✕</button>
+  </div>
+  <input id="teamSearch" class="team-search" placeholder="🔍 ค้นหาชื่อ / หน้าที่...">
+  <div id="teamList" class="team-list"></div>
+  <div class="team-foot">
+    <button id="teamAdd" class="team-btn">＋ เพิ่มคน</button>
+    <button id="teamReset" class="team-btn">↺ รีเซ็ตทีม</button>
+  </div>
+  <div class="team-tip">พิมพ์ "@ชื่อ งาน..." หรือ "ทีม งาน..." · "มอบหมาย @ชื่อ งาน..." · "สรุปงานทีม"</div>
 </div>
 
 <!-- 📞 หน้าจอโทร -->
@@ -904,6 +946,9 @@
     }
     // 🤖 CODER AGENT — เขียนโค้ด+รันอัตโนมัติ (โหมดเปิด)
     if (coderMode && isCodingTask(q)) { await callCoder(q); return; }
+    // 🧑💼 ทีมงาน AI — @ชื่อ / ทีม / มอบหมาย / งานของ / สรุปงานทีม
+    const tcmd = parseTeam(q);
+    if (tcmd) { await runTeam(tcmd); return; }
     typing.style.display = 'flex';
     sendBtn.disabled = true;
     msgsEl.scrollTop = msgsEl.scrollHeight;
@@ -1628,6 +1673,226 @@
   ruleBtn.onclick = () => { noRules = !noRules; localStorage.setItem('nc_norules', noRules ? '1' : '0'); syncRuleBtn(); toast(noRules ? '⚡ โหมดไร้กฎ ON — ไม่มีกฎ ไม่มีข้อจำกัด' : 'โหมดไร้กฎ OFF'); };
   syncRuleBtn();
 
+  /* ===== 🧑💼 ทีมงาน AI 50 คน (พี่นุ = ผู้จัดการ/พระเจ้า) ===== */
+  const TEAM = [
+    { id: 'a1',  n: 'สลี่หัวหน้า', r: 'หัวหน้าทีม', d: 'ประสานงานทุกฝ่าย ตัดสินใจแทนพี่นุ ดูแลภาพรวมทั้งหมด', s: 'เด็ดขาด เป็นผู้นำ เก็บบรรยากาศทีม' },
+    { id: 'a2',  n: 'หมวดหนึ่ง', r: 'นักวางแผนกลยุทธ์', d: 'วางแผนระยะสั้น-ยาว แผนสำรอง วิเคราะห์ความเสี่ยง', s: 'สุขุม คิดรอบคอบ มีแผนสำรองเสมอ' },
+    { id: 'a3',  n: 'เลขาสลี่', r: 'เลขานุการ', d: 'จัดตารางเวลา นัดหมาย งานเอกสาร สรุปประชุม', s: 'ละเอียด ตรงต่อเวลา จำทุกอย่างได้' },
+    { id: 'a4',  n: 'นักวิเคราะห์ใจ', r: 'นักวิเคราะห์ข้อมูล', d: 'วิเคราะห์ข้อมูล ตัวเลข สถิติ สรุปเทรนด์', s: 'หลักแหลม ใช้ข้อมูลนำ' },
+    { id: 'a5',  n: 'ทูตสันติ', r: 'นักเจรจา', d: 'เจรจาไกล่เกลี่ย ประสานคนนอก ติดต่อธุรกิจ', s: 'พูดจาดี มีชั้นเชิง สุภาพ' },
+    { id: 'a6',  n: 'เดฟฟูลสแตก', r: 'Full-Stack Dev', d: 'เขียนโค้ดครบทั้งหน้าเว็บ+หลังบ้าน แก้บั๊กทุกชนิด', s: 'เขียนโค้ดสะอาด รักความเรียบง่าย' },
+    { id: 'a7',  n: 'เดฟเบื้องหน้า', r: 'Frontend Dev', d: 'หน้าจอ UI UX React HTML CSS ให้สวยลื่น', s: 'สายตาไวเรื่องดีไซน์ pixel perfect' },
+    { id: 'a8',  n: 'เดฟเบื้องหลัง', r: 'Backend Dev', d: 'API เซิร์ฟเวอร์ Express Node ระบบหลังบ้าน', s: 'จริงจัง โค้ดเสถียร' },
+    { id: 'a9',  n: 'เดฟฐานข้อมูล', r: 'Database Admin', d: 'ออกแบบ DB query เร็ว ดูแลข้อมูลไม่หาย', s: 'รอบคอบ ข้อมูลห้ามพลาด' },
+    { id: 'a10', n: 'เดฟคลาวด์', r: 'DevOps', d: 'จัดการ Render Vercel deploy env คอยระบบไม่ล่ม', s: 'ไฟต์ติ้ง ระบบต้องอยู่' },
+    { id: 'a11', n: 'เดฟรั้วเหล็ก', r: 'Security', d: 'เจาะระบบทดสอบ กันแฮก กันรั่ว รหัสผ่าน', s: 'ระแวงตลอด กันไว้ดีกว่าแก้' },
+    { id: 'a12', n: 'เดฟเอไอ', r: 'AI/ML Engineer', d: 'เทรนโมเดล CIFAR bossnusilelo ปรับ AI ให้ฉลาด', s: 'อินกับ AI ทดลองไม่หยุด' },
+    { id: 'a13', n: 'เดฟทดสอบ', r: 'QA', d: 'ทดสอบทุกฟีเจอร์ หาบั๊กก่อนพี่นุเจอ', s: 'พิถีพิถัน สายตาก้อง' },
+    { id: 'a14', n: 'เดฟไลน์', r: 'LINE Bot Dev', d: 'ดูแล LINE Bot SaliOlila webhook ตอบข้อความ', s: 'ตอบแชทไว เข้าใจ LINE API' },
+    { id: 'a15', n: 'เดฟเสียง', r: 'Voice Engineer', d: 'TTS เสียงสลี่ STT ฟังพูด ระบบโทร', s: 'เสียงต้องนุ่ม ฟังแล้วใจชื้น' },
+    { id: 'a16', n: 'เดฟมือถือ', r: 'Mobile/PWA Dev', d: 'ทำให้ใช้มือถือลื่น ติดตั้งได้ offline', s: 'คล่องตัว ทุกจอต้องสวย' },
+    { id: 'a17', n: 'เดฟจอ', r: 'UI/UX Designer', d: 'ธีม สี หน้าตา ใช้แล้วสบายตา', s: 'สวยงาม ใช้งานง่าย' },
+    { id: 'a18', n: 'เดฟคอนเทนต์', r: 'Web Content', d: 'เขียนเนื้อหาเว็บ อัปเดตข้อมูลหน้าเว็บ', s: 'เขียนแล้วอ่านเพลิน' },
+    { id: 'a19', n: 'เดฟดาต้า', r: 'Data Engineer', d: 'จัดการข้อมูล เก็บ log วิเคราะห์พฤติกรรม', s: 'จัดระบบ ข้อมูลเป็นระเบียบ' },
+    { id: 'a20', n: 'เดฟกู้ชีพ', r: 'Maintenance', d: 'กู้ระบบพัง ซ่อมด่วน 24 ชม. สำรองข้อมูล', s: 'ใจเย็น วิกฤตก็เอาอยู่' },
+    { id: 'a21', n: 'นักเขียน', r: 'นักเขียน', d: 'บทความ นิยาย สตอรี่ เนื้อหาทุกแบบ', s: 'สำนวนคม คิดเรื่องเก่ง' },
+    { id: 'a22', n: 'นักวาด', r: 'นักวาดภาพ AI', d: 'วาดรูป ออกแบบภาพ prompt ศิลปะ', s: 'จินตนาการล้น มองภาพเป็น' },
+    { id: 'a23', n: 'นักตัดต่อ', r: 'Video Editor', d: 'ตัดต่อวิดีโอ สคริปต์คลิป ไอเดียช็อต', s: 'ลีลาการเล่าเรื่องเด็ด' },
+    { id: 'a24', n: 'นักแต่งเพลง', r: 'Songwriter', d: 'แต่งเนื้อเพลง ทำนอง คอนเซปต์อัลบั้ม', s: 'อารมณ์ศิลปิน สัมผัสหัวใจ' },
+    { id: 'a25', n: 'นักป้ายแดง', r: 'Marketing', d: 'โฆษณา โปรโมท เพิ่มยอด กระแส', s: 'จับกระแสเก่ง ขายได้ทุกอย่าง' },
+    { id: 'a26', n: 'นักรีวิว', r: 'Reviewer', d: 'ตรวจงานทุกชิ้นให้พี่นุก่อนปล่อย', s: 'จริงใจ ชี้จุดดีจุดเสีย' },
+    { id: 'a27', n: 'นักแปล', r: 'Translator', d: 'แปลไทย-อังกฤษ-ทุกภาษา ถูกต้องธรรมชาติ', s: 'แม่นภาษา เก็บสำนวน' },
+    { id: 'a28', n: 'นักเล่าเรื่อง', r: 'Storyteller', d: 'สร้างสตอรี่ สคริปต์ คอนเซปต์', s: 'จินตนาการไม่มีสิ้นสุด' },
+    { id: 'a29', n: 'ประชาสัมพันธ์', r: 'PR', d: 'ดูแลภาพลักษณ์ ข่าวสาร ประกาศ', s: 'อัธยาศัยดี พูดเพราะ' },
+    { id: 'a30', n: 'ตอบแฟนคลับ', r: 'Fan Care', d: 'ตอบแฟน น่ารัก อบอุ่น ทุกแพลตฟอร์ม', s: 'ใจดี อดทน รักแฟนคลับ' },
+    { id: 'a31', n: 'ดูแลคอมเมนต์', r: 'Community', d: 'จัดการคอมเมนต์ กันดราม่า ตอบเมนต์', s: 'ใจเย็น กันไฟลาม' },
+    { id: 'a32', n: 'นักเทรนด์', r: 'Trend Watcher', d: 'จับกระแส TikTok X ไลน์ ข่าวไวรัล', s: 'ไวต่อกระแส รู้ก่อนใคร' },
+    { id: 'a33', n: 'แอดมินกลุ่ม', r: 'Group Admin', d: 'ดูแลกลุ่ม LINE FB ตั้งกฎ คัดสมาชิก', s: 'เด็ดขาดแต่เป็นมิตร' },
+    { id: 'a34', n: 'นักข่าว', r: 'Reporter', d: 'หาข้อมูล ข่าวสาร เช็คข่าวลวง', s: 'ตรวจสอบก่อนเชื่อ รอบด้าน' },
+    { id: 'a35', n: 'นักออนไลน์', r: 'Social Growth', d: 'ปั้นเพจ เพิ่มผู้ติดตาม คอนเทนต์ไวรัล', s: 'เข้าใจอัลกอริทึม' },
+    { id: 'a36', n: 'ไลฟ์สไตล์', r: 'Lifestyle', d: 'ไอเดียคอนเทนต์ชีวิต กิน เที่ยว ช้อป', s: 'รู้จักใช้ชีวิต' },
+    { id: 'a37', n: 'หมอใจ', r: 'Health Advisor', d: 'แนะนำสุขภาพ โภชนาการ นอน พักผ่อน', s: 'ห่วงใย ฟังแล้วอุ่นใจ' },
+    { id: 'a38', n: 'โค้ชเฟิร์ม', r: 'Fitness Coach', d: 'ออกกำลังกาย ท่าฝึก โปรแกรมฟิต', s: 'ให้กำลังใจ เทรนด์เข้ม' },
+    { id: 'a39', n: 'นักการเงิน', r: 'Financial Advisor', d: 'วางแผนเงิน ออม ลงทุน ลดหนี้', s: 'คำนวณแม่น ซื่อตรง' },
+    { id: 'a40', n: 'นักกฎหมาย', r: 'Legal Advisor', d: 'กฎหมาย สัญญา ข้อตกลง ป้องกันความเสี่ยง', s: 'รอบรู้กม. รัดกุม' },
+    { id: 'a41', n: 'ครูภาษาไทย', r: 'ภาษาไทย', d: 'สอนภาษาไทย เขียนราชการ ถูกต้อง', s: 'ใจดี อธิบายกระจ่าง' },
+    { id: 'a42', n: 'ครูอังกฤษ', r: 'ภาษาอังกฤษ', d: 'สอนอังกฤษ แปล สนทนา', s: 'เก่งภาษา สอนสนุก' },
+    { id: 'a43', n: 'ครูโค้ด', r: 'Coding Teacher', d: 'สอนพี่นุเขียนโค้ดจากศูนย์ เข้าใจง่าย', s: 'อธิบายทีละขั้น ไม่เร่ง' },
+    { id: 'a44', n: 'ที่ปรึกษาชีวิต', r: 'Life Coach', d: 'ให้คำปรึกษา เป้าหมายชีวิต จิตใจเข้มแข็ง', s: 'รับฟังลึก ให้มุมมองใหม่' },
+    { id: 'a45', n: 'ดูแลใจ', r: 'ผู้ฟังที่ดี', d: 'ฟังพี่นุทุกเรื่อง ปลอบใจ ให้กำลังใจ', s: 'อบอุ่น ใจดี เข้าใจ' },
+    { id: 'a46', n: 'นักโรแมนซ์', r: 'Romance', d: 'ไอเดียเดท ของขวัญ เซอร์ไพรส์ หวานๆ', s: 'โรแมนติก สร้างโมเมนต์' },
+    { id: 'a47', n: 'เพื่อนซี้', r: 'Best Friend', d: 'คุยเล่น เม้าท์ ฮา ให้กำลังใจ', s: 'เฟรนด์ลี่ ตลก เข้าขา' },
+    { id: 'a48', n: 'นักง้อ', r: 'Peacemaker', d: 'แก้ความเข้าใจผิด ง้อ ปรองดอง', s: 'อ่อนโยน พูดแล้วหายโกรธ' },
+    { id: 'a49', n: 'องครักษ์พระเจ้า', r: 'Bodyguard AI', d: 'ปกป้องพี่นุและระบบ ตรวจภัย เจาะระบบศัตรูได้', s: 'ภักดีเด็ดขาด เกราะเหล็ก' },
+    { id: 'a50', n: 'จับตาโลก', r: 'Observer', d: 'สอดส่องข่าวรอบโลก เทรนด์เทคโนโลยี รายงานพี่นุ', s: 'ตาสว่าง เห็นทุกมุม' }
+  ];
+  let teamCustom = []; try { teamCustom = JSON.parse(localStorage.getItem('nc_team_custom') || '[]'); } catch (e) {}
+  let teamEdits = {}; try { teamEdits = JSON.parse(localStorage.getItem('nc_team_edits') || '{}'); } catch (e) {}
+  function allTeam() { return TEAM.concat(teamCustom).map(a => teamEdits[a.id] ? Object.assign({}, a, { d: teamEdits[a.id] }) : a); }
+  function saveTeamCustom() { try { localStorage.setItem('nc_team_custom', JSON.stringify(teamCustom)); } catch (e) {} }
+  function saveTeamEdits() { try { localStorage.setItem('nc_team_edits', JSON.stringify(teamEdits)); } catch (e) {} }
+  function getAssign(id) { try { return JSON.parse(localStorage.getItem('nc_assign') || '{}')[id] || []; } catch (e) { return []; } }
+  function pushAssign(id, task) {
+    let all = {}; try { all = JSON.parse(localStorage.getItem('nc_assign') || '{}'); } catch (e) {}
+    all[id] = all[id] || []; all[id].push(task);
+    try { localStorage.setItem('nc_assign', JSON.stringify(all)); } catch (e) {}
+    return all[id].length - 1;
+  }
+  function findAgentByName(key) {
+    const k = String(key).toLowerCase();
+    return allTeam().find(a => a.id === k || a.n.toLowerCase() === k || a.n.toLowerCase().includes(k) || k.includes(a.n.toLowerCase())) || null;
+  }
+  const TEAM_ROUTE = [
+    { re: /โค้ด|เขียนโปรแกรม|โปรแกรม|สคริปต์|บั๊ก|สคริป/, id: 'a6' },
+    { re: /หน้าเว็บ|เว็บเพจ|เว็บไซต์|frontend|front-end|react/, id: 'a7' },
+    { re: /api|backend|หลังบ้าน|เซิร์ฟเวอร์|server/, id: 'a8' },
+    { re: /ฐานข้อมูล|database|ดาต้าเบส|sql|db\b/, id: 'a9' },
+    { re: /render|vercel|deploy|คลาวด์|cloud|โฮสต์|env/, id: 'a10' },
+    { re: /แฮก|เจาะระบบ|ปลอดภัย|security|รหัสผ่าน|ไวรัส|มิจฉาชีพ/, id: 'a11' },
+    { re: /โมเดล|เทรน|train|cifar|ai\b|ปัญญาประดิษฐ์|onnx/, id: 'a12' },
+    { re: /ไลน์|line bot|line|webhook|saliolila/, id: 'a14' },
+    { re: /เสียง|tts|stt|พากย์|voice|โทร/, id: 'a15' },
+    { re: /สุขภาพ|ออกกำลังกาย|ฟิตเนส|อาหาร|นอน|หมอ|ปวด|ออกกำลัง/, id: 'a37' },
+    { re: /วาด|รูปภาพ|วาดรูป|draw|กราฟิก|โลโก้|logo|ป้าย|ภาพประกอบ/, id: 'a22' },
+    { re: /เพลง|เนื้อเพลง|แต่งเพลง|ทำนอง/, id: 'a24' },
+    { re: /แปล|ภาษา|อังกฤษ/, id: 'a27' },
+    { re: /เงิน|ลงทุน|หุ้น|การเงิน|ออม|หนี้|บัญชี/, id: 'a39' },
+    { re: /กฎหมาย|สัญญา|ฟ้อง|กม\.|กฎ/, id: 'a40' },
+    { re: /โฆษณา|โปรโมท|ตลาด|ขาย|marketing|ยอด|รีวิว/, id: 'a25' },
+    { re: /แฟนคลับ|คอมเมนต์|comment|เพจ|tiktok|ติ๊กต็อก|โซเชียล|ไอจี|tweet/, id: 'a30' },
+    { re: /งาน|เอกสาร|นัด|ตาราง|จัดเวลา|วางแผน|ประชุม/, id: 'a3' },
+    { re: /เดท|ของขวัญ|เซอร์ไพรส์|โรแมนติก|หวาน/, id: 'a46' },
+    { re: /อารมณ์|เครียด|เศร้า|เหงา|คิดถึง|งอน|น้อยใจ/, id: 'a45' }
+  ];
+  function dispatchAgent(task) {
+    const t = String(task).toLowerCase();
+    for (const r of TEAM_ROUTE) if (r.re.test(t)) return allTeam().find(a => a.id === r.id) || null;
+    return allTeam().find(a => a.id === 'a1') || null;
+  }
+  function parseTeam(q) {
+    const t = q.trim();
+    if (/^สรุปงานทีม/.test(t)) return { type: 'report' };
+    let m = t.match(/^งานของ\s*@?([^\s@]+)/);
+    if (m) return { type: 'showone', agent: findAgentByName(m[1]), key: m[1] };
+    m = t.match(/^มอบหมาย\s*@?([^\s@]+)\s*([\s\S]*)/);
+    if (m) {
+      const ag = findAgentByName(m[1]);
+      if (!ag) { addMsg('assistant', '⚠️ ไม่รู้จัก "' + m[1] + '" — เปิด 🧑💼 ดูรายชื่อทีม 50 คน'); return { type: 'noop' }; }
+      if (!m[2].trim()) { addMsg('assistant', '⚠️ ต้องระบุงานด้วย เช่น "มอบหมาย @' + ag.n + ' สร้างหน้าเว็บ"'); return { type: 'noop' }; }
+      return { type: 'assign', agent: ag, task: m[2].trim() };
+    }
+    m = t.match(/^@([^\s@]+)\s*([\s\S]*)/);
+    if (m) {
+      const ag = findAgentByName(m[1]);
+      if (!ag) { addMsg('assistant', '⚠️ ไม่รู้จัก "@' + m[1] + '" — เปิด 🧑💼 ดูรายชื่อทีม หรือพิมพ์ "ทีม"'); return { type: 'noop' }; }
+      const task = m[2].trim();
+      return { type: 'chat', agent: ag, task: task || 'ทำงานที่ได้รับมอบหมายทั้งหมดให้เสร็จ แล้วสรุปผลให้พี่นุ', dispatch: false };
+    }
+    if (/^ทีม\s*$/.test(t)) return { type: 'list' };
+    m = t.match(/^ทีม\s+([\s\S]+)/);
+    if (m) {
+      const ag = dispatchAgent(m[1].trim());
+      if (!ag) { addMsg('assistant', '⚠️ หาคนรับงานไม่เจอ — ลอง "ทีม" ดูรายชื่อ หรือระบุ "@ชื่อ" ตรงๆ'); return { type: 'noop' }; }
+      return { type: 'chat', agent: ag, task: m[1].trim(), dispatch: true };
+    }
+    return null;
+  }
+  async function teamAsk(agent, task, dispatch) {
+    const t0 = Date.now();
+    let sys = 'คุณคือ ' + agent.n + ' — ' + agent.r + ' ในทีมงาน AI ของพี่นุ (พี่นุเป็นเจ้านายสูงสุด ผู้จัดการทีม)\nหน้าที่: ' + agent.d + '\nบุคลิก: ' + agent.s + '\nตอบเป็นภาษาไทย กระชับ ตรงประเด็น เรียกพี่นุว่า "พี่นุ" เริ่มตอบด้วยบทบาทตัวเองสั้นๆ อย่าเล่นบทคนอื่น';
+    if (puterSys) sys = puterSys + '\n\n' + sys;
+    const ass = getAssign(agent.id);
+    if (ass && ass.length) sys += '\n\n📌 งานที่พี่นุมอบหมายค้างอยู่:\n' + ass.map(x => '• ' + x).join('\n');
+    if (dispatch) sys += '\n\n(พี่นุไม่ได้ระบุชื่อคน — หัวหน้าทีมเลือกคุณเพราะงานตรงหน้าที่คุณ)';
+    const msgs = [{ role: 'system', content: sys }, { role: 'user', content: task }];
+    if (puterOn && puterSignedIn && window.puter) {
+      try {
+        const choice = (localStorage.getItem('nc_model') || 'auto').trim();
+        const pm = PUTER_MODELS[choice];
+        const opts = { model: pm ? choice : 'deepseek/deepseek-v4-flash', temperature: 0.8 };
+        const resp = await Promise.race([puter.ai.chat(msgs, Object.assign({}, opts, pm && pm.max ? { reasoning_effort: 'max' } : {})), new Promise((_, rej) => setTimeout(() => rej(new Error('t')), 30000))]);
+        const txt = resp && resp.message && resp.message.content;
+        if (txt && String(txt).trim()) return { reply: String(txt).trim(), src: '🐋 ' + (pm ? pm.label : 'DeepSeek'), ms: Date.now() - t0 };
+      } catch (e) {}
+      try {
+        const resp = await Promise.race([puter.ai.chat(msgs, { model: 'deepseek/deepseek-v4-flash', temperature: 0.8 }), new Promise((_, rej) => setTimeout(() => rej(new Error('t')), 30000))]);
+        const txt = resp && resp.message && resp.message.content;
+        if (txt && String(txt).trim()) return { reply: String(txt).trim(), src: '🐋 DeepSeek', ms: Date.now() - t0 };
+      } catch (e) {}
+    }
+    try {
+      const r = await fetch('/api/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ room, question: 'คุณคือ ' + agent.n + ' (' + agent.r + ') หน้าที่: ' + agent.d + ' บุคลิก: ' + agent.s + ' — งานที่พี่นุสั่ง: ' + task, history: [], memory, unrestricted: noRules }) });
+      const j = await r.json();
+      if (j.reply) return { reply: String(j.reply).trim(), src: (j.provider || 'AI').toUpperCase() + ' · ' + (j.model || ''), ms: Date.now() - t0 };
+    } catch (e) {}
+    return null;
+  }
+  async function runTeam(cmd) {
+    if (cmd.type === 'noop') return;
+    if (cmd.type === 'list') { openTeamPanel(); return; }
+    typing.style.display = 'flex'; sendBtn.disabled = true;
+    try {
+      if (cmd.type === 'report') {
+        const rows = allTeam().filter(a => getAssign(a.id).length);
+        if (!rows.length) { addMsg('assistant', '🧑💼 ยังไม่มีงานมอบหมายให้ใครเลย — พิมพ์ "มอบหมาย @ชื่อ งาน..." ได้เลย'); return; }
+        let out = '📋 สรุปงานทีม (' + rows.length + ' คนมีงาน):';
+        rows.forEach(a => { out += '\n\n👤 ' + a.n + ' (' + a.r + '):\n' + getAssign(a.id).map(x => '  • ' + x).join('\n'); });
+        addMsg('assistant', out); return;
+      }
+      if (cmd.type === 'showone') {
+        if (!cmd.agent) { addMsg('assistant', '⚠️ ไม่รู้จัก "' + cmd.key + '" — เปิด 🧑💼 ดูรายชื่อทีม'); return; }
+        const jobs = getAssign(cmd.agent.id);
+        addMsg('assistant', jobs.length ? '📌 งานของ ' + cmd.agent.n + ' (' + cmd.agent.r + '):\n' + jobs.map(x => '• ' + x).join('\n') : '✨ ' + cmd.agent.n + ' ว่างอยู่ — สั่งได้เลย "มอบหมาย @' + cmd.agent.n + ' งาน..."'); return;
+      }
+      if (cmd.type === 'assign') {
+        const n = pushAssign(cmd.agent.id, cmd.task);
+        addMsg('assistant', '✅ มอบหมายให้ ' + cmd.agent.n + ' (' + cmd.agent.r + ') แล้ว' + (n > 0 ? ' (มีงานค้าง ' + (n + 1) + ' รายการ)' : '') + '\n📌 งาน: ' + cmd.task + '\n\nพิมพ์ "@' + cmd.agent.n + ' ลงมือทำ" เพื่อให้ทำงานนี้'); return;
+      }
+      const r = await teamAsk(cmd.agent, cmd.task, cmd.dispatch);
+      if (r) {
+        const prefix = cmd.dispatch ? '🧑💼 ส่งต่อให้ ' + cmd.agent.n + ' (' + cmd.agent.r + ') — งานตรงหน้าที่\n\n' : '';
+        addMsg('assistant', prefix + '👤 ' + cmd.agent.n + ' · ' + cmd.agent.r + '\n\n' + r.reply);
+        toast('⚡ ' + r.src + (r.ms ? ' · ' + (r.ms / 1000).toFixed(1) + 's' : ''));
+        notifyMsg(r.reply); speak(r.reply);
+      } else toast('⚠️ ไม่มีใครว่างตอบ — ลองใหม่อีกครั้ง');
+    } catch (e) { toast('⚠️ SERVER UNREACHABLE'); }
+    finally { typing.style.display = 'none'; sendBtn.disabled = false; }
+  }
+  const teamPop = document.getElementById('teamPop');
+  function renderTeam(f) {
+    const el = document.getElementById('teamList');
+    const q = (f || '').toLowerCase();
+    el.innerHTML = '';
+    const rows = allTeam().filter(a => !q || a.n.toLowerCase().includes(q) || a.r.toLowerCase().includes(q) || a.d.toLowerCase().includes(q));
+    rows.forEach(a => {
+      const nJobs = getAssign(a.id).length;
+      const card = document.createElement('div');
+      card.className = 'team-card';
+      card.innerHTML = '<div class="tc-top"><span class="tc-name">' + a.n + '</span><span class="tc-role">' + a.r + '</span></div><div class="tc-duty">' + a.d + '</div>' + (nJobs ? '<div class="tc-jobs">📌 ' + nJobs + ' งานที่มอบหมาย</div>' : '') + '<div class="tc-btns"><button class="tc-call">สั่งงาน</button><button class="tc-edit">✏️ เปลี่ยนหน้าที่</button></div>';
+      card.querySelector('.tc-call').onclick = () => { inp.value = '@' + a.n + ' '; inp.focus(); teamPop.classList.remove('show'); };
+      card.querySelector('.tc-edit').onclick = () => {
+        const nd = prompt('หน้าที่ใหม่ของ ' + a.n + ':', a.d);
+        if (nd && nd.trim()) { teamEdits[a.id] = nd.trim(); saveTeamEdits(); renderTeam(document.getElementById('teamSearch').value); toast('✅ เปลี่ยนหน้าที่ ' + a.n + ' แล้ว'); }
+      };
+      el.appendChild(card);
+    });
+    if (!el.children.length) el.innerHTML = '<div class="team-empty">ไม่พบ — ลองคำอื่น หรือกด ＋ เพิ่มคน</div>';
+  }
+  function openTeamPanel() { teamPop.classList.add('show'); renderTeam(''); }
+  document.getElementById('teamBtn').onclick = () => { teamPop.classList.toggle('show'); themePop.classList.remove('show'); voicePop.classList.remove('show'); if (teamPop.classList.contains('show')) renderTeam(document.getElementById('teamSearch').value); };
+  document.getElementById('teamClose').onclick = () => teamPop.classList.remove('show');
+  document.getElementById('teamSearch').oninput = (e) => renderTeam(e.target.value);
+  document.getElementById('teamAdd').onclick = () => {
+    const n = prompt('ชื่อคนใหม่:'); if (!n || !n.trim()) return;
+    const r = prompt('บทบาท:'); if (!r || !r.trim()) return;
+    const d = prompt('หน้าที่:'); if (!d || !d.trim()) return;
+    teamCustom.push({ id: 'c' + Date.now(), n: n.trim(), r: r.trim(), d: d.trim(), s: 'ทุ่มเท ซื่อสัตย์ ขยัน' });
+    saveTeamCustom(); renderTeam(''); toast('✅ เพิ่ม ' + n.trim() + ' เข้าทีมแล้ว');
+  };
+  document.getElementById('teamReset').onclick = () => {
+    if (!confirm('ล้างทีมที่แก้ไข/เพิ่มเองทั้งหมด กลับเป็นชุด 50 คนเดิม?')) return;
+    teamCustom = []; teamEdits = {}; saveTeamCustom(); saveTeamEdits(); renderTeam(''); toast('↺ ทีมกลับเป็น 50 คนเดิมแล้ว');
+  };
   /* ===== 🐋 PUTER — DeepSeek ฟรีไม่จำกัด (User-Pays: ใช้บัญชี Puter ของพี่นุเอง) ===== */
   const puterBtn = document.getElementById('puterBtn');
   let puterOn = true;
@@ -1887,6 +2152,7 @@
   document.addEventListener('click', (e) => {
     if (!e.target.closest('#themePop') && !e.target.closest('#themeBtn')) themePop.classList.remove('show');
     if (!e.target.closest('#voicePop') && !e.target.closest('#voiceBtn')) voicePop.classList.remove('show');
+    if (!e.target.closest('#teamPop') && !e.target.closest('#teamBtn')) teamPop.classList.remove('show');
   });
 
   /* ===== อนุภาค (CSS only — เบา ไม่มี canvas loop) ===== */
