@@ -1,5 +1,5 @@
-/* SILELO Neo-Connect Service Worker v1.11 - network-first HTML (fix stale cache) */
-const CACHE = 'silelo-v12';
+/* SILELO Neo-Connect Service Worker v1.12 - DUSTY UI v1.16 (fix stale cache) */
+const CACHE = 'silelo-v13';
 const SHELL = [
   '/',
   '/index.html',

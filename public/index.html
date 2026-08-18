@@ -18,8 +18,9 @@
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&display=swap" rel="stylesheet">
 <style>
   :root {
-    --bg: #020409; --cyan: #00e5ff; --purple: #a78bfa; --pink: #ff2d95; --amber: #ffb74d;
-    --green: #22e584; --txt: #eaf6ff; --dim: rgba(234,246,255,.5);
+    --bg: #f5f6fb; --cyan: #8b7cf7; --purple: #c4b5fd; --pink: #f9a8d4; --amber: #fbbf24;
+    --green: #22c55e; --txt: #2a2f45; --dim: #8b93ab;
+    --panel: #ffffff;
   }
   * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   html { overflow-x: clip; }
@@ -34,7 +35,7 @@
   .bgfx { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; clip-path: inset(0); }
   /* starfield: 2 ชั้น box-shadow (static, 0 CPU) */
   .stars, .stars2 {
-    position: absolute; inset: 0;
+    position: absolute; inset: 0; opacity: .16;
     background-image:
       radial-gradient(1px 1px at 20% 30%, rgba(255,255,255,.9), transparent),
       radial-gradient(1px 1px at 70% 15%, rgba(160,220,255,.8), transparent),
@@ -47,7 +48,7 @@
     background-repeat: repeat;
     background-size: 420px 420px;
   }
-  .stars2 { background-size: 260px 260px; opacity: .6; transform: translateY(20px); }
+  .stars2 { background-size: 260px 260px; opacity: .18; transform: translateY(20px); }
   /* perspective grid — เคลื่อนช้า ๆ transform-only */
   .grid-bg {
     position: absolute; left: -25%; right: -25%; top: 58%; height: 75%;
@@ -63,7 +64,7 @@
   }
   @keyframes gridroll { from { background-position: 0 0, 0 0; } to { background-position: 0 46px, 46px 0; } }
   /* aurora แบบ soft gradient (ไม่ใช้ filter:blur — ถูก GPU มาก) */
-  .glow { position: absolute; border-radius: 50%; opacity: .5; will-change: transform; }
+  .glow { position: absolute; border-radius: 50%; opacity: .4; will-change: transform; }
   .glow.g1 { width: 52vmax; height: 52vmax; left: -20vmax; top: -22vmax;
     background: radial-gradient(circle, rgba(0,229,255,.16), transparent 62%);
     animation: drift1 26s ease-in-out infinite alternate; }
@@ -75,10 +76,10 @@
     animation: drift1 37s ease-in-out infinite alternate-reverse; }
   @keyframes drift1 { from { transform: translate(0,0); } to { transform: translate(5vmax,-3vmax); } }
   @keyframes drift2 { from { transform: translate(0,0); } to { transform: translate(-4vmax,3vmax); } }
-  .scanlines { position: absolute; inset: 0; opacity: .05;
+  .scanlines { position: absolute; inset: 0; opacity: 0;
     background: repeating-linear-gradient(0deg, #fff 0 1px, transparent 1px 3px); }
   .vignette { position: absolute; inset: 0;
-    background: radial-gradient(ellipse 100% 90% at 50% 40%, transparent 50%, rgba(0,0,0,.7)); }
+    background: radial-gradient(ellipse 100% 90% at 50% 40%, transparent 55%, rgba(139,124,247,.06)); }
 
   .wrap { position: relative; z-index: 2; max-width: 1120px; margin: 0 auto; padding: 24px 20px 54px; }
 
@@ -131,12 +132,12 @@
   .hero h1 {
     font-family: 'Orbitron', sans-serif; font-weight: 900; font-size: clamp(42px, 9.5vw, 80px);
     letter-spacing: 12px; line-height: 1.05;
-    background: linear-gradient(180deg, #fff 0%, #a5ecff 40%, #00c8ff 65%, #2b6cff 100%);
+    background: linear-gradient(180deg, #6d5ce0 0%, #a78bfa 45%, #f9a8d4 80%, #fb7185 100%);
     -webkit-background-clip: text; background-clip: text; color: transparent;
   }
   .hero .sub {
     margin-top: 8px; font-family: 'Orbitron', sans-serif; letter-spacing: 13px; font-size: clamp(10px, 2.4vw, 15px);
-    color: var(--cyan); text-transform: uppercase; text-shadow: 0 0 16px rgba(0,229,255,.7);
+    color: var(--cc, var(--cyan)); text-transform: uppercase;
   }
   .hero .sub::before, .hero .sub::after { content: '◆'; margin: 0 13px; font-size: 7px; opacity: .85; }
 
@@ -156,40 +157,40 @@
     display: inline-flex; align-items: center; gap: 8px; margin-top: 0; padding: 6px 18px;
     font-family: 'Orbitron', monospace; font-size: 10px; letter-spacing: 3px; color: var(--green);
     border: 1px solid rgba(34,229,132,.4); border-radius: 30px;
-    background: rgba(34,229,132,.08); box-shadow: 0 0 18px rgba(34,229,132,.18), inset 0 0 14px rgba(34,229,132,.08);
+    background: color-mix(in srgb, var(--green) 10%, var(--panel)); box-shadow: 0 0 18px rgba(34,229,132,.18), inset 0 0 14px rgba(34,229,132,.08);
     text-transform: uppercase;
   }
   .badge .pulse { width: 7px; height: 7px; border-radius: 50%; background: var(--green); box-shadow: 0 0 10px var(--green); animation: pulse 1.2s infinite; }
   .tagline { text-align: center; color: var(--dim); font-size: 13px; font-weight: 300; letter-spacing: 2px; margin: 22px 0 6px; }
 
   /* ========== Quick Access — ปุ่มเข้าห้องลัด (เห็นทันที) ========== */
-  .quick { display: flex; gap: 10px; justify-content: center; margin: 12px 0 0; flex-wrap: wrap; }
-  .quick a { display: inline-flex; align-items: center; gap: 7px; padding: 10px 22px; border-radius: 30px;
-    font-family: 'Orbitron', monospace; font-size: 12px; letter-spacing: 2.5px; color: var(--cc);
+  .quick { display: flex; gap: 12px; justify-content: center; margin: 14px 0 0; flex-wrap: wrap; }
+  .quick a { display: inline-flex; align-items: center; gap: 9px; padding: 14px 30px; border-radius: 40px;
+    font-family: 'Orbitron', monospace; font-size: 15px; font-weight: 700; letter-spacing: 2.5px; color: var(--cc);
     border: 1px solid color-mix(in srgb, var(--cc) 55%, transparent);
-    background: rgba(6,14,32,.6); text-decoration: none; transition: all .15s;
-    box-shadow: 0 0 16px color-mix(in srgb, var(--cc) 14%, transparent); }
-  .quick a:hover, .quick a:active { background: color-mix(in srgb, var(--cc) 15%, transparent); transform: translateY(-2px); box-shadow: 0 0 24px color-mix(in srgb, var(--cc) 30%, transparent); }
-  .quick .q-ico { font-size: 14px; }
+    background: var(--panel); text-decoration: none; transition: all .15s;
+    box-shadow: 0 4px 18px rgba(139,124,247,.14); }
+  .quick a:hover, .quick a:active { background: color-mix(in srgb, var(--cc) 12%, var(--panel)); transform: translateY(-2px); box-shadow: 0 0 24px color-mix(in srgb, var(--cc) 28%, transparent); }
+  .quick .q-ico { font-size: 18px; }
 
   /* ========== เลือกห้อง (SELECT CHAMBER) ========== */
   .sel {
     display: flex; align-items: center; justify-content: center; gap: 12px;
     margin: 16px 0 14px; font-family: 'Orbitron', monospace; font-size: 11px;
-    letter-spacing: 4px; color: var(--cyan); text-transform: uppercase;
+    letter-spacing: 4px; color: var(--cc, var(--cyan)); text-transform: uppercase; font-weight: 700;
   }
   .sel::before, .sel::after { content: ''; height: 1px; width: 56px;
     background: linear-gradient(90deg, transparent, rgba(0,229,255,.55), transparent); }
   .sel .th { color: var(--dim); letter-spacing: 2px; font-size: 10px; }
 
   /* ========== Holo cards ========== */
-  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(270px, 1fr)); gap: 22px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 24px; }
   .card {
     position: relative; display: block; text-decoration: none; color: var(--txt);
-    padding: 20px 20px 16px; overflow: hidden; cursor: pointer;
-    background: linear-gradient(160deg, rgba(10,20,44,.68), rgba(4,8,22,.62));
+    padding: 26px 24px 20px; overflow: hidden; cursor: pointer;
+    background: linear-gradient(160deg, #ffffff, #f3f0ff);
     border: 1px solid color-mix(in srgb, var(--cc) 30%, transparent);
-    clip-path: polygon(24px 0, 100% 0, 100% calc(100% - 24px), calc(100% - 24px) 100%, 0 100%, 0 24px);
+    border-radius: 22px;
     transition: transform .28s cubic-bezier(.2,.8,.3,1.1), box-shadow .28s, border-color .28s;
     will-change: transform;
   }
@@ -200,10 +201,10 @@
   .card:hover, .card:active {
     transform: translateY(-7px) scale(1.015);
     border-color: color-mix(in srgb, var(--cc) 70%, transparent);
-    box-shadow: 0 20px 50px rgba(0,0,0,.65), 0 0 36px color-mix(in srgb, var(--cc) 26%, transparent);
+    box-shadow: 0 20px 50px rgba(139,124,247,.18), 0 0 36px color-mix(in srgb, var(--cc) 22%, transparent);
   }
   .card:hover .topline { box-shadow: 0 0 14px var(--cc); }
-  .avatar-wrap { position: relative; width: 68px; height: 68px; margin: 2px auto 12px; }
+  .avatar-wrap { position: relative; width: 80px; height: 80px; margin: 4px auto 14px; }
   .avatar-wrap .ring {
     position: absolute; inset: 0; border-radius: 50%;
     background: conic-gradient(from 0deg, transparent 0 40%, var(--cc) 55%, transparent 72%);
@@ -214,33 +215,33 @@
   .avatar-wrap .ring2 { inset: -9px; animation-duration: 8s; animation-direction: reverse; opacity: .55; }
   .avatar {
     position: absolute; inset: 9px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
-    font-size: 30px;
-    background: radial-gradient(circle at 32% 28%, color-mix(in srgb, var(--cc) 32%, transparent), rgba(3,6,18,.9));
+    font-size: 36px;
+    background: radial-gradient(circle at 32% 28%, color-mix(in srgb, var(--cc) 30%, #ffffff), #faf7ff);
     border: 1px solid color-mix(in srgb, var(--cc) 55%, transparent);
     box-shadow: 0 0 22px color-mix(in srgb, var(--cc) 32%, transparent), inset 0 0 16px color-mix(in srgb, var(--cc) 18%, transparent);
   }
-  .card h2 { text-align: center; font-family: 'Orbitron', sans-serif; font-size: 20px; letter-spacing: 5px; font-weight: 700; }
-  .card .tag { text-align: center; color: var(--cc); font-size: 9.5px; letter-spacing: 3px; text-transform: uppercase; margin: 5px 0 10px; font-family: 'Orbitron', monospace; }
-  .card p { color: rgba(234,246,255,.62); font-size: 12.5px; font-weight: 300; line-height: 1.7; text-align: center; min-height: 44px; }
+  .card h2 { text-align: center; font-family: 'Orbitron', sans-serif; font-size: 23px; letter-spacing: 5px; font-weight: 800; }
+  .card .tag { text-align: center; color: var(--cc); font-size: 10.5px; letter-spacing: 3px; text-transform: uppercase; margin: 6px 0 10px; font-family: 'Orbitron', monospace; font-weight: 600; }
+  .card p { color: var(--dim); font-size: 13.5px; font-weight: 400; line-height: 1.7; text-align: center; min-height: 44px; }
   .card .enter {
-    margin: 14px auto 0; display: flex; align-items: center; justify-content: center; gap: 10px;
-    padding: 10px 0; border-radius: 4px; font-family: 'Orbitron', sans-serif; font-size: 12px; letter-spacing: 3px; font-weight: 700;
-    background: linear-gradient(90deg, color-mix(in srgb, var(--cc) 80%, #000), color-mix(in srgb, var(--cc) 45%, var(--purple)));
-    color: #02101a; position: relative; overflow: hidden;
+    margin: 16px auto 0; display: flex; align-items: center; justify-content: center; gap: 10px;
+    height: 52px; border-radius: 14px; font-family: 'Orbitron', sans-serif; font-size: 14px; letter-spacing: 3px; font-weight: 800;
+    background: linear-gradient(90deg, var(--cc), color-mix(in srgb, var(--cc) 45%, var(--purple)));
+    color: #fff; position: relative; overflow: hidden;
     box-shadow: 0 0 20px color-mix(in srgb, var(--cc) 32%, transparent);
   }
   .card .enter::before { content: ''; position: absolute; top: 0; bottom: 0; width: 40%; background: linear-gradient(90deg, transparent, rgba(255,255,255,.5), transparent); animation: btnglide 2.8s ease-in-out infinite; }
   @keyframes btnglide { from { left: -50%; } to { left: 110%; } }
   .card .enter::after { content: '▸'; transition: transform .2s; }
   .card:hover .enter::after { transform: translateX(5px); }
-  .card .statusline { margin-top: 12px; display: flex; justify-content: space-between; font-size: 9.5px; color: rgba(234,246,255,.4); font-family: 'Orbitron', monospace; letter-spacing: 1px; }
+  .card .statusline { margin-top: 14px; display: flex; justify-content: space-between; font-size: 10px; color: var(--dim); font-family: 'Orbitron', monospace; letter-spacing: 1px; font-weight: 600; }
   .card .statusline .on { color: var(--green); }
 
   .featbar { margin: 26px auto 6px; max-width: 580px; text-align: center; }
-  .feat-ttl { font-family: 'Orbitron', monospace; font-size: 10.5px; letter-spacing: 3px; color: var(--cyan); margin-bottom: 10px; text-shadow: 0 0 12px rgba(0,229,255,.4); }
+  .feat-ttl { font-family: 'Orbitron', monospace; font-size: 10.5px; letter-spacing: 3px; color: var(--cc, var(--cyan)); margin-bottom: 10px; }
   .feat-row { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
-  .feat { font-size: 11px; color: rgba(234,246,255,.78); background: rgba(0,229,255,.06); border: 1px solid rgba(0,229,255,.22); border-radius: 30px; padding: 6px 12px; letter-spacing: .3px; }
-  .foot { text-align: center; margin-top: 40px; color: rgba(234,246,255,.35); font-size: 10.5px; letter-spacing: 2px; font-family: 'Orbitron', monospace; }
+  .feat { font-size: 11px; color: var(--dim); background: var(--panel); border: 1px solid color-mix(in srgb, var(--cyan) 25%, transparent); border-radius: 30px; padding: 6px 12px; letter-spacing: .3px; font-weight: 500; }
+  .foot { text-align: center; margin-top: 40px; color: var(--dim); font-size: 10.5px; letter-spacing: 2px; font-family: 'Orbitron', monospace; }
   .foot b { color: var(--cyan); }
 
   @media (max-width: 640px) { .wrap { padding: 16px 14px 44px; } .card p { min-height: 0; } }

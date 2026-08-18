@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="th">
+<html lang="th" data-room="">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
@@ -23,6 +23,18 @@
     --accent: var(--cyan);
     --bot-grad1: rgba(167,139,250,.24); --bot-grad2: rgba(167,139,250,.08);
     --bot-border: rgba(167,139,250,.45);
+    --panel: rgba(10,20,42,.72); --panel-2: rgba(6,14,30,.55);
+    --field: rgba(0,229,255,.05); --line: rgba(0,229,255,.28);
+    --callbg: radial-gradient(130% 130% at 50% -10%, #4b2a7a 0%, #3a2160 38%, #552a5e 68%, #6b2f56 100%);
+  }
+  /* ===== DUSTY — theme สว่าง สะอาดตา (ค่าเริ่มต้น) ===== */
+  body.theme-dusty {
+    --accent: #8b7cf7; --cyan: #8b7cf7; --purple: #c4b5fd; --pink: #f9a8d4; --amber: #fbbf24;
+    --bg: #f5f6fb; --txt: #2a2f45; --dim: #667085;
+    --bot-grad1: rgba(167,139,250,.16); --bot-grad2: rgba(249,168,212,.12); --bot-border: rgba(167,139,250,.35);
+    --panel: rgba(255,255,255,.8); --panel-2: rgba(255,255,255,.55);
+    --field: #ffffff; --line: rgba(139,124,247,.3);
+    --callbg: radial-gradient(130% 130% at 50% -10%, #ede9fe 0%, #fdf2f8 55%, #fce7f3 100%);
   }
   /* ===== THEMES 2026 ===== */
   body.theme-jarvis { --accent: #ff4655; --bg: #0b0306; --bot-grad1: rgba(255,70,85,.22); --bot-grad2: rgba(255,179,71,.07); --bot-border: rgba(255,70,85,.5); }
@@ -42,7 +54,7 @@
   /* call summary card */
   .call-sum { margin-top: 8px; padding: 10px 12px; border-radius: 8px; border: 1px dashed color-mix(in srgb, var(--accent) 45%, transparent); background: color-mix(in srgb, var(--accent) 6%, transparent); font-size: 12.5px; line-height: 1.6; color: var(--txt); white-space: pre-wrap; }
   .call-sum b { color: var(--accent); }
-  .ptt { width: 42px; height: 42px; border-radius: 50%; border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent); background: rgba(0,229,255,.05); color: var(--txt); font-size: 17px; cursor: pointer; flex: none; display: flex; align-items: center; justify-content: center; transition: all .2s; }
+  .ptt { width: 48px; height: 48px; border-radius: 50%; border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent); background: var(--panel); color: var(--txt); font-size: 19px; cursor: pointer; flex: none; display: flex; align-items: center; justify-content: center; transition: all .2s; }
   .ptt:active, .ptt.rec { transform: scale(.9); background: color-mix(in srgb, #ff4655 30%, transparent); border-color: #ff4655; box-shadow: 0 0 16px rgba(255,70,85,.5); }
   @keyframes pttPulse { 0%,100% { box-shadow: 0 0 0 0 rgba(255,70,85,.5); } 50% { box-shadow: 0 0 0 7px transparent; } }
   .ptt.rec { animation: pttPulse 1s infinite; }
@@ -77,7 +89,7 @@
   /* ===== Header ===== */
   header {
     display: flex; align-items: center; gap: 14px; padding: 12px 16px;
-    background: linear-gradient(180deg, rgba(8,16,36,.92), rgba(5,10,26,.75));
+    background: linear-gradient(180deg, var(--panel), var(--panel-2));
     border-bottom: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
     box-shadow: 0 0 34px color-mix(in srgb, var(--accent) 12%, transparent);
     position: relative;
@@ -103,7 +115,7 @@
   .avatar {
     position: absolute; inset: 6px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
     font-size: 26px;
-    background: radial-gradient(circle at 32% 28%, color-mix(in srgb, var(--accent) 28%, transparent), rgba(3,6,18,.9));
+    background: radial-gradient(circle at 32% 28%, color-mix(in srgb, var(--accent) 28%, transparent), var(--panel-2));
     border: 1px solid color-mix(in srgb, var(--accent) 55%, transparent);
     box-shadow: 0 0 18px color-mix(in srgb, var(--accent) 35%, transparent), inset 0 0 12px color-mix(in srgb, var(--accent) 18%, transparent);
   }
@@ -115,11 +127,19 @@
 
   .hbtns { display: flex; gap: 8px; }
   .icon-btn {
-    width: 42px; height: 42px; border-radius: 6px; border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
-    background: rgba(0,229,255,.05); color: var(--txt); font-size: 16px; cursor: pointer; flex: none;
-    clip-path: polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px);
+    width: 48px; height: 48px; border-radius: 12px; border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+    background: var(--panel); color: var(--txt); font-size: 18px; cursor: pointer; flex: none;
     transition: all .2s;
   }
+  /* ===== Dola style: header เหลือแค่ปุ่มจำเป็น (โทร + ล้างแชท) ===== */
+  #voiceBtn, #soundBtn, #memBtn, #ruleBtn, #coderBtn, #themeBtn { display: none !important; }
+  html[data-room="private"] #codeBtn, html[data-room="work"] #codeBtn { display: none !important; }
+  .back-btn { width: 48px; height: 48px; border-radius: 12px; border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent);
+    background: var(--panel); color: var(--txt); font-size: 19px; cursor: pointer; flex: none; transition: all .2s; }
+  #callBtn { width: 50px; height: 50px; border-radius: 50%; background: linear-gradient(145deg, #16a34a, #0f6b36); color: #fff !important;
+    font-size: 22px; border: none; flex: none; display: flex; align-items: center; justify-content: center; cursor: pointer;
+    box-shadow: 0 4px 16px rgba(34,197,94,.4); animation: callpulse 1.8s ease-in-out infinite; transition: all .15s; }
+  #callBtn:active { transform: scale(.9); }
   .icon-btn:active { transform: scale(.88); background: color-mix(in srgb, var(--accent) 22%, transparent); box-shadow: 0 0 14px color-mix(in srgb, var(--accent) 35%, transparent); }
   .icon-btn.active { border-color: #ff3d00 !important; color: #fff !important; animation: rulepulse 1.2s ease-in-out infinite; }
   @keyframes rulepulse { 0%,100% { box-shadow: 0 0 6px rgba(255,61,0,.5); } 50% { box-shadow: 0 0 18px rgba(255,61,0,.9); } }
@@ -131,12 +151,13 @@
     .avatar { font-size: 20px; }
     .hinfo h1 { font-size: 13px; letter-spacing: 2px; }
     .hbtns { gap: 4px; }
-    .icon-btn { width: 33px; height: 33px; font-size: 13.5px; border-radius: 5px; }
-    .back-btn { width: 33px; height: 33px; font-size: 15px; }
+    .icon-btn { width: 44px; height: 44px; font-size: 17px; border-radius: 10px; }
+    .back-btn { width: 44px; height: 44px; font-size: 17px; }
+    #callBtn { width: 46px; height: 46px; font-size: 20px; }
     #statusDot { display: none; }
   }
   @media (max-width: 380px) {
-    .icon-btn { width: 30px; height: 30px; font-size: 12.5px; }
+    .icon-btn { width: 44px; height: 44px; font-size: 17px; }
     .hbtns { gap: 3px; }
     header { padding: 8px 6px; gap: 6px; }
     .hinfo h1 { font-size: 12px; }
@@ -154,10 +175,10 @@
     font-weight: 300;
   }
   .msg.user .bubble {
-    background: linear-gradient(135deg, rgba(0,229,255,.28), rgba(0,140,255,.12));
-    border: 1px solid rgba(0,229,255,.4);
+    background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 22%, var(--panel)), color-mix(in srgb, var(--accent) 8%, var(--panel)));
+    border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent);
     clip-path: polygon(12px 0, 100% 0, 100% 100%, 0 100%, 0 12px);
-    box-shadow: 0 0 22px rgba(0,229,255,.14), inset 0 0 20px rgba(0,229,255,.06);
+    box-shadow: 0 0 22px color-mix(in srgb, var(--accent) 14%, transparent), inset 0 0 20px color-mix(in srgb, var(--accent) 5%, transparent);
   }
   .msg.bot .bubble {
     background: linear-gradient(135deg, var(--bot-grad1), var(--bot-grad2));
@@ -180,15 +201,15 @@
   /* ===== Input bar ===== */
   .inputbar {
     display: flex; align-items: center; gap: 10px; padding: 12px 14px calc(14px + env(safe-area-inset-bottom));
-    background: linear-gradient(0deg, rgba(8,16,36,.95), rgba(5,10,26,.8));
+    background: linear-gradient(0deg, var(--panel), var(--panel-2));
     border-top: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
     position: relative;
   }
   .inputbar::before { content: ''; position: absolute; top: -1px; left: 0; right: 0; height: 1px; background: linear-gradient(90deg, transparent, var(--accent), transparent); opacity: .6; }
   #inp {
     flex: 1; min-height: 46px; max-height: 190px; resize: none; border-radius: 6px;
-    background: rgba(0,229,255,.05); border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
-    color: var(--txt); font-size: 15px; padding: 12px 15px; outline: none; font-family: system-ui, sans-serif; font-weight: 300; line-height: 1.4;
+    background: var(--field); border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
+    color: var(--txt); font-size: 15px; padding: 12px 15px; outline: none; font-family: system-ui, sans-serif; font-weight: 500; line-height: 1.4;
     clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px);
     transition: box-shadow .2s, border-color .2s;
   }
@@ -209,14 +230,14 @@
   /* ===== รูปในแชท & ปุ่มเพิ่ม ===== */
   .img-msg { display: block; max-width: 240px; max-height: 240px; border-radius: 8px; margin-top: 8px; border: 1px solid color-mix(in srgb, var(--accent) 55%, transparent); cursor: zoom-in; box-shadow: 0 0 18px color-mix(in srgb, var(--accent) 20%, transparent); }
   .msg.user .img-msg { max-width: 180px; max-height: 180px; }
-  .inputbar .icon-btn { width: 42px; height: 42px; border-radius: 50%; border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent); background: rgba(0,229,255,.05); color: var(--txt); font-size: 17px; cursor: pointer; flex: none; display: flex; align-items: center; justify-content: center; transition: all .2s; clip-path: none; }
+  .inputbar .icon-btn { width: 48px; height: 48px; border-radius: 50%; border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent); background: var(--panel); color: var(--txt); font-size: 19px; cursor: pointer; flex: none; display: flex; align-items: center; justify-content: center; transition: all .2s; clip-path: none; }
   .inputbar .icon-btn:active { transform: scale(.88); background: color-mix(in srgb, var(--accent) 22%, transparent); }
 
   /* Voice picker */
   .voice-pop {
     position: fixed; bottom: 92px; right: 14px; z-index: 30; display: none; flex-direction: column; gap: 8px;
-    background: rgba(8,16,36,.94); border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent);
-    border-radius: 8px; padding: 14px; background: rgba(8,18,36,.96);
+    background: var(--panel); border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent);
+    border-radius: 12px; padding: 14px;
     box-shadow: 0 14px 50px rgba(0,0,0,.7), 0 0 24px color-mix(in srgb, var(--accent) 15%, transparent);
   }
   .voice-pop.show { display: flex; }
@@ -260,7 +281,7 @@
 
   #toast {
     position: fixed; top: 16px; left: 50%; transform: translateX(-50%) translateY(-90px); z-index: 60;
-    background: rgba(8,16,36,.95); border: 1px solid var(--accent); color: var(--txt);
+    background: var(--panel); border: 1px solid var(--accent); color: var(--txt);
     padding: 11px 22px; border-radius: 6px; font-size: 12px; transition: transform .3s; pointer-events: none;
     font-family: 'Orbitron', monospace; letter-spacing: 1px;
     box-shadow: 0 0 24px color-mix(in srgb, var(--accent) 25%, transparent);
@@ -272,11 +293,11 @@
   @keyframes callPulse { 0%,100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 45%, transparent); } 50% { box-shadow: 0 0 0 8px transparent; } }
   #callOverlay {
     position: fixed; inset: 0; z-index: 100; display: none;
-    background: radial-gradient(130% 130% at 50% -10%, #4b2a7a 0%, #3a2160 38%, #552a5e 68%, #6b2f56 100%);
+    background: var(--callbg);
     flex-direction: column; align-items: center;
     justify-content: space-between;
     padding: max(env(safe-area-inset-top), 40px) 24px max(env(safe-area-inset-bottom), 24px);
-    color: #dff3ff;
+    color: var(--txt);
   }
   #callOverlay.show { display: flex; }
   .call-top { display: flex; flex-direction: column; align-items: center; margin-top: 1vh; }
@@ -290,29 +311,32 @@
   @keyframes ringWave { 0% { transform: scale(.85); opacity: .9; } 100% { transform: scale(1.55); opacity: 0; } }
   .call-avatar .cface {
     position: absolute; inset: 12px; border-radius: 50%;
-    background: linear-gradient(145deg, color-mix(in srgb, var(--accent) 35%, #0a1420), #060b12);
+    background: linear-gradient(145deg, color-mix(in srgb, var(--accent) 35%, var(--panel)), var(--panel-2));
     border: 1px solid color-mix(in srgb, var(--accent) 70%, transparent);
     display: flex; align-items: center; justify-content: center; font-size: 52px;
     box-shadow: 0 0 42px color-mix(in srgb, var(--accent) 40%, transparent), inset 0 0 26px rgba(0,0,0,.6);
   }
   .call-avatar.speaking .cface { animation: faceGlow 1s ease-in-out infinite alternate; }
   @keyframes faceGlow { from { box-shadow: 0 0 30px color-mix(in srgb, var(--accent) 30%, transparent); } to { box-shadow: 0 0 70px color-mix(in srgb, var(--accent) 80%, transparent); } }
-  #callName { font-size: 24px; font-weight: 700; letter-spacing: 2px; text-shadow: 0 0 16px var(--accent); }
-  #callState { font-size: 13px; color: rgba(210,235,250,.65); margin: 8px 0 6px; letter-spacing: 1px; min-height: 18px; }
-  #callTimer { font-size: 32px; font-weight: 300; font-variant-numeric: tabular-nums; margin: 8px 0 0; color: rgba(230,248,255,.92); }
+  #callName { font-size: 24px; font-weight: 800; letter-spacing: 2px; }
+  #callState { font-size: 13px; color: var(--dim); margin: 8px 0 6px; letter-spacing: 1px; min-height: 18px; font-weight: 700; }
+  #callTimer { font-size: 32px; font-weight: 700; font-variant-numeric: tabular-nums; margin: 8px 0 0; color: var(--txt); }
   #callTrans {
     min-height: 44px; max-width: 88%; width: 320px; text-align: center; font-size: 14px;
-    color: var(--accent); margin: 10px 0 0; padding: 8px 14px; border-radius: 14px;
-    background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.07);
+    color: var(--txt); margin: 10px 0 0; padding: 8px 14px; border-radius: 14px;
+    background: var(--panel); border: 1px solid var(--line);
     letter-spacing: .3px; display: flex; align-items: center; justify-content: center;
   }
-  #callTrans.empty { color: rgba(200,225,240,.35); }
+  #callTrans.empty { color: var(--dim); }
   /* ปุ่มแชร์จอ — เล็ก มุมขวาบน */
+  /* Dola style: หน้าโทรเหลือ 3 ปุ่ม (ไมค์/ลำโพง/กล้อง) + วางสายใหญ่กลางล่าง */
+  #screenBtn, #stopTtsBtn { display: none !important; }
+  .call-ctrl-row { gap: 26px; }
   /* ===== ▶ คลื่นเสียงไมค์ (visualizer) ===== */
   #callViz { width: min(280px, 86%); height: 46px; margin: 2px auto 0; display: flex; align-items: center; justify-content: center; }
   #callViz canvas { width: 100%; height: 100%; display: block; }
-  #micHint { font-size: 11px; color: rgba(255,200,225,.85); min-height: 16px; margin-top: 3px; text-align: center; letter-spacing: .3px; }
-  #micHint.warn { color: #ffb3c1; font-weight: 600; }
+  #micHint { font-size: 11px; color: var(--dim); min-height: 16px; margin-top: 3px; text-align: center; letter-spacing: .3px; }
+  #micHint.warn { color: #d6336c; font-weight: 700; }
   .cctrl.warn { animation: micWarn 1s ease-in-out infinite alternate; }
   @keyframes micWarn { from { box-shadow: 0 0 0 0 rgba(255,80,110,.55); } to { box-shadow: 0 0 0 8px rgba(255,80,110,0); } }
   .cshare {
@@ -326,13 +350,13 @@
   /* 3 ปุ่มควบคุม — ใหญ่ กดง่าย */
   .call-ctrl-row { display: flex; gap: 30px; align-items: center; }
   .cctrl {
-    width: 68px; height: 68px; border-radius: 50%; border: none; cursor: pointer;
+    width: 76px; height: 76px; border-radius: 50%; border: none; cursor: pointer;
     display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
-    background: rgba(255,255,255,.08); color: #eaf6ff; font-size: 25px;
-    box-shadow: 0 6px 24px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.12);
+    background: var(--panel); color: var(--txt); font-size: 28px;
+    box-shadow: 0 6px 24px rgba(139,124,247,.25), inset 0 1px 0 rgba(255,255,255,.6);
     transition: transform .15s, background .2s, box-shadow .2s;
   }
-  .cctrl span { font-size: 10px; letter-spacing: .5px; color: rgba(220,240,255,.7); }
+  .cctrl span { font-size: 11px; letter-spacing: .5px; color: var(--dim); font-weight: 600; }
   .cctrl:active { transform: scale(.92); }
   .cctrl.off { background: rgba(255,77,109,.16); color: #ff4d6d; }
   .cctrl.off span { color: rgba(255,120,140,.85); }
@@ -350,7 +374,7 @@
   .cend .hang-ico { font-size: 32px; line-height: 1; }
   .cend:active { transform: scale(.92); }
   .cend .hang-ico { transform: rotate(135deg); display: inline-block; }
-  .call-hint { position: static; margin-top: 1vh; font-size: 11px; color: rgba(190,215,230,.4); letter-spacing: .5px; text-align: center; padding: 0 24px; }
+  .call-hint { position: static; margin-top: 1vh; font-size: 11px; color: var(--dim); letter-spacing: .5px; text-align: center; padding: 0 24px; }
 
   /* ===== 🔒 Lock screen ===== */
   .lock { position: fixed; inset: 0; z-index: 9999; display: none; align-items: center; justify-content: center; background: radial-gradient(ellipse at 50% 30%, #0d1b2a 0%, #030b14 70%); }
@@ -367,9 +391,8 @@
   .lock-go:active { transform: scale(.97); background: rgba(34,229,132,.25); }
   .go-kbd { opacity: .6; font-size: 12px; }
   .lock-msg { min-height: 18px; margin-top: 12px; font-size: 12px; color: #ff5252; font-family: system-ui, sans-serif; }
-  .call-top { width: 46px; height: 46px; border-radius: 50%; background: linear-gradient(145deg, #1a7a45, #0d4d28); color: #fff !important; font-size: 20px; border: none; flex: none; display: flex; align-items: center; justify-content: center; cursor: pointer; animation: callpulse 1.8s ease-in-out infinite; }
-  .call-top:active { transform: scale(.9); }
-  .chat-call-inline { width: 42px; height: 42px; border-radius: 50%; border: 1px solid rgba(34,229,132,.45); background: linear-gradient(145deg, rgba(26,122,69,.25), rgba(13,77,40,.2)); color: #7dffb8; font-size: 17px; cursor: pointer; flex: none; display: flex; align-items: center; justify-content: center; transition: all .2s; }
+  #callBtn { animation: callpulse 1.8s ease-in-out infinite; }
+  .chat-call-inline { width: 48px; height: 48px; border-radius: 50%; border: 1px solid rgba(34,197,94,.5); background: linear-gradient(145deg, rgba(34,197,94,.18), rgba(21,128,61,.14)); color: #16a34a; font-size: 20px; cursor: pointer; flex: none; display: flex; align-items: center; justify-content: center; transition: all .2s; }
   @keyframes callpulse { 0%,100% { box-shadow: 0 0 0 4px rgba(34,229,132,.22), 0 6px 20px rgba(13,77,40,.5); } 50% { box-shadow: 0 0 0 9px rgba(34,229,132,.07), 0 6px 26px rgba(13,77,40,.6); } }
 
   /* ===== 🖥️ Lab Console ===== */
@@ -477,14 +500,13 @@
   <div class="typing" id="typing"><span></span><span></span><span></span></div>
 
   <div class="inputbar">
-    <button class="icon-btn" id="codeBtn" title="💻 Lab Console — รัน/แก้ไขโค้ด">💻</button>
-    <button class="icon-btn" id="imgBtn" title="ส่งรูป/ถ่ายรูป">📎</button>
-    <button class="icon-btn ptt" id="pttBtn" title="🎤 พูดแล้วส่ง (กดค้าง)">🎤</button>
     <input type="file" id="imgFile" accept="image/*" hidden>
-    <button class="icon-btn chat-call-inline" id="chatCallFab" title="โทรหาสลี่ออกมา">📞</button>
-    <textarea id="inp" rows="1" placeholder="พิมพ์ข้อความ... (ลอง: วาดรูปแมวอวกาศ)" enterkeyhint="send"></textarea>
+    <textarea id="inp" rows="1" placeholder="พิมพ์ข้อความ..." enterkeyhint="send"></textarea>
+    <button class="icon-btn ptt" id="pttBtn" title="🎤 พูดแล้วส่ง (กดค้าง)">🎤</button>
+    <button class="icon-btn chat-call-inline" id="chatCallFab" title="📞 โทรหาสลี่">📞</button>
+    <button class="icon-btn" id="imgBtn" title="แนบรูป">📄</button>
     <button class="send" id="sendBtn" title="ส่ง">➤</button>
-  </div>
+    <button class="icon-btn" id="codeBtn" title="💻 Lab Console">💻</button></div>
 </div>
 
 <!-- 🔒 หน้าจอล็อก -->
@@ -502,6 +524,7 @@
 <div class="theme-pop" id="themePop" style="max-width:280px">
   <div class="ttl">🎨 THEMES 2026</div>
   <div class="theme-grid">
+    <div class="theme-card" data-theme="dusty"><span class="theme-dot" style="background:linear-gradient(135deg,#c4b5fd,#f9a8d4)"></span><span><div class="theme-name">DUSTY</div><div class="theme-sub">LIGHT &amp; SOFT</div></span></div>
     <div class="theme-card" data-theme="neo"><span class="theme-dot" style="background:linear-gradient(135deg,#00e5ff,#4facfe)"></span><span><div class="theme-name">NEO</div><div class="theme-sub">DEFAULT CYAN</div></span></div>
     <div class="theme-card" data-theme="jarvis"><span class="theme-dot" style="background:linear-gradient(135deg,#ff4655,#ffb347)"></span><span><div class="theme-name">JARVIS</div><div class="theme-sub">IRON MAN</div></span></div>
     <div class="theme-card" data-theme="cyberpunk"><span class="theme-dot" style="background:linear-gradient(135deg,#ff2d95,#00e5ff)"></span><span><div class="theme-name">CYBERPUNK</div><div class="theme-sub">NEON CITY</div></span></div>
@@ -556,6 +579,7 @@
     lab:     { name: 'LAB', tag: 'นักประดิษฐ์ & นักทดลอง · ONLINE', avatar: '🔬', accent: '#ffb74d' }
   };
   const room = new URLSearchParams(location.search).get('room') || 'private';
+  document.documentElement.dataset.room = room;
   const R = ROOMS[room] || ROOMS.private;
   document.documentElement.style.setProperty('--accent', R.accent);
   const botC = R.accent;
@@ -1603,13 +1627,13 @@
     root.style.setProperty('--bot-grad1', t.g1);
     root.style.setProperty('--bot-grad2', t.g2);
     root.style.setProperty('--bot-border', t.bd);
-    document.body.classList.remove('theme-neo', 'theme-jarvis', 'theme-cyberpunk', 'theme-matrix', 'theme-aurora', 'theme-sunset');
+    document.body.classList.remove('theme-neo', 'theme-jarvis', 'theme-cyberpunk', 'theme-matrix', 'theme-aurora', 'theme-sunset', 'theme-dusty');
     document.body.classList.add('theme-' + name);
     document.querySelectorAll('.theme-card').forEach(x => x.classList.toggle('on', x.dataset.theme === name));
     try { localStorage.setItem('nc_theme', name); } catch (e) {}
   }
   let curTheme = 'neo';
-  try { curTheme = localStorage.getItem('nc_theme') || 'neo'; } catch (e) {}
+  try { curTheme = localStorage.getItem('nc_theme') || 'dusty'; } catch (e) {}
   applyTheme(curTheme);
   document.querySelectorAll('.theme-card').forEach(card => {
     card.onclick = () => {
