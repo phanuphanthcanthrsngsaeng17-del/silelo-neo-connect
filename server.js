@@ -578,9 +578,14 @@ async function askRoomAI(roomId, question, history, memory, unrestricted, intel)
   const mockReply = () => ({ provider: 'mock', model: 'offline', reply: aiMockReply(roomId, question) });
   const tooLate = () => chainTimer.signal.aborted;
   try {
-    // 🟢 ตัวหลัก = DeepSeek-V4-Flash (ผ่าน silelo proxy, 0.8s, ตอบเป็นสลี่ DNA) — ทุกห้อง
+    // ⚡ ตัวหลัก = Groq gpt-oss-120b (0.4s ฟรี ไม่จำกัด) — เร็วสุดในโซ่
+    const g0 = await groqChat(msgs, extSig);
+    if (g0) { logAI('chain', '✅ ตัวหลัก Groq: ' + g0.model); return g0; }
+    if (tooLate()) return mockReply();
+
+    // 🟢 สำรอง = DeepSeek-V4-Flash (ผ่าน silelo proxy, ตอบเป็นสลี่ DNA)
     const hf0 = await hfChat(msgs, extSig);
-    if (hf0) { logAI('chain', '✅ ตัวหลัก DeepSeek: ' + hf0.model); return hf0; }
+    if (hf0) { logAI('chain', '✅ สำรอง DeepSeek: ' + hf0.model); return hf0; }
     if (tooLate()) return mockReply();
 
     const gem = await geminiChat(msgs, extSig);
