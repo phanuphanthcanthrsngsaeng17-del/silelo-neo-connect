@@ -152,7 +152,55 @@ const ROOMS = {
 
 /* ---------------- ฐานความรู้โปรเจกต์ของพี่นุ (Project Knowledge) ---------------- */
 /* ---------------- AI Chain (คัดลอก pattern จาก Silelo) ---------------- */
-function logAI(provider, msg) { try { console.log(`[ai] ${provider}: ${msg}`); } catch (e) {} }
+// 📊 v1.21 — สลี่เข้าใจระบบตัวเอง 100% (CodingFleet style): เก็บ log จริง + อ่านสถานะระบบได้
+const aiLogs = [];
+function logAI(provider, msg) {
+  try {
+    aiLogs.push({ t: Date.now(), provider, msg: String(msg).slice(0, 120) });
+    if (aiLogs.length > 150) aiLogs.shift();
+    console.log(`[ai] ${provider}: ${msg}`);
+  } catch (e) {}
+}
+function systemIntel() {
+  try {
+    const mem = process.memoryUsage();
+    const mb = v => (v / 1048576).toFixed(1);
+    const alive = x => Date.now() < x;
+    const lines = [];
+    lines.push(`• เวลาทำงาน (uptime): ${Math.floor(process.uptime() / 60)} นาที (${Math.floor(process.uptime())} วิ)`);
+    lines.push(`• Node ${process.version} บน ${process.platform} | RAM ใช้ ${mb(mem.rss)}MB / heap ${mb(mem.heapUsed)}MB`);
+    lines.push(`• ห้องแชท: ${Object.keys(ROOMS).map(r => ROOMS[r].name).join(', ')} | ออนไลน์ตอนนี้: ${online ? online.size : 0} คน`);
+    lines.push(`• สถานะ AI: Groq ${alive(GROQ_DEAD_UNTIL) ? '🟢' : '🔴'} | Cerebras ${alive(CEREBRAS_DEAD_UNTIL) ? '🟢' : '🔴'} | Ollama ${alive(OLLAMA_DEAD_UNTIL) ? '🟢' : '🔴'} | Gemini ${alive(GEMINI_DEAD_UNTIL) ? '🟢' : '🔴'} | OpenRouter ${alive(OR_DEAD_UNTIL) ? '🟢' : '🔴'} | HF/silelo ${alive(HF_PROXY_DEAD_UNTIL) ? '🟢' : '🔴'}`);
+    lines.push(`• ไฟล์หลัก: server.js (${fs.existsSync(__dirname + '/server.js') ? (fs.statSync(__dirname + '/server.js').size / 1024).toFixed(0) + 'KB' : 'n/a'})`);
+    if (aiLogs.length) {
+      lines.push('• กิจกรรม AI ล่าสุด (log จริง):');
+      for (const l of aiLogs.slice(-12)) lines.push(`  - [${new Date(l.t).toISOString().slice(11, 19)}] ${l.provider}: ${l.msg}`);
+    }
+    return lines.join('\n');
+  } catch (e) { return 'systemIntel error: ' + e.message; }
+}
+// 🔍 v1.21 — สลี่อ่านโค้ด server.js เองได้ (สรุปโครงสร้างจริง ไม่มโน)
+function selfCodeIntel() {
+  try {
+    const src = fs.readFileSync(__dirname + '/server.js', 'utf8');
+    const lines = src.split('\n');
+    const endpoints = [];
+    for (const l of lines) {
+      const m = l.match(/app\.(get|post|put|delete)\(['"`](\/[^'"`]+)/);
+      if (m) endpoints.push(m[1].toUpperCase() + ' ' + m[2]);
+    }
+    const fns = [];
+    for (const l of lines) {
+      const m = l.match(/^(?:async )?function\s+([a-zA-Z_]\w*)/);
+      if (m) fns.push(m[1]);
+    }
+    const providers = ['groqChat', 'cerebrasChat', 'ollamaChat', 'geminiChat', 'openrouterChat', 'hfChat', 'pollinationsChat'].filter(f => fns.includes(f));
+    return `server.js ทั้งหมด ${lines.length} บรรทัด (${(src.length / 1024).toFixed(0)}KB)\n` +
+      `• API endpoints (${endpoints.length}): ${endpoints.join(', ')}\n` +
+      `• AI providers ที่มี: ${providers.join(', ')}\n` +
+      `• ฟังก์ชันหลัก (${fns.length}): ${fns.slice(0, 25).join(', ')}`;
+  } catch (e) { return 'อ่าน server.js ไม่ได้: ' + e.message; }
+}
 
 function raceSignal(ms, ext) {
   const c = new AbortController();
@@ -685,12 +733,18 @@ async function askRoomAI(roomId, question, history, memory, unrestricted, intel)
   msgs.push({ role: 'user', content: String(question).slice(0, 12000) });
 
   // 🟢 สมองหลัก: Gemini Flash — ลองก่อนเสมอ (ถ้าติดขัด ค่อยตกไป RACE)
-  // 🔍 ถ้าพี่นุถามเรื่องตรวจ/สถานะระบบ → ตรวจของจริงแล้วให้ AI สรุป
+  // 🔍 ถ้าพี่นุถามเรื่อง ตรวจ/สถานะ/ระบบ/โค้ด/บั๊ก/log/ทำงานยังไง → สลี่รู้จริง (v1.21 เข้าใจระบบตัวเอง 100%)
   const qs = String(question);
-  if (/(ตรวจ|สถานะ|ระบบ|ออนไลน์|ออนไลน|ล่ม|ขึ้นไหม|ทำงานอยู่|ping|status|health|เวิร์คไหม)/i.test(qs)) {
+  const ql = qs.toLowerCase();
+  if (/(ตรวจ|สถานะ|ระบบ|ออนไลน์|ออนไลน|ล่ม|ขึ้นใหม่|ทำงานอยู่|ping|status|health|เวิร์คไหน|server|เซิร์ฟเวอร์|โค้ด|บั๊ก|bug|log|ทำงานยังไง|endpoint|api|รันอยู่)/i.test(ql)) {
     try {
       const st = await checkServices();
-      sys += '\n\n[ผลตรวจสถานะระบบจริงล่าสุด]: ' + st + ' — สรุปให้พี่นุฟังเป็นภาษาไทยสั้น ๆ ว่าตัวไหนรันอยู่/ล่ม';
+      const si = systemIntel();
+      const codeInfo = selfCodeIntel();
+      sys += '\n\n[🔍 ข้อมูลระบบจริงล่าสุด (สลี่รู้จริง ไม่มโน):]\n' + si +
+        '\n\n[🧠 ตัวสลี่เองอ่านโค้ด server.js ได้ — โครงสร้างจริง:]\n' + codeInfo +
+        '\n\n[📡 ผลตรวจสถานะระบบจริงล่าสุด]: ' + st +
+        '\n— สรุปให้พี่นุฟังเป็นภาษาไทยสั้น ๆ จากข้อมูลจริงนี้: ตัวไหนรันอยู่/ล่ม, ถ้าถามเรื่องโค้ด/ระบบ ให้ตอบจากข้อมูลจริง ห้ามมโน';
       msgs[0] = { role: 'system', content: sys };
     } catch (e) {}
   }
