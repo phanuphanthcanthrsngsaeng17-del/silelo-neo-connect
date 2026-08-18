@@ -540,19 +540,24 @@ async function askRoomAI(roomId, question, history, memory, unrestricted, intel)
 
 /* ---------------- 🩺 DIAG (ตรวจ env runtime จริง) ---------------- */
 app.get('/api/diag', async (req, res) => {
-  const msgs = [{ role: 'user', content: 'ตอบสั้นๆ: สวัสดี' }];
   const out = { env: {} };
   for (const key of ['GROQ_API_KEY','GEMINI_API_KEYS','OPENROUTER_API_KEY','HF_TOKEN','POLLINATIONS_MODEL']) out.env[key] = (process.env[key] || '').length;
-  const tryOne = async (name, fn) => {
+  const raw = async (name, url, opts) => {
     const t0 = Date.now();
-    try { const r = await fn(); out[name] = { ok: !!r, ms: Date.now() - t0, model: r && r.model, err: r ? null : 'no-result' }; }
-    catch (e) { out[name] = { ok: false, ms: Date.now() - t0, err: String(e.message || e).slice(0, 160) }; }
+    try {
+      const r = await fetch(url, opts);
+      const body = await r.text().catch(() => '');
+      out[name] = { status: r.status, ms: Date.now() - t0, body: body.slice(0, 220) };
+    } catch (e) { out[name] = { status: 'ERR', ms: Date.now() - t0, body: String(e.message || e).slice(0, 160) }; }
   };
-  await tryOne('groq', () => groqChat(msgs));
-  await tryOne('gemini', () => geminiChat(msgs));
-  await tryOne('openrouter', () => openrouterChat(msgs));
-  await tryOne('hf', () => hfChat(msgs));
-  await tryOne('pollinations', () => pollinationsChat(msgs));
+  const msgs = [{ role: 'user', content: 'ตอบสั้นๆ ว่า สวัสดี' }];
+  await raw('groq', 'https://api.groq.com/openai/v1/chat/completions', { method: 'POST', headers: { 'Authorization': 'Bearer ' + process.env.GROQ_API_KEY, 'Content-Type': 'application/json' }, body: JSON.stringify({ model: 'openai/gpt-oss-120b', max_tokens: 30, messages: msgs }) });
+  const gk = (process.env.GEMINI_API_KEYS || '').split(',')[0];
+  await raw('gemini', 'https://generativelanguage.googleapis.com/v1beta/models/' + (process.env.GEMINI_MODEL || 'gemini-3.6-flash') + ':generateContent?key=' + gk, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contents: [{ parts: [{ text: 'สวัสดี' }] }], generationConfig: { maxOutputTokens: 30 } }) });
+  const ok = (process.env.OPENROUTER_API_KEY || '').split(',')[0];
+  await raw('openrouter', 'https://openrouter.ai/api/v1/chat/completions', { method: 'POST', headers: { 'Authorization': 'Bearer ' + ok, 'Content-Type': 'application/json' }, body: JSON.stringify({ model: 'nvidia/nemotron-3-ultra-550b-a55b:free', max_tokens: 30, messages: msgs }) });
+  await raw('pollinations', 'https://text.pollinations.ai/openai', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ model: process.env.POLLINATIONS_MODEL || 'openai', max_tokens: 30, messages: msgs }) });
+  await raw('hfProxy', 'https://silelo.onrender.com/api/hf-chat', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-run-secret': process.env.RUN_SECRET }, body: JSON.stringify({ messages: msgs }) });
   res.json(out);
 });
 
