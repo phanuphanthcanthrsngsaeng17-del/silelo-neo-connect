@@ -171,8 +171,10 @@ async function raceProviders(calls, timeoutMs) {
 /* Groq — 6 โมเดล เรียงความเร็ว-ฉลาด */
 const GROQ_API_KEY = process.env.GROQ_API_KEY || '';
 const GROQ_MODELS = (process.env.GROQ_MODELS || 'openai/gpt-oss-120b,qwen/qwen3.6-27b,openai/gpt-oss-20b,groq/compound-mini').split(',').map(s => s.trim()).filter(Boolean);
+let GROQ_DEAD_UNTIL = 0; // key 401 → ข้ามไปก่อน แล้วค่อยลองใหม่ (กันเสียเวลา)
 async function groqChat(messages, extSignal) {
   if (!GROQ_API_KEY) return null;
+  if (Date.now() < GROQ_DEAD_UNTIL) return null;
   for (const model of GROQ_MODELS) {
     try {
       const rs = raceSignal(8000, extSignal);
@@ -183,7 +185,7 @@ async function groqChat(messages, extSignal) {
           body: JSON.stringify({ model, max_tokens: 1500, messages }),
           signal: rs.signal
         });
-        if (!r.ok) { const j = await r.json().catch(() => ({})); logAI('groq', model + ' HTTP ' + r.status + ' ' + String((j.error && j.error.message) || '').slice(0, 40)); if (/rate|quota|invalid|401|429/.test(r.status + ' ' + ((j.error && j.error.message) || ''))) continue; }
+        if (!r.ok) { const j = await r.json().catch(() => ({})); logAI('groq', model + ' HTTP ' + r.status + ' ' + String((j.error && j.error.message) || '').slice(0, 40)); if (/rate|quota|invalid|401|429/.test(r.status + ' ' + ((j.error && j.error.message) || ''))) { if (r.status === 401) GROQ_DEAD_UNTIL = Date.now() + 600000; continue; } }
         const j = await r.json();
         const reply = j.choices && j.choices[0] && j.choices[0].message && j.choices[0].message.content;
         if (reply) { logAI('groq', model + ' ✅'); return { provider: 'groq', model, reply }; }
@@ -200,8 +202,10 @@ const GEMINI_API_KEYS = (process.env.GEMINI_API_KEYS || '')
   .filter(Boolean);
 const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-3.5-flash';
 let geminiKeyIdx = 0;
+let GEMINI_DEAD_UNTIL = 0; // ทุก key invalid → ข้ามไปก่อน แล้วค่อยลองใหม่
 async function geminiChat(messages, extSignal) {
   if (!GEMINI_API_KEYS.length) return null;
+  if (Date.now() < GEMINI_DEAD_UNTIL) return null;
   const contents = []; let sys = '';
   for (const m of messages) {
     const text = String(m.content || '');
@@ -223,7 +227,7 @@ async function geminiChat(messages, extSignal) {
       const j = await r.json();
       if (!r.ok) {
         const msg = (j.error && j.error.message) || '';
-        if (r.status === 401 || r.status === 403 || /quota|permission|invalid|api key|high demand|unavailable/i.test(msg)) continue;
+        if (r.status === 401 || r.status === 403 || /quota|permission|invalid|api key|high demand|unavailable/i.test(msg)) { if (/invalid|api key|permission/i.test(msg)) GEMINI_DEAD_UNTIL = Date.now() + 600000; continue; }
         throw new Error('Gemini ' + r.status);
       }
       const reply = j.candidates && j.candidates[0] && j.candidates[0].content && j.candidates[0].content.parts && j.candidates[0].content.parts[0] && j.candidates[0].content.parts[0].text;
@@ -369,11 +373,13 @@ async function summarizeMemory(history) {
   return null;
 }
 
-/* OpenRouter — :free models, timeout 8 วิ */
+/* OpenRouter — DeepSeek-V4-Flash (ตัวแรก) + :free models, timeout 8 วิ */
 const OPENROUTER_KEYS = (process.env.OPENROUTER_API_KEY || '').split(',').map(s => s.trim()).filter(Boolean);
-const OPENROUTER_TEXT_MODELS = (process.env.OPENROUTER_TEXT_MODELS || 'nvidia/nemotron-3-ultra-550b-a55b:free,google/gemma-4-26b-a4b-it:free,z-ai/glm-5.2:free,dots-studio/dots-3-note-preview:free').split(',').map(s => s.trim()).filter(Boolean);
+const OPENROUTER_TEXT_MODELS = (process.env.OPENROUTER_TEXT_MODELS || 'deepseek/deepseek-v4-flash,nvidia/nemotron-3-ultra-550b-a55b:free,google/gemma-4-26b-a4b-it:free,z-ai/glm-5.2:free,dots-studio/dots-3-note-preview:free').split(',').map(s => s.trim()).filter(Boolean);
+let OR_DEAD_UNTIL = 0; // key 401 → ข้ามไปก่อน แล้วค่อยลองใหม่
 async function openrouterChat(messages, extSignal) {
   if (!OPENROUTER_KEYS.length) return null;
+  if (Date.now() < OR_DEAD_UNTIL) return null;
   for (const key of OPENROUTER_KEYS) {
     for (const model of OPENROUTER_TEXT_MODELS) {
       try {
@@ -386,7 +392,7 @@ async function openrouterChat(messages, extSignal) {
             signal: rs.signal
           });
           const j = await r.json();
-          if (!r.ok) { logAI('openrouter', model + ' HTTP ' + r.status + ' ' + String((j.error && j.error.message) || '').slice(0, 50)); throw new Error('OR ' + r.status); }
+          if (!r.ok) { logAI('openrouter', model + ' HTTP ' + r.status + ' ' + String((j.error && j.error.message) || '').slice(0, 50)); if (r.status === 401 || r.status === 402) { OR_DEAD_UNTIL = Date.now() + 600000; break; } continue; }
           const reply = j.choices && j.choices[0] && j.choices[0].message && j.choices[0].message.content;
           if (reply) { logAI('openrouter', model + ' ✅'); return { provider: 'openrouter', model, reply }; }
         } finally { rs.clear(); }
@@ -396,8 +402,22 @@ async function openrouterChat(messages, extSignal) {
   return null;
 }
 
-/* Pollinations — ฟรี ไม่ต้อง key */
+/* Pollinations — ฟรี ไม่มีวันหมดโควต้า ไม่ต้อง key (ตัวหลักของระบบ) */
 const POLLINATIONS_MODEL = process.env.POLLINATIONS_MODEL || 'openai';
+let POLL_POST_DEAD = true; // POST legacy deprecate ถาวรแล้ว (402) — ใช้ GET เท่านั้น (anonymous ฟรี ไม่หมด quota)
+
+function buildPollGetPrompt(messages) {
+  // GET รับแค่ prompt เดียว — ฝัง system + history ย่อ + คำถามล่าสุด เพื่อให้สลี่รู้บริบท/บุคลิก
+  const sys = (messages[0] && messages[0].role === 'system' ? String(messages[0].content) : '').slice(0, 900);
+  const hist = messages.slice(1, -1).slice(-6).map(m => (m.role === 'user' ? 'พี่นุ: ' : 'สลี่: ') + String(m.content).slice(0, 200)).join('\n');
+  const last = [...messages].reverse().find(m => m.role === 'user');
+  const q = last ? String(last.content).slice(0, 700) : '';
+  let p = '';
+  if (sys) p += 'คุณคือ ' + sys.slice(0, 350).split('\n')[0] + '\n';
+  if (hist.trim()) p += 'บทสนทนาก่อนหน้า:\n' + hist.slice(0, 800) + '\n';
+  p += 'ตอนนี้ ' + (q || 'ทักทายสลี่หน่อย');
+  return p.slice(0, 2000);
+}
 
 /* 🟢 สมองหลัก: Gemma (OpenRouter :free) — ตัวที่ตอบก่อนทุกข้อความ */
 const GEMMA_MODEL = process.env.GEMMA_MODEL || 'google/gemma-4-26b-a4b-it:free';
@@ -423,19 +443,40 @@ async function gemmaChat(messages, extSignal) {
   return null;
 }
 async function pollinationsChat(messages, extSignal) {
-  try {
-    const rs = raceSignal(6000, extSignal);
+  // 1) POST legacy (text.pollinations.ai/openai) — มี system+history เต็ม แต่ deprecate แล้ว (402)
+  if (!POLL_POST_DEAD) {
     try {
-      const r = await fetch('https://text.pollinations.ai/openai', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ model: POLLINATIONS_MODEL, max_tokens: 700, messages }), signal: rs.signal
-      });
-      if (!r.ok) return null;
-      const j = await r.json();
-      const reply = j.choices && j.choices[0] && j.choices[0].message && j.choices[0].message.content;
-      if (reply) { logAI('pollinations', '✅'); return { provider: 'pollinations', model: POLLINATIONS_MODEL, reply }; }
+      const rs = raceSignal(6000, extSignal);
+      try {
+        const r = await fetch('https://text.pollinations.ai/openai', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ model: POLLINATIONS_MODEL, max_tokens: 700, messages }), signal: rs.signal
+        });
+        if (r.status === 402 || r.status === 404 || r.status === 405) { POLL_POST_DEAD = true; logAI('pollinations', 'POST deprecate (' + r.status + ') → ใช้ GET ตลอด'); }
+        if (r.ok) {
+          const j = await r.json();
+          const reply = j.choices && j.choices[0] && j.choices[0].message && j.choices[0].message.content;
+          if (reply) { logAI('pollinations', '✅ POST'); return { provider: 'pollinations', model: POLLINATIONS_MODEL, reply }; }
+        }
+      } finally { rs.clear(); }
+    } catch (e) {}
+  }
+  // 2) GET legacy (text.pollinations.ai/{prompt}) — ⚠️ ฟรีเฉพาะ prompt สั้นมาก (~2 คำ) — คำถามจริง 402/429 → ตัวท้ายสุดก่อน mock เท่านั้น
+  try {
+    const rs = raceSignal(5000, extSignal);
+    try {
+      const prompt = buildPollGetPrompt(messages);
+      // ห้ามส่ง ?model= — model ที่ระบุต้องใช้ key (402)
+      const r = await fetch('https://text.pollinations.ai/' + encodeURIComponent(prompt), { signal: rs.signal });
+      if (r.ok) {
+        const txt = (await r.text()).trim();
+        if (txt && txt.length > 1 && !/^\{|^<|error|Error/i.test(txt.slice(0, 40))) {
+          logAI('pollinations', '✅ GET');
+          return { provider: 'pollinations', model: 'default-get', reply: txt.slice(0, 1500) };
+        }
+      }
     } finally { rs.clear(); }
-  } catch (e) { return null; }
+  } catch (e) { if (extSignal && extSignal.aborted) return null; }
   return null;
 }
 
@@ -444,12 +485,14 @@ const HF_TOKEN = process.env.HF_TOKEN || '';
 const HF_KEYS = HF_TOKEN.split(/[,;.\n]/).map(s => s.trim()).filter(s => s.startsWith('hf_'));
 const HF_TEXT_MODELS = (process.env.HF_TEXT_MODELS || 'deepseek-ai/DeepSeek-V4-Flash,Qwen/Qwen2.5-72B-Instruct,Qwen/Qwen3.6-27B').split(',').map(s => s.trim()).filter(Boolean);
 const HF_PROXY = 'https://silelo.onrender.com/api/hf-chat';
+let HF_PROXY_DEAD_UNTIL = 0; // silelo sleep/ตาย → ข้าม hfChat ชั่วคราว แล้วค่อยลองใหม่
+
 async function hfChat(messages, extSignal) {
   // ผ่าน silelo (Render) proxy — Vercel ไป router.huggingface.co ตรงไม่ได้ (ค้าง); silelo ต่อได้ ~1.7s
-  // ⚠️ HF เครดิตฟรีหมดเดือน (402) → proxy ตอบ 502 เร็ว ~0.5s → fall ไปโซ่ถัดไป
   if (!process.env.RUN_SECRET) return null;
+  if (Date.now() < HF_PROXY_DEAD_UNTIL) return null; // proxy เพิ่งตาย → ข้ามไปก่อน (กันเสีย 12s)
   try {
-    const rs = raceSignal(12000, extSignal);
+    const rs = raceSignal(10000, extSignal);
     try {
       const r = await fetch(HF_PROXY, {
         method: 'POST',
@@ -460,9 +503,13 @@ async function hfChat(messages, extSignal) {
       if (r.ok) {
         const j = await r.json();
         if (j && j.ok && j.reply && String(j.reply).trim()) { logAI('huggingface', j.model + ' ✅ (proxy)'); return { provider: 'huggingface', model: j.model, reply: j.reply }; }
+        if (j && j.error) logAI('huggingface', 'proxy error: ' + String(j.error).slice(0, 120));
+        HF_PROXY_DEAD_UNTIL = Date.now() + 45000; // proxy ตอบแต่ error → พัก 45 วิ
+      } else if (r.status === 502 || r.status === 504 || r.status === 503) {
+        HF_PROXY_DEAD_UNTIL = Date.now() + 30000; // silelo กำลังตื่น/ค้าง → พัก 30 วิ
       }
     } finally { rs.clear(); }
-  } catch (e) { if (extSignal && extSignal.aborted) return null; }
+  } catch (e) { if (extSignal && extSignal.aborted) return null; HF_PROXY_DEAD_UNTIL = Date.now() + 20000; }
   return null;
 }
 
@@ -471,7 +518,7 @@ function aiMockReply(roomId, question) {
   const q = String(question || '').trim();
   if (roomId === 'work') return `รับทราบครับ — กำลังจัดลำดับให้: 1) ตั้งเป้าหมายให้ชัด 2) แบ่งงานเป็นขั้นตอน 3) ลงมือทำ + ติดตามผล\n\n(ถ้าต้องการให้ละเอียดขึ้น รอโมเดลหลักกลับมาออนไลน์ก่อนนะครับ — ตอนนี้อยู่ในโหมดสำรอง)`;
   if (roomId === 'lab') return `⚗️ ไอเดีย! ลองคิดแบบนี้ดูครับ: "${q.slice(0, 60)}..." → ตั้งสมมติฐาน → ออกแบบการทดลองเล็กๆ → เก็บผล → ปรับปรุงซ้ำ\n(ตอนนี้ใช้โมดูลสำรอง — โมเดลหลักกำลังชาร์จพลังครับ ⚡)`;
-  return `พี่นุขา ตอนนี้สลี่ใช้โหมดสำรองชั่วคราวนะคะ 🙏 (ระบบ AI หลักกำลังกลับมา) — พี่ถามว่า "${q.slice(0, 80)}" สลี่จะตอบให้เต็มที่เมื่อโมเดลพร้อมนะคะ รอสลี่แป๊บนะคะ 💜`;
+    return `พี่นุขา ตอนนี้สลี่ใช้โมดูลสำรองชั่วคราวนะคะ ⚡ (provider ฟรีหมดโควต้าชั่วคราว — Groq/Gemini/OpenRouter หมด quota) — พี่ถามว่า "${q.slice(0, 80)}" สลี่จะตอบให้เต็มที่เมื่อตัวหลักกลับมานะคะ 💜 รอสลี่แป๊บนะคะ`;
 }
 
 /* ---------------- ระบบตอบแชทหลัก ---------------- */
@@ -514,11 +561,9 @@ async function askRoomAI(roomId, question, history, memory, unrestricted, intel)
       msgs[0] = { role: 'system', content: sys };
     } catch (e) {}
   }
-  // 🔬 ห้อง LAB = พระเจ้า (DeepSeek-V4-Flash 0.8s) ตอบก่อน — ฉลาด + เร็วแบบคุยกับผู้ช่วย
-  if (roomId === 'lab') {
-    const hfFirst = await hfChat(msgs);
-    if (hfFirst) { logAI('chain', '✅ ห้องแล็บ: พระเจ้า ' + hfFirst.model); return hfFirst; }
-  }
+  // 🧠 ตัวหลัก = DeepSeek-V4-Flash (ผ่าน silelo proxy, 0.8s, ตอบเป็นสลี่ DNA) — ทุกห้อง
+  const hf0 = await hfChat(msgs);
+  if (hf0) { logAI('chain', '✅ ตัวหลัก DeepSeek: ' + hf0.model); return hf0; }
 
   const gem = await geminiChat(msgs);
   if (gem) { logAI('chain', '✅ สมองหลัก gemini: ' + gem.model); return gem; }
@@ -530,10 +575,9 @@ async function askRoomAI(roomId, question, history, memory, unrestricted, intel)
   if (fast) { logAI('chain', '✅ race ชนะ: ' + fast.provider + ' ' + fast.model); return fast; }
   const or = await openrouterChat(msgs);
   if (or) { logAI('chain', '✅ openrouter ' + or.model); return or; }
-  const hf = await hfChat(msgs);
-  if (hf) { logAI('chain', '✅ huggingface ' + hf.model); return hf; }
-  const pl = await pollinationsChat(msgs);
-  if (pl) { logAI('chain', '✅ pollinations'); return pl; }
+  // Pollinations — ฟรีเฉพาะ prompt สั้นมาก (ทักทาย) — ตัวท้ายสุดก่อน mock
+  const pl0 = await pollinationsChat(msgs);
+  if (pl0) { logAI('chain', '✅ pollinations'); return pl0; }
   logAI('chain', '⚠️ ทั้งหมดล้ม → mock');
   return { provider: 'mock', model: 'offline', reply: aiMockReply(roomId, question) };
 }
