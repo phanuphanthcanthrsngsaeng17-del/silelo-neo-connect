@@ -232,6 +232,19 @@
   .img-msg { display: block; max-width: 240px; max-height: 240px; border-radius: 8px; margin-top: 8px; border: 1px solid color-mix(in srgb, var(--accent) 55%, transparent); cursor: zoom-in; box-shadow: 0 0 18px color-mix(in srgb, var(--accent) 20%, transparent); }
   .msg.user .img-msg { max-width: 180px; max-height: 180px; }
   .inputbar .icon-btn { width: 48px; height: 48px; border-radius: 50%; border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent); background: var(--panel); color: var(--txt); font-size: 19px; cursor: pointer; flex: none; display: flex; align-items: center; justify-content: center; transition: all .2s; clip-path: none; }
+  /* ===== แถบเลือกโมเดล AI ===== */
+  .modelbar { display: flex; align-items: center; gap: 8px; padding: 8px 14px 0; }
+  .modelbar select {
+    flex: 0 1 auto; min-width: 0; max-width: 72%;
+    background: var(--panel); color: var(--txt);
+    border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+    border-radius: 10px; padding: 6px 8px; font-size: 12px; font-family: inherit; cursor: pointer; outline: none;
+    transition: all .2s;
+  }
+  .modelbar select:focus { border-color: var(--accent); box-shadow: 0 0 10px color-mix(in srgb, var(--accent) 30%, transparent); }
+  .modelbar select option { background: var(--panel); color: var(--txt); }
+  .modelbar-ico { font-size: 13px; opacity: .85; flex: none; }
+  .modelbar-hint { font-size: 10.5px; opacity: .65; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .inputbar .icon-btn:active { transform: scale(.88); background: color-mix(in srgb, var(--accent) 22%, transparent); }
 
   /* Voice picker */
@@ -504,6 +517,23 @@
   <div id="msgs"></div>
   <div class="typing" id="typing"><span></span><span></span><span></span></div>
 
+  <div class="modelbar">
+    <span class="modelbar-ico">🧠</span>
+    <select id="modelSel" title="เลือกโมเดล AI (ผ่าน Puter ฟรี ไม่จำกัด)">
+      <option value="auto">🤖 อัตโนมัติ (โซ่เต็ม)</option>
+      <option value="deepseek/deepseek-v4-flash">🐋 DeepSeek V4 Flash · Max</option>
+      <option value="deepseek/deepseek-v4-pro">🐋 DeepSeek V4 Pro · Max</option>
+      <option value="qwen/qwen3.5-397b-a17b">🐋 Qwen3.5 397B</option>
+      <option value="qwen/qwen3.8-2.4t-a95b">🐋 Qwen3.8 2.4T</option>
+      <option value="openai/gpt-oss-120b">🐋 GPT-OSS 120B</option>
+      <option value="google/gemini-3.7-flash">🐋 Gemini 3.7 Flash</option>
+      <option value="x-ai/grok-4-1-fast">🐋 Grok 4.1 Fast</option>
+      <option value="moonshotai/kimi-k2.7-code">🐋 Kimi K2.7 Code</option>
+      <option value="z-ai/glm-5.2">🐋 GLM-5.2</option>
+      <option value="minimax/minimax-m3">🐋 MiniMax M3</option>
+    </select>
+    <span class="modelbar-hint" id="modelHint"></span>
+  </div>
   <div class="inputbar">
     <input type="file" id="imgFile" accept="image/*" hidden>
     <textarea id="inp" rows="1" placeholder="พิมพ์ข้อความ..." enterkeyhint="send"></textarea>
@@ -1605,15 +1635,51 @@
   let puterSignedIn = false;
   let puterSys = '';
   let puterHintShown = false;
+  const PUTER_MODELS = {
+    'deepseek/deepseek-v4-flash': { label: 'DeepSeek V4 Flash', max: true },
+    'deepseek/deepseek-v4-pro': { label: 'DeepSeek V4 Pro', max: true },
+    'qwen/qwen3.5-397b-a17b': { label: 'Qwen3.5 397B', max: false },
+    'qwen/qwen3.8-2.4t-a95b': { label: 'Qwen3.8 2.4T', max: false },
+    'openai/gpt-oss-120b': { label: 'GPT-OSS 120B', max: false },
+    'google/gemini-3.7-flash': { label: 'Gemini 3.7 Flash', max: false },
+    'x-ai/grok-4-1-fast': { label: 'Grok 4.1 Fast', max: false },
+    'moonshotai/kimi-k2.7-code': { label: 'Kimi K2.7 Code', max: false },
+    'z-ai/glm-5.2': { label: 'GLM-5.2', max: true },
+    'minimax/minimax-m3': { label: 'MiniMax M3', max: false }
+  };
   function syncPuterBtn() {
     const on = puterOn && puterSignedIn;
     puterBtn.classList.toggle('active', on);
     puterBtn.style.background = puterSignedIn ? (puterOn ? '#0d5c46' : '') : '';
     puterBtn.style.boxShadow = on ? '0 0 14px rgba(0,200,150,.55)' : '';
     puterBtn.title = !puterSignedIn
-      ? '🐋 DeepSeek ฟรีไม่จำกัด (Puter) — แตะเพื่อเชื่อมบัญชี Puter'
-      : (puterOn ? '🐋 DeepSeek (Puter): ON — แตะเพื่อปิด' : '🐋 DeepSeek (Puter): OFF — แตะเพื่อเปิด');
+      ? '\ud83d\udc0b DeepSeek \u0e1f\u0e23\u0e35\u0e44\u0e21\u0e48\u0e08\u0e33\u0e01\u0e31\u0e14 (Puter) \u2014 \u0e41\u0e15\u0e30\u0e40\u0e1e\u0e37\u0e48\u0e2d\u0e40\u0e0a\u0e37\u0e48\u0e2d\u0e21\u0e1a\u0e31\u0e0d\u0e0a\u0e35 Puter'
+      : (puterOn ? '\ud83d\udc0b DeepSeek (Puter): ON \u2014 \u0e41\u0e15\u0e30\u0e40\u0e1e\u0e37\u0e48\u0e2d\u0e1b\u0e34\u0e14' : '\ud83d\udc0b DeepSeek (Puter): OFF \u2014 \u0e41\u0e15\u0e30\u0e40\u0e1e\u0e37\u0e48\u0e2d\u0e40\u0e1b\u0e34\u0e14');
+    syncModelHint();
   }
+  /* ===== \ud83e\udde0 \u0e41\u0e16\u0e1a\u0e40\u0e25\u0e37\u0e2d\u0e01\u0e42\u0e21\u0e40\u0e14\u0e25 AI ===== */
+  const modelSel = document.getElementById('modelSel');
+  const modelHint = document.getElementById('modelHint');
+  function syncModelHint() {
+    if (!modelHint) return;
+    const v = (localStorage.getItem('nc_model') || 'auto').trim();
+    const pm = PUTER_MODELS[v];
+    if (v === 'auto') modelHint.textContent = '';
+    else if (!puterSignedIn) modelHint.textContent = '\u26a0\ufe0f \u0e01\u0e14 \ud83d\udc0b \u0e40\u0e1e\u0e37\u0e48\u0e2d\u0e40\u0e0a\u0e37\u0e48\u0e2d\u0e21\u0e1a\u0e31\u0e0d\u0e0a\u0e35';
+    else modelHint.textContent = (pm ? pm.label : v) + (pm && pm.max ? ' \u00b7 \ud83e\udde0 Max' : '') + ' \u00b7 \u0e1f\u0e23\u0e35';
+  }
+  if (modelSel) {
+    try { modelSel.value = localStorage.getItem('nc_model') || 'auto'; } catch (e) {}
+    modelSel.onchange = () => {
+      try { localStorage.setItem('nc_model', modelSel.value); } catch (e) {}
+      syncModelHint();
+      const pm = PUTER_MODELS[modelSel.value];
+      if (modelSel.value === 'auto') toast('\ud83e\udd16 \u0e2d\u0e31\u0e15\u0e42\u0e19\u0e21\u0e31\u0e15\u0e34 \u2014 \u0e43\u0e0a\u0e49\u0e42\u0e0b\u0e48\u0e40\u0e15\u0e47\u0e21 (Puter \u2192 Gemini \u2192 Groq \u2192 OpenRouter \u2192 Pollinations)');
+      else if (!puterSignedIn) toast('\u26a0\ufe0f \u0e01\u0e14 \ud83d\udc0b \u0e43\u0e19 header \u0e40\u0e1e\u0e37\u0e48\u0e2d\u0e40\u0e0a\u0e37\u0e48\u0e2d\u0e21\u0e1a\u0e31\u0e0d\u0e0a\u0e35 Puter \u0e01\u0e48\u0e2d\u0e19\u0e43\u0e0a\u0e49 \ud83d\udc0b');
+      else toast('\ud83e\udde0 ' + (pm ? pm.label : modelSel.value) + ' \u0e1c\u0e48\u0e32\u0e19 \ud83d\udc0b Puter \u0e1f\u0e23\u0e35' + (pm && pm.max ? ' \u00b7 Max' : ''));
+    };
+  }
+  syncModelHint();
   async function loadPuterSys() {
     try {
       const r = await fetch('/api/sysprompt?room=' + encodeURIComponent(room));
@@ -1635,21 +1701,30 @@
       }
       msgs.push({ role: 'user', content: String(q).slice(0, 12000) });
       const t0 = Date.now();
+      const choice = (localStorage.getItem('nc_model') || 'auto').trim();
+      const pm = PUTER_MODELS[choice];
+      const baseOpts = { model: pm ? choice : 'deepseek/deepseek-v4-flash', temperature: 0.9 };
+      const wantMax = pm ? !!pm.max : true;
       const race = (opts) => Promise.race([
-        puter.ai.chat(msgs, Object.assign({ model: 'deepseek/deepseek-v4-flash', temperature: 0.9 }, opts)),
+        puter.ai.chat(msgs, Object.assign({}, baseOpts, opts)),
         new Promise((_, rej) => setTimeout(() => rej(new Error('puter timeout')), 30000))
       ]);
       let resp, usedMax = true;
-      try { resp = await race({ reasoning_effort: 'max' }); }
+      try { resp = await race(wantMax ? { reasoning_effort: 'max' } : {}); }
       catch (e1) {
         // พารามิเตอร์ max อาจไม่รองรับบน vendor บางตัว → ลองใหม่แบบธรรมดา
         usedMax = false;
         try { resp = await race({}); }
-        catch (e2) { throw e2; }
+        catch (e2) {
+          // safety net: กัน ID โมเดลผิด → ดึง DeepSeek Flash ตัวที่พิสูจน์แล้ว
+          try { resp = await race({ model: 'deepseek/deepseek-v4-flash', temperature: 0.9 }); }
+          catch (e3) { throw e3; }
+        }
       }
       const text = resp && resp.message && resp.message.content;
       if (!text || !String(text).trim()) return null;
-      return { reply: String(text).trim(), model: 'DeepSeek-V4-Flash \u00b7 \ud83d\udc0b Puter \u0e1f\u0e23\u0e35' + (usedMax ? ' \u00b7 \ud83e\udde0 Max' : ''), ms: Date.now() - t0 };
+      const mLabel = pm ? pm.label : 'DeepSeek V4 Flash';
+      return { reply: String(text).trim(), model: mLabel + ' \u00b7 \ud83d\udc0b Puter \u0e1f\u0e23\u0e35' + (usedMax ? ' \u00b7 \ud83e\udde0 Max' : ''), ms: Date.now() - t0 };
     } catch (e) {
       console.log('[puter] fail:', e && e.message ? e.message : e);
       return null;
