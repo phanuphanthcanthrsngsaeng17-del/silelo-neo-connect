@@ -461,7 +461,7 @@
 </div>
 
 <!-- 🔒 Lock -->
-<div class="lock" id="lockScreen">
+<div class="lock" id="lockScreen" style="display:none!important">
   <div class="lock-box">
     <div class="lock-ico">🔒</div>
     <div class="lock-ttl">SILELO NEO-CONNECT</div>
@@ -546,7 +546,8 @@
   }
   document.getElementById('lockGo').onclick = verifyPin;
   lockInp.addEventListener('keydown', function (e) { if (e.key === 'Enter') verifyPin(); });
-  if (!isUnlocked()) { lockScreen.classList.add('show'); setTimeout(function () { lockInp.focus(); }, 300); }
+  /* 🔓 v1.23: ปลดล็อกถาวร (พี่นุสั่ง) — เปิดมาเข้าแชทได้เลย ไม่ต้องใส่รหัส */
+  lockScreen.classList.remove('show');
     /* ===== 🎨 THEMES 2026 — เลือกหน้าแรก = เปลี่ยนทั้งแอพ (sync กับแชท) ===== */
   var THEMES = {
     neo:       { accent: '#00e5ff', bg: '#01030a', txt: '#e8f6ff', dim: '#6b7f99', panel: 'rgba(10,20,42,.72)' },

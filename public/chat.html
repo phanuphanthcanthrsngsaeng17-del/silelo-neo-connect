@@ -598,7 +598,7 @@
 </div>
 
 <!-- 🔒 หน้าจอล็อก -->
-<div class="lock" id="lockScreen">
+<div class="lock" id="lockScreen" style="display:none!important">
   <div class="lock-box">
     <div class="lock-ico">🔒</div>
     <div class="lock-ttl">SILELO NEO-CONNECT</div>
@@ -2508,7 +2508,8 @@ async function verifyPin() {
 document.getElementById('lockGo').onclick = verifyPin;
 lockInp.addEventListener('keydown', e => { if (e.key === 'Enter') verifyPin(); });
 // ล็อกอัตโนมัติทุกครั้งที่เปิดหน้า (ใช้คนเดียว — ปลดล็อกแล้วจำไว้ในเบราว์เซอร์นี้)
-if (!isUnlocked()) { lockScreen.classList.add('show'); setTimeout(() => lockInp.focus(), 300); }
+// 🔓 v1.23: ปลดล็อกถาวร (พี่นุสั่ง) — เปิดมาเข้าแชทได้เลย ไม่ต้องใส่รหัส
+lockScreen.classList.remove('show');
 </script>
 <!-- 🖥️ Lab Console (ห้อง lab) -->
 <div class="lab-console" id="labConsole">
