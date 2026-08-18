@@ -1,5 +1,5 @@
-/* SILELO Neo-Connect Service Worker v1.10 */
-const CACHE = 'silelo-v11';
+/* SILELO Neo-Connect Service Worker v1.11 - network-first HTML (fix stale cache) */
+const CACHE = 'silelo-v12';
 const SHELL = [
   '/',
   '/index.html',
@@ -33,17 +33,18 @@ self.addEventListener('fetch', (e) => {
     return;
   }
 
-  // GET เฉพาะ (POST/อื่น ๆ ข้ามไป)
   if (req.method !== 'GET') return;
 
-  // App shell -> cache-first (โหลดไว ใช้ได้แม้ออฟไลน์)
+  // HTML app shell -> NETWORK-FIRST (ได้หน้าใหม่ทุก deploy แต่ยังสำรอง offline)
   if (SHELL.includes(url.pathname) || url.pathname === '/') {
     e.respondWith(
-      caches.match(req).then((hit) => hit || fetch(req).then((res) => {
-        const copy = res.clone();
-        caches.open(CACHE).then((c) => c.put(req, copy));
+      fetch(req).then((res) => {
+        if (res && res.status === 200) {
+          const copy = res.clone();
+          caches.open(CACHE).then((c) => c.put(req, copy));
+        }
         return res;
-      }))
+      }).catch(() => caches.match(req).then((hit) => hit || caches.match('/')))
     );
     return;
   }

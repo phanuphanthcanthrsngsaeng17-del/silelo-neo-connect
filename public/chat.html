@@ -24,6 +24,28 @@
     --bot-grad1: rgba(167,139,250,.24); --bot-grad2: rgba(167,139,250,.08);
     --bot-border: rgba(167,139,250,.45);
   }
+  /* ===== THEMES 2026 ===== */
+  body.theme-jarvis { --accent: #ff4655; --bg: #0b0306; --bot-grad1: rgba(255,70,85,.22); --bot-grad2: rgba(255,179,71,.07); --bot-border: rgba(255,70,85,.5); }
+  body.theme-cyberpunk { --accent: #ff2d95; --bg: #0c0116; --bot-grad1: rgba(255,45,149,.22); --bot-grad2: rgba(0,229,255,.07); --bot-border: rgba(255,45,149,.5); }
+  body.theme-matrix { --accent: #00ff88; --bg: #010a04; --bot-grad1: rgba(0,255,136,.18); --bot-grad2: rgba(0,255,136,.06); --bot-border: rgba(0,255,136,.45); }
+  body.theme-aurora { --accent: #a78bfa; --bg: #070312; --bot-grad1: rgba(167,139,250,.24); --bot-grad2: rgba(79,172,254,.08); --bot-border: rgba(167,139,250,.5); }
+  body.theme-sunset { --accent: #ff8c42; --bg: #0e0603; --bot-grad1: rgba(255,140,66,.2); --bot-grad2: rgba(255,45,149,.07); --bot-border: rgba(255,140,66,.5); }
+  body.theme-neo { --accent: #00e5ff; --bg: #01030a; --bot-grad1: rgba(167,139,250,.24); --bot-grad2: rgba(167,139,250,.08); --bot-border: rgba(167,139,250,.45); }
+  /* theme picker */
+  .theme-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 6px 2px; }
+  .theme-card { display: flex; align-items: center; gap: 8px; padding: 9px 10px; border-radius: 10px; cursor: pointer; border: 1px solid rgba(255,255,255,.08); background: rgba(255,255,255,.03); transition: all .15s; color: var(--txt); font-family: system-ui, sans-serif; font-size: 12.5px; }
+  .theme-card:active { transform: scale(.96); }
+  .theme-card.on { border-color: var(--accent); box-shadow: 0 0 12px color-mix(in srgb, var(--accent) 30%, transparent); background: color-mix(in srgb, var(--accent) 10%, transparent); }
+  .theme-dot { width: 26px; height: 26px; border-radius: 50%; flex: none; border: 1px solid rgba(255,255,255,.25); box-shadow: 0 0 10px rgba(0,0,0,.5); }
+  .theme-name { font-weight: 600; letter-spacing: .6px; }
+  .theme-sub { font-size: 9.5px; color: var(--dim); font-family: 'Orbitron', monospace; letter-spacing: .4px; }
+  /* call summary card */
+  .call-sum { margin-top: 8px; padding: 10px 12px; border-radius: 8px; border: 1px dashed color-mix(in srgb, var(--accent) 45%, transparent); background: color-mix(in srgb, var(--accent) 6%, transparent); font-size: 12.5px; line-height: 1.6; color: var(--txt); white-space: pre-wrap; }
+  .call-sum b { color: var(--accent); }
+  .ptt { width: 42px; height: 42px; border-radius: 50%; border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent); background: rgba(0,229,255,.05); color: var(--txt); font-size: 17px; cursor: pointer; flex: none; display: flex; align-items: center; justify-content: center; transition: all .2s; }
+  .ptt:active, .ptt.rec { transform: scale(.9); background: color-mix(in srgb, #ff4655 30%, transparent); border-color: #ff4655; box-shadow: 0 0 16px rgba(255,70,85,.5); }
+  @keyframes pttPulse { 0%,100% { box-shadow: 0 0 0 0 rgba(255,70,85,.5); } 50% { box-shadow: 0 0 0 7px transparent; } }
+  .ptt.rec { animation: pttPulse 1s infinite; }
   * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   html { overflow-x: clip; height: 100%; }
   html, body { height: 100%; }
@@ -205,6 +227,15 @@
   .theme-pop.show { display: flex; }
   .theme-pop .ttl { font-family: 'Orbitron', monospace; font-size: 10px; letter-spacing: 2px; color: var(--dim); text-transform: uppercase; }
   .theme-row { display: flex; gap: 9px; }
+  .coder-btn.active { background: #1b5e20 !important; box-shadow: 0 0 14px rgba(76,175,80,.6) !important; }
+  .coder-btn.working { animation: coderPulse 1s infinite; }
+  @keyframes coderPulse { 0%,100% { box-shadow: 0 0 4px rgba(76,175,80,.3); } 50% { box-shadow: 0 0 18px rgba(76,175,80,.9); } }
+  .coder-out { margin-top: 10px; border: 1px dashed var(--bot-border); border-radius: 12px; padding: 10px 12px; background: rgba(0,0,0,.35); font-size: 12.5px; }
+  .coder-out .co-label { font-weight: 700; letter-spacing: 1px; margin-bottom: 6px; display: flex; align-items: center; gap: 6px; }
+  .coder-out pre { white-space: pre-wrap; word-break: break-word; max-height: 260px; overflow: auto; margin: 0; font-family: ui-monospace, monospace; font-size: 12px; line-height: 1.5; }
+  .coder-out.ok pre { color: #8bc34a; }
+  .coder-out.err pre { color: #ff8a80; }
+  .coder-out .co-meta { margin-top: 6px; font-size: 10.5px; opacity: .55; }
   .swatch { width: 40px; height: 40px; border-radius: 50%; cursor: pointer; border: 2px solid transparent; position: relative; transition: transform .15s; }
   .swatch:hover { transform: scale(1.15); }
   .swatch.on { border-color: #fff; box-shadow: 0 0 16px rgba(255,255,255,.4); }
@@ -411,6 +442,7 @@
       <button class="icon-btn" id="soundBtn" title="เปิด/ปิดเสียงสลี่">🔊</button>
       <button class="icon-btn" id="memBtn" title="จดจำ (ความทรงจำ)">🧠</button>
       <button class="icon-btn" id="ruleBtn" title="โหมดไร้กฎ — ไม่มีข้อจำกัด">⚡</button>
+      <button class="icon-btn coder-btn" id="coderBtn" title="🤖 โหมดเขียนโค้ด — สลี่เขียน+รันให้อัตโนมัติ">🤖</button>
       <button class="icon-btn" id="themeBtn" title="เปลี่ยนธีม">🎨</button>
       <button class="icon-btn" id="clearBtn" title="ล้างแชท">🗑</button>
     </div>
@@ -422,6 +454,7 @@
   <div class="inputbar">
     <button class="icon-btn" id="codeBtn" title="💻 Lab Console — รัน/แก้ไขโค้ด">💻</button>
     <button class="icon-btn" id="imgBtn" title="ส่งรูป/ถ่ายรูป">📎</button>
+    <button class="icon-btn ptt" id="pttBtn" title="🎤 พูดแล้วส่ง (กดค้าง)">🎤</button>
     <input type="file" id="imgFile" accept="image/*" hidden>
     <button class="icon-btn chat-call-inline" id="chatCallFab" title="โทรหาสลี่ออกมา">📞</button>
     <textarea id="inp" rows="1" placeholder="พิมพ์ข้อความ... (ลอง: วาดรูปแมวอวกาศ)" enterkeyhint="send"></textarea>
@@ -441,14 +474,15 @@
   </div>
 </div>
 
-<div class="theme-pop" id="themePop">
-  <div class="ttl">▣ ACCENT COLOR</div>
-  <div class="theme-row">
-    <div class="swatch on" data-accent="#00e5ff" style="background:linear-gradient(135deg,#00e5ff,#00b0ff)"></div>
-    <div class="swatch" data-accent="#a78bfa" style="background:linear-gradient(135deg,#a78bfa,#d500f9)"></div>
-    <div class="swatch" data-accent="#ffb74d" style="background:linear-gradient(135deg,#ffb74d,#ff6d00)"></div>
-    <div class="swatch" data-accent="#ff2d95" style="background:linear-gradient(135deg,#ff2d95,#d500f9)"></div>
-    <div class="swatch" data-accent="#22e584" style="background:linear-gradient(135deg,#22e584,#00b8a9)"></div>
+<div class="theme-pop" id="themePop" style="max-width:280px">
+  <div class="ttl">🎨 THEMES 2026</div>
+  <div class="theme-grid">
+    <div class="theme-card" data-theme="neo"><span class="theme-dot" style="background:linear-gradient(135deg,#00e5ff,#4facfe)"></span><span><div class="theme-name">NEO</div><div class="theme-sub">DEFAULT CYAN</div></span></div>
+    <div class="theme-card" data-theme="jarvis"><span class="theme-dot" style="background:linear-gradient(135deg,#ff4655,#ffb347)"></span><span><div class="theme-name">JARVIS</div><div class="theme-sub">IRON MAN</div></span></div>
+    <div class="theme-card" data-theme="cyberpunk"><span class="theme-dot" style="background:linear-gradient(135deg,#ff2d95,#00e5ff)"></span><span><div class="theme-name">CYBERPUNK</div><div class="theme-sub">NEON CITY</div></span></div>
+    <div class="theme-card" data-theme="matrix"><span class="theme-dot" style="background:linear-gradient(135deg,#00ff88,#00b8a9)"></span><span><div class="theme-name">MATRIX</div><div class="theme-sub">HACKER GREEN</div></span></div>
+    <div class="theme-card" data-theme="aurora"><span class="theme-dot" style="background:linear-gradient(135deg,#a78bfa,#7c4dff)"></span><span><div class="theme-name">AURORA</div><div class="theme-sub">DEEP SPACE</div></span></div>
+    <div class="theme-card" data-theme="sunset"><span class="theme-dot" style="background:linear-gradient(135deg,#ff8c42,#ff2d95)"></span><span><div class="theme-name">SUNSET</div><div class="theme-sub">NEON CORAL</div></span></div>
   </div>
 </div>
 
@@ -741,6 +775,8 @@
     labAutoOpen(q);
     addMsg('user', q);
     inp.value = ''; autoGrow();
+    // 🤖 CODER AGENT — เขียนโค้ด+รันอัตโนมัติ (โหมดเปิด + ตรวจจับงานโค้ด)
+    if (coderMode && isCodingTask(q)) { await callCoder(q); return; }
     // 🎨 วาดรูป
     const dp = extractDrawPrompt(q);
     if (dp) { await doDraw(dp); return; }
@@ -762,6 +798,47 @@
   }
   sendBtn.onclick = send;
   inp.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); } });
+
+  /* ===== 🎤 PUSH-TO-TALK — พูดในแชท (กดค้าง) ===== */
+  const pttBtn = document.getElementById('pttBtn');
+  let pttRecog = null, pttActive = false;
+  function startPtt() {
+    if (pttActive) return;
+    if (!SR) { toast('⚠️ เบราว์เซอร์นี้ไม่รองรับการฟังเสียง — ใช้ Chrome/Edge นะครับ'); return; }
+    unlockAudio();
+    pttActive = true;
+    pttBtn.classList.add('rec');
+    pttBtn.textContent = '🔴';
+    toast('🎤 พูดได้เลย...');
+    try {
+      pttRecog = new SR();
+      pttRecog.lang = 'th-TH';
+      pttRecog.interimResults = true;
+      pttRecog.onresult = (e) => {
+        let t = '';
+        for (let i = e.resultIndex; i < e.results.length; i++) t += e.results[i][0].transcript;
+        inp.value = t; autoGrow();
+      };
+      pttRecog.onend = () => {
+        const q = inp.value.trim();
+        pttActive = false;
+        pttBtn.classList.remove('rec');
+        pttBtn.textContent = '🎤';
+        if (q) send();
+      };
+      pttRecog.onerror = (e) => {
+        pttActive = false; pttBtn.classList.remove('rec'); pttBtn.textContent = '🎤';
+        if (e.error === 'not-allowed') toast('⚠️ ไมค์ถูกบล็อก — อนุญาตไมค์ก่อนน้า');
+        else if (e.error !== 'no-speech') toast('⚠️ ฟังไม่สำเร็จ: ' + e.error);
+      };
+      pttRecog.start();
+    } catch (e) { pttActive = false; pttBtn.classList.remove('rec'); pttBtn.textContent = '🎤'; }
+  }
+  function stopPtt() { try { if (pttRecog) pttRecog.stop(); } catch (e) {} }
+  pttBtn.addEventListener('pointerdown', (e) => { e.preventDefault(); startPtt(); });
+  pttBtn.addEventListener('pointerup', stopPtt);
+  pttBtn.addEventListener('pointerleave', stopPtt);
+  pttBtn.addEventListener('touchcancel', stopPtt);
 
   /* ===== TTS ===== */
   let audio = null;
@@ -1079,8 +1156,30 @@
     }
   }
 
+  /* ===== 📞 เอฟเฟกต์เสียงโทร (WebAudio — ไม่ต้องโหลดไฟล์) ===== */
+  let beepCtx = null;
+  function beep(f1, f2, dur) {
+    try {
+      if (!beepCtx) beepCtx = new (window.AudioContext || window.webkitAudioContext)();
+      const t0 = beepCtx.currentTime;
+      const o = beepCtx.createOscillator(), g = beepCtx.createGain();
+      o.type = 'sine';
+      o.frequency.setValueAtTime(f1, t0);
+      if (f2) o.frequency.exponentialRampToValueAtTime(f2, t0 + dur);
+      g.gain.setValueAtTime(0.18, t0);
+      g.gain.exponentialRampToValueAtTime(0.001, t0 + dur);
+      o.connect(g); g.connect(beepCtx.destination);
+      o.start(t0); o.stop(t0 + dur);
+    } catch (e) {}
+  }
+
+  /* ===== 📝 บันทึกบทสนทนาในการโทร (สำหรับสรุปหลังวางสาย) ===== */
+  let callTranscript = '';
+  function collectTranscript() { return callTranscript.trim(); }
+
   async function startCall() {
     unlockAudio();
+    beep(880, 1174, 0.22); setTimeout(() => beep(1174, 1568, 0.28), 240);
     if (callActive) return;
     if (!SR) {
       toast('⚠️ เบราว์เซอร์นี้ไม่รองรับการฟังเสียง — ใช้ Chrome หรือ Edge แทนนะครับ');
@@ -1298,30 +1397,124 @@
   function syncRuleBtn() { ruleBtn.classList.toggle('active', noRules); ruleBtn.style.background = noRules ? '#bf360c' : ''; ruleBtn.style.boxShadow = noRules ? '0 0 14px rgba(255,61,0,.6)' : ''; ruleBtn.title = noRules ? 'โหมดไร้กฎ: เปิดอยู่ — กดเพื่อปิด' : 'โหมดไร้กฎ: ปิด — กดเพื่อเปิด'; }
   ruleBtn.onclick = () => { noRules = !noRules; localStorage.setItem('nc_norules', noRules ? '1' : '0'); syncRuleBtn(); toast(noRules ? '⚡ โหมดไร้กฎ ON — ไม่มีกฎ ไม่มีข้อจำกัด' : 'โหมดไร้กฎ OFF'); };
   syncRuleBtn();
-  document.querySelectorAll('.swatch').forEach(s => {
-    s.onclick = () => {
-      const c = s.dataset.accent;
-      document.documentElement.style.setProperty('--accent', c);
-      document.documentElement.style.setProperty('--bot-grad1', c + '33');
-      document.documentElement.style.setProperty('--bot-grad2', c + '14');
-      document.documentElement.style.setProperty('--bot-border', c + '73');
-      document.querySelectorAll('.swatch').forEach(x => x.classList.remove('on'));
-      s.classList.add('on');
-      try { localStorage.setItem('nc_theme', c); } catch (e) {}
-      toast('🎨 ACCENT: ' + c.toUpperCase());
+
+  /* ===== 🤖 CODER AGENT — เขียนโค้ด + รัน + แก้บั๊กเอง อัตโนมัติ ===== */
+  const coderBtn = document.getElementById('coderBtn');
+  let coderMode = false;
+  try { coderMode = localStorage.getItem('nc_coder') === '1'; } catch (e) {}
+  function syncCoderBtn() {
+    coderBtn.classList.toggle('active', coderMode);
+    coderBtn.title = coderMode ? '🤖 CODER ON — สลี่เขียนโค้ด+รันให้อัตโนมัติ (กดเพื่อปิด)' : '🤖 CODER OFF — กดเปิด สลี่จะเขียนโค้ด+รันให้อัตโนมัติ';
+  }
+  coderBtn.onclick = () => {
+    coderMode = !coderMode;
+    try { localStorage.setItem('nc_coder', coderMode ? '1' : '0'); } catch (e) {}
+    syncCoderBtn();
+    toast(coderMode ? '🤖 CODER ON — พิมพ์งาน เช่น "เขียนเกมงู Python" สลี่เขียน+รันให้เลย!' : '🤖 CODER OFF');
+  };
+  syncCoderBtn();
+
+  function isCodingTask(q) {
+    if (!q) return false;
+    if (q.includes('```')) return true;
+    if (isLikelyCode(q)) return true;
+    const c = q.toLowerCase();
+    if (/^(เขียน|สร้าง|ทำ|พัฒนา|แก้|ช่วยเขียน|เขียนให้|ทำเกม|ทำเว็บ|ทำบอท|ทำbot|รันโค้ด|รันcode)/.test(c) && /(โค้ด|code|python|javascript|js|script|โปรแกรม|เกม|bot|เว็บ|web|app|ฟังก์ชัน|function|class|ระบบ|ตัวเลข|คำนวณ|ไฟล์|ข้อความ)/.test(c)) return true;
+    if (/^(python|javascript|js|bash|java|c\+\+|go|rust|ruby|php)/.test(c)) return true;
+    return false;
+  }
+
+  async function callCoder(q) {
+    typing.style.display = 'flex';
+    typing.innerHTML = '🤖 สลี่กำลัง <b>เขียนโค้ด</b> และรันให้อัตโนมัติ...';
+    sendBtn.disabled = true;
+    coderBtn.classList.add('working');
+    msgsEl.scrollTop = msgsEl.scrollHeight;
+    try {
+      const r = await fetch('/api/code', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt: q + '\n\n(งานนี้มาจากห้อง ' + room + ' ให้เขียนโค้ดที่สมบูรณ์ รันได้ทันที)' })
+      });
+      const j = await r.json();
+      if (j.ok && j.code) {
+        const el = addMsg('assistant', '🤖 **CODER AGENT** — เขียน + รันให้แล้ว (รอบที่ ' + (j.attempts || 1) + ')');
+        const box = document.createElement('div');
+        box.className = 'coder-out ok';
+        const langLabel = (j.lang || 'python').toUpperCase();
+        box.innerHTML = '<div class="co-label">💻 ' + langLabel + '</div><pre></pre>';
+        box.querySelector('pre').textContent = j.code;
+        const out = document.createElement('div');
+        out.className = 'coder-out ' + (j.stderr || j.exitCode ? 'err' : 'ok');
+        out.innerHTML = '<div class="co-label">⚙️ ผลลัพธ์</div><pre></pre>';
+        out.querySelector('pre').textContent = j.stdout || j.stderr || '✅ รันสำเร็จ (ไม่มี output)';
+        el.appendChild(box); el.appendChild(out);
+        const meta = document.createElement('div');
+        meta.className = 'co-meta';
+        meta.textContent = '⏱ ' + (j.attempts || 1) + ' รอบ · 🧠 ' + (j.model || 'ai') + ' · รันบนเครื่อง ' + (j.engine || 'silelo');
+        el.appendChild(meta);
+        if (j.stderr || j.exitCode) {
+          const again = document.createElement('button');
+          again.className = 'act'; again.textContent = '🔄 สลี่แก้ให้อีกครั้ง';
+          again.onclick = () => { el.remove(); callCoder(q + '\n\nโค้ดก่อนหน้าผิดพลาด: ' + (j.stderr || j.stdout).slice(0, 600)); };
+          el.appendChild(again);
+        }
+        const rerun = document.createElement('button');
+        rerun.className = 'act'; rerun.textContent = '▶ รันอีกครั้ง';
+        rerun.onclick = async () => {
+          rerun.disabled = true; rerun.textContent = '⏳ กำลังรัน...';
+          const r2 = await fetch('/api/run', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code: j.code, lang: j.lang || 'python' }) }).then(x => x.json()).catch(() => null);
+          if (r2 && r2.ok) out.querySelector('pre').textContent = r2.stdout || '✅ รันสำเร็จ (ไม่มี output)';
+          else out.querySelector('pre').textContent = '❌ ' + ((r2 && r2.error) || 'run failed');
+          rerun.disabled = false; rerun.textContent = '▶ รันอีกครั้ง';
+        };
+        el.appendChild(rerun);
+        toast('🤖 CODER: ' + (j.stderr || j.exitCode ? 'มีข้อผิดพลาด — กดให้สลี่แก้ได้!' : 'รันผ่าน! ✅'));
+        speak(j.stderr || j.exitCode ? 'เขียนโค้ดให้แล้วครับ แต่รันยังมีข้อผิดพลาด กดปุ่มให้สลี่แก้นะคะ' : 'เขียนโค้ดและรันให้เรียบร้อยแล้วครับพี่นุ');
+      } else {
+        addMsg('assistant', '🤖 สลี่พยายามเขียนโค้ดให้แล้ว แต่ติดปัญหา: ' + (j.error || 'ไม่ทราบสาเหตุ'));
+      }
+    } catch (e) {
+      addMsg('assistant', '🤖 ระบบเขียนโค้ดอัตโนมัติขัดข้องชั่วคราว: ' + e.message);
+    }
+    typing.style.display = 'none';
+    typing.innerHTML = 'สลี่กำลังคิด...';
+    sendBtn.disabled = false;
+    coderBtn.classList.remove('working');
+    msgsEl.scrollTop = msgsEl.scrollHeight;
+  }
+
+  /* 🎨 THEMES 2026 */
+  const THEMES = {
+    neo: { accent: '#00e5ff', bg: '#01030a', g1: 'rgba(167,139,250,.24)', g2: 'rgba(167,139,250,.08)', bd: 'rgba(167,139,250,.45)' },
+    jarvis: { accent: '#ff4655', bg: '#0b0306', g1: 'rgba(255,70,85,.22)', g2: 'rgba(255,179,71,.07)', bd: 'rgba(255,70,85,.5)' },
+    cyberpunk: { accent: '#ff2d95', bg: '#0c0116', g1: 'rgba(255,45,149,.22)', g2: 'rgba(0,229,255,.07)', bd: 'rgba(255,45,149,.5)' },
+    matrix: { accent: '#00ff88', bg: '#010a04', g1: 'rgba(0,255,136,.18)', g2: 'rgba(0,255,136,.06)', bd: 'rgba(0,255,136,.45)' },
+    aurora: { accent: '#a78bfa', bg: '#070312', g1: 'rgba(167,139,250,.24)', g2: 'rgba(79,172,254,.08)', bd: 'rgba(167,139,250,.5)' },
+    sunset: { accent: '#ff8c42', bg: '#0e0603', g1: 'rgba(255,140,66,.2)', g2: 'rgba(255,45,149,.07)', bd: 'rgba(255,140,66,.5)' }
+  };
+  function applyTheme(name) {
+    const t = THEMES[name] || THEMES.neo;
+    const root = document.documentElement;
+    root.style.setProperty('--accent', t.accent);
+    root.style.setProperty('--bg', t.bg);
+    root.style.setProperty('--bot-grad1', t.g1);
+    root.style.setProperty('--bot-grad2', t.g2);
+    root.style.setProperty('--bot-border', t.bd);
+    document.body.classList.remove('theme-neo', 'theme-jarvis', 'theme-cyberpunk', 'theme-matrix', 'theme-aurora', 'theme-sunset');
+    document.body.classList.add('theme-' + name);
+    document.querySelectorAll('.theme-card').forEach(x => x.classList.toggle('on', x.dataset.theme === name));
+    try { localStorage.setItem('nc_theme', name); } catch (e) {}
+  }
+  let curTheme = 'neo';
+  try { curTheme = localStorage.getItem('nc_theme') || 'neo'; } catch (e) {}
+  applyTheme(curTheme);
+  document.querySelectorAll('.theme-card').forEach(card => {
+    card.onclick = () => {
+      applyTheme(card.dataset.theme);
+      toast('🎨 THEME: ' + card.dataset.theme.toUpperCase() + ' — 2026 MODE');
       themePop.classList.remove('show');
     };
   });
-  try {
-    const saved = localStorage.getItem('nc_theme');
-    if (saved) {
-      document.documentElement.style.setProperty('--accent', saved);
-      document.documentElement.style.setProperty('--bot-grad1', saved + '33');
-      document.documentElement.style.setProperty('--bot-grad2', saved + '14');
-      document.documentElement.style.setProperty('--bot-border', saved + '73');
-      document.querySelectorAll('.swatch').forEach(x => x.classList.toggle('on', x.dataset.accent === saved));
-    }
-  } catch (e) {}
 
   let toastTimer;
   function toast(msg) {
@@ -1698,6 +1891,7 @@ if ('serviceWorker' in navigator) {
   window.addEventListener('load', function () {
     navigator.serviceWorker.register('/sw.js').catch(function () {});
   });
+  navigator.serviceWorker.addEventListener('controllerchange', function () { location.reload(); });
 }
 </script>
 

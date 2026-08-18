@@ -499,6 +499,7 @@
   // PWA: ลงทะเบียน Service Worker (โหลดไว + ใช้ได้ออฟไลน์)
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', function () { navigator.serviceWorker.register('/sw.js').catch(function () {}); });
+    navigator.serviceWorker.addEventListener('controllerchange', function () { location.reload(); });
   }
 </script>
 </body>

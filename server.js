@@ -119,7 +119,7 @@ async function raceProviders(calls, timeoutMs) {
 
 /* Groq — 6 โมเดล เรียงความเร็ว-ฉลาด */
 const GROQ_API_KEY = process.env.GROQ_API_KEY || '';
-const GROQ_MODELS = (process.env.GROQ_MODELS || 'openai/gpt-oss-120b,llama-3.3-70b-versatile,qwen/qwen3.6-27b,openai/gpt-oss-20b,groq/compound-mini,llama-3.1-8b-instant').split(',').map(s => s.trim()).filter(Boolean);
+const GROQ_MODELS = (process.env.GROQ_MODELS || 'openai/gpt-oss-120b,qwen/qwen3.6-27b,openai/gpt-oss-20b,groq/compound-mini').split(',').map(s => s.trim()).filter(Boolean);
 async function groqChat(messages, extSignal) {
   if (!GROQ_API_KEY) return null;
   for (const model of GROQ_MODELS) {
@@ -320,7 +320,7 @@ async function summarizeMemory(history) {
 
 /* OpenRouter — :free models, timeout 8 วิ */
 const OPENROUTER_KEYS = (process.env.OPENROUTER_API_KEY || '').split(',').map(s => s.trim()).filter(Boolean);
-const OPENROUTER_TEXT_MODELS = (process.env.OPENROUTER_TEXT_MODELS || 'nvidia/nemotron-3-ultra-550b-a55b:free,google/gemma-4-26b-a4b-it:free').split(',').map(s => s.trim()).filter(Boolean);
+const OPENROUTER_TEXT_MODELS = (process.env.OPENROUTER_TEXT_MODELS || 'nvidia/nemotron-3-ultra-550b-a55b:free,google/gemma-4-26b-a4b-it:free,z-ai/glm-5.2:free,dots-studio/dots-3-note-preview:free').split(',').map(s => s.trim()).filter(Boolean);
 async function openrouterChat(messages, extSignal) {
   if (!OPENROUTER_KEYS.length) return null;
   for (const key of OPENROUTER_KEYS) {
@@ -982,6 +982,32 @@ function findBin(names) {
   for (const n of names) { try { execSync('command -v ' + n + ' 2>/dev/null || which ' + n + ' 2>/dev/null', { stdio: 'pipe' }); return n; } catch (e) {} }
   return null;
 }
+app.post('/api/code', async (req, res) => {
+  /* 🤖 CODER AGENT — เขียนโค้ด + รัน + แก้บั๊กเอง (proxy ไป silelo /api/agent) */
+  try {
+    const prompt = String(req.body?.prompt || '').slice(0, 3000);
+    if (!prompt.trim()) return res.status(400).json({ ok: false, error: 'prompt ว่าง' });
+    if (!process.env.RUN_SECRET) return res.status(503).json({ ok: false, error: 'ยังไม่ได้ตั้ง RUN_SECRET' });
+    const ctl = new AbortController();
+    const t = setTimeout(() => { try { ctl.abort(); } catch (e) {} }, 115000);
+    try {
+      const rr = await fetch((process.env.SILELO_URL || 'https://silelo.onrender.com') + '/api/agent', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-run-secret': process.env.RUN_SECRET },
+        body: JSON.stringify({ prompt }), signal: ctl.signal
+      });
+      clearTimeout(t);
+      const jj = await rr.json().catch(() => ({}));
+      return res.json({ ok: !!(jj && jj.ok), code: (jj && jj.code) || '', lang: (jj && jj.lang) || 'python', stdout: (jj && jj.stdout) || '', stderr: (jj && jj.stderr) || '', error: (jj && jj.error) || '', exitCode: (jj && jj.exitCode) || 1, attempts: (jj && jj.attempts) || 0, model: (jj && jj.model) || '', engine: (jj && jj.engine) || 'silelo' });
+    } catch (e) {
+      clearTimeout(t);
+      return res.status(504).json({ ok: false, error: 'silelo agent เกินเวลา: ' + (e.message || 'timeout') });
+    }
+  } catch (e) {
+    return res.status(500).json({ ok: false, error: e.message || 'err' });
+  }
+});
+
 app.post('/api/run', async (req, res) => {
   try {
     const { code, lang } = req.body || {};
