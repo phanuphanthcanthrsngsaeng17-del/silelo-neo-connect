@@ -1664,8 +1664,7 @@ app.post('/api/chat', async (req, res) => {
         if (results.length) {
           const summary = await aiSummarizeSearch(sq, results);
           const links = results.map(r => '🔗 ' + r.title + '\n   ' + r.url).join('\n');
-          return res.json({ reply: (summary ? summary + '\n\n' : '🔍 เจอ ' + results.length + ' รายการนะ\n\n') + '📡 แหล่งอ้างอิง:
-' + links, provider: 'websearch', model: 'ddg+groq', room: roomId, t: Date.now() });
+          return res.json({ reply: (summary ? summary + '\n\n' : '🔍 เจอ ' + results.length + ' รายการนะ\n\n') + '📡 แหล่งอ้างอิง:\n' + links, provider: 'websearch', model: 'ddg+groq', room: roomId, t: Date.now() });
         }
       } catch (e) { /* ตกไป AI ธรรมดา */ }
     }
@@ -1891,7 +1890,7 @@ const WB_COMPILERS = {
   go: 'go-1.23.2', rust: 'rust-1.82.0', typescript: 'typescript-5.6.2',
   ruby: 'ruby-3.4.9', php: 'php-8.3.12',
   /* 🌐 60+ ภาษา ผ่าน Wandbox cloud (175 compilers) */
-  swift: 'swift-5.10.1', scala: 'scala-3.3.4', csharp: 'mono-6.12.0.199',
+  swift: 'swift-6.0.1', scala: 'scala-3.3.4', csharp: 'mono-6.12.0.199',
   'c#': 'mono-6.12.0.199', dotnet: 'dotnetcore-8.0.402', fsharp: 'dotnetcore-8.0.402',
   vb: 'mono-6.12.0.199', lua: 'lua-5.4.7', luajit: 'luajit-2.0.5',
   perl: 'perl-5.40.0', julia: 'julia-1.10.5', haskell: 'ghc-9.0.1',

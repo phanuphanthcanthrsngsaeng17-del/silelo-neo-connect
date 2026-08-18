@@ -94,6 +94,20 @@
   .app { position: relative; z-index: 2; display: flex; flex-direction: column; height: 100%; max-width: 880px; margin: 0 auto; width: 100%; overflow-x: clip; }
 
   /* ===== Header ===== */
+  .ct-btn { background: rgba(167,139,250,.12); color: #cdd9f5; border: 1px solid rgba(167,139,250,.35); border-radius: 9px; padding: 6px 10px; font-size: 11.5px; font-weight: 700; cursor: pointer; transition: all .15s; }
+  .ct-btn:hover { background: rgba(167,139,250,.28); transform: translateY(-1px); }
+  .ct-btn:disabled { opacity: .45; cursor: wait; }
+  .ct-btn.ct-web { border-color: rgba(0,229,255,.4); background: rgba(0,229,255,.08); color: #7deeff; }
+  .ct-result { margin-top: 8px; border: 1px solid rgba(167,139,250,.3); border-radius: 12px; background: rgba(10,16,32,.6); overflow: hidden; }
+  .ct-result .ct-head { display: flex; align-items: center; gap: 8px; padding: 8px 12px; font-size: 11.5px; color: #8fa2c8; border-bottom: 1px solid rgba(167,139,250,.18); }
+  .ct-result pre { margin: 0; padding: 10px 12px; overflow-x: auto; font-size: 11.5px; line-height: 1.5; color: #d6f5ff; font-family: Consolas, 'JetBrains Mono', monospace; white-space: pre-wrap; word-break: break-word; }
+  .ct-result .ct-run { padding: 8px 12px; border-top: 1px dashed rgba(126,231,135,.25); font-family: Consolas, monospace; font-size: 11px; white-space: pre-wrap; word-break: break-word; }
+  .ct-result .ct-run.ok { color: #7ee787; background: rgba(126,231,135,.05); }
+  .ct-result .ct-run.err { color: #ff6b6b; background: rgba(255,107,107,.05); }
+  .ct-result .ct-act { display: inline-block; margin: 6px 10px 10px; padding: 5px 12px; border-radius: 8px; border: 1px solid rgba(126,231,135,.4); background: rgba(126,231,135,.1); color: #7ee787; font-size: 11px; font-weight: 700; cursor: pointer; }
+  .ct-result .ct-act:hover { background: rgba(126,231,135,.25); }
+  .ct-mermaid { padding: 10px 12px; overflow-x: auto; background: rgba(255,255,255,.03); }
+  .ct-mermaid svg { max-width: 100%; height: auto; }
   header {
     display: flex; align-items: center; gap: 14px; padding: 12px 16px;
     background: linear-gradient(180deg, var(--panel), var(--panel-2));
@@ -475,6 +489,7 @@
       <button class="icon-btn" id="voiceBtn" title="เลือกเสียง">🎙️</button>
       <button class="icon-btn" id="soundBtn" title="เปิด/ปิดเสียงสลี่">🔊</button>
       <button class="icon-btn" id="memBtn" title="🧠 จดจำ · ดับเบิลคลิก = เปิดสมุดโน้ต">🧠</button>
+      <button class="icon-btn" id="toolsBtn" title="🧭️ เครื่องมือโค้ด (CodingFleet style): สร้าง/แปลง/อธิบาย/ปรับปรุง/คอมเมนต์/Unit Test/ไดอแกรม/Refactor">🧭️</button>
       <button class="icon-btn" id="ruleBtn" title="โหมดไร้กฎ — ไม่มีข้อจำกัด">⚡</button>
       <button class="icon-btn coder-btn" id="coderBtn" title="🤖 โหมดเขียนโค้ด — สลี่เขียน+รันให้อัตโนมัติ">🤖</button>
       <button class="icon-btn" id="themeBtn" title="เปลี่ยนธีม">🎨</button>
@@ -503,6 +518,17 @@
       <option value="minimax/minimax-m3">🐋 MiniMax M3</option>
     </select>
     <span class="modelbar-hint" id="modelHint"></span>
+  </div>
+  <div id="codeTools" style="display:none;flex-wrap:wrap;gap:6px;padding:6px 10px;background:rgba(10,16,32,.85);border-top:1px solid rgba(167,139,250,.25);">
+    <button class="ct-btn" data-mode="create" title="เขียนโค้ดใหม่ แล้วรันให้ทันที">🐍 สร้าง</button>
+    <button class="ct-btn" data-mode="convert" title="แปลงโค้ดข้ามภาษา 60+">🔄 แปลง</button>
+    <button class="ct-btn" data-mode="explain" title="อธิบายโค้ดทีละส่วน ภาษาไทย">📖 อธิบาย</button>
+    <button class="ct-btn" data-mode="improve" title="ปรับปรุงประสิทธิภาพ/ความอ่าน">⚡ ปรับปรุง</button>
+    <button class="ct-btn" data-mode="comment" title="เติมคอมเมนต์อธิบายโค้ด">💬 คอมเมนต์</button>
+    <button class="ct-btn" data-mode="unittest" title="สร้าง unit test แล้วรันให้">🧪 Test</button>
+    <button class="ct-btn" data-mode="diagram" title="สร้าง Mermaid diagram จากคำอธิบาย">📊 ไดอแกรม</button>
+    <button class="ct-btn" data-mode="refactor" title="จัดโครงสร้างโค้ดให้สะอาด">🔧 Refactor</button>
+    <button class="ct-btn ct-web" data-mode="websearch" title="ค้นหาเว็บ live (DuckDuckGo) แล้ว AI สรุป">🌐 ค้นหาเว็บ</button>
   </div>
   <div class="inputbar">
     <input type="file" id="imgFile" accept="image/*" hidden>
@@ -939,7 +965,24 @@
         <span>${fmt(m.t)}</span>
         ${m.role === 'assistant' ? '<button class="spk" title="ฟังเสียง">🔊</button><button class="cpy" title="คัดลอก">📋</button>' : '<span>★ READ</span>'}
       </div>`;
-    div.querySelector('.bubble').textContent = m.content;
+    const bubble = div.querySelector('.bubble');
+    if (m.role === 'assistant' && /```/.test(m.content)) {
+      /* แสดง code block + mermaid ใน bubble */
+      const parts = String(m.content).split(/```/);
+      let html = '';
+      for (let i = 0; i < parts.length; i += 2) {
+        html += escHtml(parts[i]);
+        if (i + 1 < parts.length) {
+          const lang = (parts[i + 1].split('\n')[0] || '').trim();
+          const code = parts[i + 1].split('\n').slice(1).join('\n');
+          html += '<pre><code class="language-' + escAttr(lang || '') + '">' + escHtml(code) + '</code></pre>';
+        }
+      }
+      bubble.innerHTML = html;
+      renderMermaidIn(div);
+    } else {
+      bubble.textContent = m.content;
+    }
     if (m.image) {
       const img = document.createElement('img');
       img.className = 'img-msg';
@@ -2478,5 +2521,164 @@ lockScreen.classList.remove('show');
     if (e.target.id === 'notesModal') e.target.style.display = 'none';
   });
   </script>
+
+<script>
+/* ===== 🧭️ CODE TOOLS (CodingFleet style) ===== */
+const CT_MODES = {
+  create:    { label: '🐍 สร้างโค้ด', ask: 'สลี่จะสร้างโค้ดอะไรให้ (ภาษา python/javascript/bash/java/c/cpp/go/rust ฯลฯ)?' },
+  convert:   { label: '🔄 แปลงภาษา', ask: 'โค้ดที่จะแปลง (วางโค้ดในช่องพิมพ์) + ภาษาเป้าหมาย?' },
+  explain:   { label: '📖 อธิบายโค้ด', ask: 'วางโค้ดที่อยากให้อธิบาย (ในช่องพิมพ์)' },
+  improve:   { label: '⚡ ปรับปรุง', ask: 'วางโค้ดที่อยากให้ปรับปรุง (ในช่องพิมพ์)' },
+  comment:   { label: '💬 คอมเมนต์', ask: 'วางโค้ดที่อยากให้ใส่คอมเมนต์ (ในช่องพิมพ์)' },
+  unittest:  { label: '🧪 Unit Test', ask: 'วางโค้ดที่อยากให้สร้าง test (ในช่องพิมพ์)' },
+  diagram:   { label: '📊 ไดอแกรม', ask: 'อธิบายไดอแกรมที่อยากได้ (เช่น: ขั้นตอนเข้าสู่ระบบ)' },
+  refactor:  { label: '🔧 Refactor', ask: 'วางโค้ดที่อยาก refactor (ในช่องพิมพ์)' },
+  websearch: { label: '🌐 ค้นหาเว็บ', ask: 'พิมพ์สิ่งที่อยากค้นหา' }
+};
+let mermaidLoaded = false;
+function loadMermaid(cb) {
+  if (window.mermaid) { try { mermaid.initialize({ startOnLoad: false, theme: 'dark' }); } catch(e){} cb(); return; }
+  if (mermaidLoaded) { const iv = setInterval(() => { if (window.mermaid) { clearInterval(iv); try { mermaid.initialize({ startOnLoad: false, theme: 'dark' }); } catch(e){} cb(); } }, 200); setTimeout(() => clearInterval(iv), 8000); return; }
+  mermaidLoaded = true;
+  const sc = document.createElement('script');
+  sc.src = 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js';
+  sc.onload = () => { try { mermaid.initialize({ startOnLoad: false, theme: 'dark' }); } catch(e){} cb(); };
+  sc.onerror = () => { mermaidLoaded = false; cb(); };
+  document.head.appendChild(sc);
+}
+function renderMermaidIn(el) {
+  /* render ```mermaid ... ``` ใน element ใดๆ */
+  const blocks = el.querySelectorAll('pre code.language-mermaid, code.language-mermaid');
+  blocks.forEach(bc => {
+    const src = bc.textContent.trim();
+    if (!src) return;
+    loadMermaid(() => {
+      if (!window.mermaid) return;
+      const holder = document.createElement('div');
+      holder.className = 'ct-mermaid';
+      const pre = bc.closest('pre');
+      if (pre) { pre.style.display = 'none'; pre.parentNode.insertBefore(holder, pre.nextSibling); }
+      mermaid.render('mmd' + Math.random().toString(36).slice(2, 8), src).then(r => { holder.innerHTML = r.svg; }).catch(() => { holder.remove(); if (pre) pre.style.display = ''; });
+    });
+  });
+}
+function renderCodeToolResult(el, j) {
+  const box = document.createElement('div');
+  box.className = 'ct-result';
+  if (j.mermaid) {
+    const mm = document.createElement('div');
+    mm.className = 'ct-mermaid';
+    box.appendChild(mm);
+    loadMermaid(() => {
+      if (window.mermaid) mermaid.render('mmd' + Math.random().toString(36).slice(2, 8), j.mermaid).then(r => { mm.innerHTML = r.svg; }).catch(() => { mm.textContent = j.mermaid; });
+      else mm.textContent = j.mermaid;
+    });
+  }
+  if (j.code) {
+    const head = document.createElement('div');
+    head.className = 'ct-head';
+    head.textContent = '💻 ' + String(j.lang || 'code').toUpperCase() + ' · ' + (j.model || 'ai');
+    box.appendChild(head);
+    const pre = document.createElement('pre');
+    pre.textContent = j.code;
+    box.appendChild(pre);
+    if (j.run) {
+      const run = document.createElement('div');
+      run.className = 'ct-run ' + ((j.run.code === 0 && !j.run.stderr) ? 'ok' : 'err');
+      run.textContent = (j.run.stdout || '') + (j.run.stderr ? (j.run.stdout ? '\n' : '') + '⚠ ' + j.run.stderr : '') || '✅ รันผ่าน (ไม่มี output)';
+      box.appendChild(run);
+      if (j.run.code !== 0 || j.run.stderr) {
+        const again = document.createElement('button');
+        again.className = 'ct-act';
+        again.textContent = '🔁 สลี่แก้ให้อัตโนมัติ (run-iterate)';
+        again.onclick = async () => {
+          again.disabled = true; again.textContent = '⏳ AI กำลังแก้...';
+          const r2 = await fetch('/api/code', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ prompt: 'แก้โค้ดต่อไปนี้ให้ทำงานได้ ภาษา ' + (j.lang || 'python') + ':\n```\n' + j.code.slice(0, 4000) + '\n```\n
+error: ' + (j.run.stderr || '').slice(0, 1500) }) }).then(x => x.json()).catch(() => null);
+          if (r2 && r2.ok && r2.code) {
+            pre.textContent = r2.code;
+            run.className = 'ct-run ' + (r2.exitCode === 0 ? 'ok' : 'err');
+            run.textContent = (r2.stdout || '') + (r2.stderr ? '
+⚠ ' + r2.stderr : '') || '✅ รันผ่าน';
+            again.textContent = '✅ แก้สำเร็จ (' + (r2.attempts || 1) + ' รอบ)';
+            again.disabled = true;
+          } else {
+            again.textContent = '❌ แก้ไม่สำเร็จ: ' + ((r2 && r2.error) || '').slice(0, 80);
+            again.disabled = false;
+          }
+        };
+        box.appendChild(again);
+      }
+    }
+  }
+  el.appendChild(box);
+  msgsEl.scrollTop = msgsEl.scrollHeight;
+}
+function toolText() { return document.getElementById('inp').value.trim(); }
+async function runCodeTool(mode) {
+  const inp = document.getElementById('inp');
+  const def = CT_MODES[mode] || CT_MODES.create;
+  let payload = {};
+  if (mode === 'create' || mode === 'diagram' || mode === 'websearch') {
+    let q = toolText();
+    if (!q || q.length < 2) q = prompt(def.ask);
+    if (!q) return;
+    payload = { mode, question: q, lang: 'python' };
+  } else {
+    let code = toolText();
+    if (!code || code.length < 3) code = prompt(def.ask);
+    if (!code) return;
+    payload = { mode, code, lang: 'python' };
+  }
+  inp.value = ''; autoGrow();
+  const el = addMsg('assistant', '🧭️ **' + def.label + '** — สลี่กำลังทำให้...');
+  typing.style.display = 'flex'; sendBtn.disabled = true;
+  try {
+    let j;
+    if (mode === 'websearch') {
+      const r = await fetch('/api/websearch', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ q: payload.question }) });
+      j = await r.json().catch(() => ({}));
+      if (j.ok && j.results && j.results.length) {
+        const lines = j.results.map(r => '🔗 <b>' + escHtml(r.title) + '</b>
+   <a href="' + escAttr(r.url) + '" target="_blank" rel="noopener" style="color:#7dd3fc">' + escHtml(r.url) + '</a>' + (r.snippet ? '\n   ' + escHtml(r.snippet) : '')).join('\n\n');
+        el.innerHTML = '🔍 **ผลค้นหา live** — ' + escHtml(payload.question) + ':\n\n' + lines;
+      } else if (j.answer) {
+        el.innerHTML = j.answer;
+      } else {
+        el.innerHTML = '❌ ' + escHtml(j.error || 'ไม่พบผลค้นหา');
+      }
+    } else {
+      const r = await fetch('/api/codetool', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+      j = await r.json().catch(() => ({}));
+      if (!j.ok) { el.innerHTML = '❌ ' + escHtml(j.error || 'ผิดพลาด'); }
+      else {
+        const parts = String(j.text || '').split(/```/);
+        el.innerHTML = '';
+        let html = '';
+        for (let i = 0; i < parts.length; i += 2) {
+          html += escHtml(parts[i]);
+          if (i + 1 < parts.length) {
+            const lang = (parts[i + 1].split('\n')[0] || '').trim();
+            const code = parts[i + 1].split('\n').slice(1).join('\n');
+            html += '<pre><code class="language-' + escAttr(lang || '') + '">' + escHtml(code) + '</code></pre>';
+          }
+        }
+        el.innerHTML = html;
+        renderCodeToolResult(el, j);
+        renderMermaidIn(el);
+      }
+    }
+  } catch (e) {
+    el.innerHTML = '❌ ขัดข้อง: ' + escHtml(e.message);
+  }
+  typing.style.display = 'none'; sendBtn.disabled = false;
+  msgsEl.scrollTop = msgsEl.scrollHeight;
+}
+document.addEventListener('DOMContentLoaded', () => {
+  const tb = document.getElementById('toolsBtn');
+  if (tb) tb.onclick = () => { const ct = document.getElementById('codeTools'); ct.style.display = ct.style.display === 'none' ? 'flex' : 'none'; };
+  document.querySelectorAll('.ct-btn').forEach(b => b.onclick = () => runCodeTool(b.dataset.mode));
+});
+</script>\n
 </body>
 </html>
