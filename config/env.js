@@ -101,6 +101,7 @@ const ENV = {
     const s = this;
     return {
       groq: has(s.groq.apiKey),
+      cerebras: has(s.cerebras.apiKey),
       gemini: s.gemini.apiKeys.length > 0,
       openrouter: has(s.openrouter.apiKey),
       pollinations: true,
