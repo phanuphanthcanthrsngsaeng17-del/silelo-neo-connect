@@ -1,7 +1,7 @@
 /* ============================================================
    SILELO Neo-Connect — 3 ห้องแชท Cyberpunk
    ห้อง: private (สลี่) / work (คุณเวิร์ค) / lab (ดร.แล็บ)
-   AI chain: ⚡RACE[Groq 6 โมเดล vs Gemini 9 keys] → OpenRouter → Pollinations → mock
+   AI chain: ⚡RACE[Groq 6 โมเดล vs Gemini 9 keys] → Cerebras → OpenRouter → Pollinations → mock
    TTS: msedge-tts (ฟรี)
    ============================================================ */
 const express = require('express');
@@ -196,6 +196,34 @@ async function groqChat(messages, extSignal) {
         const msg = j.choices && j.choices[0] && j.choices[0].message || {};
         const reply = (msg.content || '').trim() || (msg.reasoning || '').trim(); // gpt-oss ตอบใน reasoning ได้ถ้า content ว่าง
         if (reply) { logAI('groq', model + ' ✅'); return { provider: 'groq', model, reply }; }
+      } finally { rs.clear(); }
+    } catch (e) { if (extSignal && extSignal.aborted) return null; }
+  }
+  return null;
+}
+
+/* Cerebras — ตัวสำรอง Groq (เร็ว 2,000+ tok/s ฟรี 1M token/วัน) — gpt-oss-120b + gemma-4-31b */
+const CEREBRAS_API_KEY = process.env.CEREBRAS_API_KEY || '';
+const CEREBRAS_MODELS = (process.env.CEREBRAS_MODELS || 'gpt-oss-120b,gemma-4-31b').split(',').map(s => s.trim()).filter(Boolean);
+let CEREBRAS_DEAD_UNTIL = 0;
+async function cerebrasChat(messages, extSignal) {
+  if (!CEREBRAS_API_KEY) return null;
+  if (Date.now() < CEREBRAS_DEAD_UNTIL) return null;
+  for (const model of CEREBRAS_MODELS) {
+    try {
+      const rs = raceSignal(10000, extSignal);
+      try {
+        const r = await fetch('https://api.cerebras.ai/v1/chat/completions', {
+          method: 'POST',
+          headers: { 'Authorization': 'Bearer ' + CEREBRAS_API_KEY, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ model, max_tokens: 1500, messages }),
+          signal: rs.signal
+        });
+        if (!r.ok) { const j = await r.json().catch(() => ({})); logAI('cerebras', model + ' HTTP ' + r.status + ' ' + String((j.error && j.error.message) || '').slice(0, 40)); if (r.status === 401) { CEREBRAS_DEAD_UNTIL = Date.now() + 600000; return null; } if (/rate|quota|429/.test(r.status + ' ' + ((j.error && j.error.message) || ''))) continue; }
+        const j = await r.json();
+        const msg = j.choices && j.choices[0] && j.choices[0].message || {};
+        const reply = (msg.content || '').trim() || (msg.reasoning || '').trim();
+        if (reply) { logAI('cerebras', model + ' ✅'); return { provider: 'cerebras', model, reply }; }
       } finally { rs.clear(); }
     } catch (e) { if (extSignal && extSignal.aborted) return null; }
   }
@@ -588,6 +616,11 @@ async function askRoomAI(roomId, question, history, memory, unrestricted, intel)
     // ⚡ ตัวหลัก = Groq gpt-oss-120b (0.4s ฟรี ไม่จำกัด) — เร็วสุดในโซ่
     const g0 = await groqChat(msgs, extSig);
     if (g0) { logAI('chain', '✅ ตัวหลัก Groq: ' + g0.model); return g0; }
+    if (tooLate()) return mockReply();
+
+    // ⚡ Cerebras — ตัวสำรอง Groq (gpt-oss-120b/gemma-4-31b เร็ว 0.5s ฟรี 1M token/วัน)
+    const cb0 = await cerebrasChat(msgs, extSig);
+    if (cb0) { logAI('chain', '✅ Cerebras สำรอง Groq: ' + cb0.model); return cb0; }
     if (tooLate()) return mockReply();
 
     // 🟢 สำรอง = DeepSeek-V4-Flash (ผ่าน silelo proxy, ตอบเป็นสลี่ DNA)

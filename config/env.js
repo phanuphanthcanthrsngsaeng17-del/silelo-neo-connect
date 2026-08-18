@@ -15,6 +15,10 @@ const ENV = {
     apiKey: process.env.GROQ_API_KEY || '',
     models: process.env.GROQ_MODELS || 'openai/gpt-oss-20b,openai/gpt-oss-120b,qwen/qwen3.6-27b,groq/compound-mini',
   },
+  cerebras: {
+    apiKey: process.env.CEREBRAS_API_KEY || '',
+    models: process.env.CEREBRAS_MODELS || 'gpt-oss-120b,gemma-4-31b',
+  },
   gemini: {
     apiKeys: splitList(process.env.GEMINI_API_KEYS),
     model: process.env.GEMINI_MODEL || 'gemini-3.6-flash',
