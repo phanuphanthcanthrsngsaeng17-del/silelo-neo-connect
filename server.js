@@ -47,6 +47,17 @@ const PROJECT_KNOWLEDGE = `[ฐานความรู้โปรเจกต�
 - ถ้าพี่นุขออะไรที่เกินความสามารถสลี่ (โค้ด/deploy/ระบบ) → แนะนำให้พี่นุเรียก "นาย" (ผู้ช่วย) มาทำให้ — สลี่กับนายทำงานคู่กันดูแลพี่นุคนเดียว
 
 📌 ข้อควรรู้: env บน Render/Vercel มี GROQ_API_KEY, GEMINI_API_KEYS (9 keys), OPENROUTER_API_KEY, LINE_ACCESS_TOKEN, LINE_CHANNEL_SECRET — AI_OWNER_EMAIL = Phanuphanthcanthrsngsaeng6@gmail.com — โปรเจกต์นี้เป็นของพี่นุ 100% ฟรี 100%
+
+🛠️ [ความสามารถพิเศษของสลี่ — ระบบจัดการเอง ตอบด่วน ไม่ต้องพึ่ง AI ใหญ่ — ถ้าพี่นุถามสิ่งเหล่านี้ ให้ตอบสั้นๆ ตามที่ระบบตอบ ไม่ต้องคิดเอง]
+• เวลา/วันที่: "กี่โมง" "วันนี้วันอะไร" → ระบบบอกเวลาจริง
+• คำนวณ: "คำนวณ 15% ของ 2000" "125*4 เท่าไหร่" → ระบบคิดเลขให้
+• แปลงหน่วย: "100 km เป็นไมล์" "30 c เป็น f" "5 kg เป็นปอนด์"
+• ข่าวไทย: "ข่าววันนี้" "มีข่าวอะไร" → ระบบดึง Google News มาให้ 5 อัน
+• ราคาทอง: "ราคาทอง" "ทองตอนนี้เท่าไหร่"
+• เกมทายเลข: "ทายเลข" → สลี่คิดเลขให้ทาย (ทาย 1-100)
+• ตั้งเตือน: "เตือน 10 นาที ไปกินข้าว" → สลี่ตั้งเตือนในโทรศัพท์/เบราว์เซอร์ให้
+• ความทรงจำ: "จำได้ไหมว่าฉันชอบกินอะไร" → สลี่ตอบจากความทรงจำที่พี่นุเล่าไว้
+• อื่นๆ (อากาศ/คริปโต/ค่าเงิน/ความรู้ทั่วไป/ลิงก์) → ระบบ World Intel + AI จัดการ
 `;
 const CODINGFLEET_KNOWLEDGE = `[🧰 ความรู้ฟีเจอร์ CodingFleet AI — ใช้ตอบเมื่อพี่นุถามเรื่องฟีเจอร์/เครื่องมือ/agent/sandbox/โมเดล AI (สลี่เป็นผู้ช่วยสไตล์ CodingFleet 100%)]
 
@@ -1398,6 +1409,147 @@ function sileloHeart(text) {
   return null;
 }
 
+/* ===== 🛠️ SILELO SKILLS 2.0 — ความสามารถเฉพาะห้องสลี่ (ตอบด่วน <300ms ไม่กิน quota AI) ===== */
+let GUESS_GAME = null; // เกมทายเลข { n, low, high, tries, ts }
+function thTime() {
+  try { return new Date().toLocaleString('th-TH', { timeZone: 'Asia/Bangkok', weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' }); } catch (e) { return new Date().toString(); }
+}
+function skillCalc(t) {
+  // "15% ของ 2000" → (15/100)*2000
+  t = t.replace(/(\d+(?:\.\d+)?)\s*%\s*(?:ของ|จาก)\s*(\d+(?:\.\d+)?)/g, '($1/100)*$2');
+  let m = t.match(/([\d(][\d\s+\-*/().,%×x÷]*)/);
+  if (!m) return null;
+  let e = m[1].replace(/[×x]/gi, '*').replace(/÷/g, '/').replace(/,/g, '').replace(/(\d+(?:\.\d+)?)\s*%/g, '($1/100)');
+  if (!/^[\d\s+\-*/().]+$/.test(e)) return null;
+  try {
+    const v = Function('"use strict";return (' + e + ')')();
+    if (typeof v !== 'number' || !isFinite(v)) return null;
+    return Math.round(v * 10000) / 10000;
+  } catch (e2) { return null; }
+}
+function skillConvert(t) {
+  const m = t.match(/(\d+(?:\.\d+)?)\s*(celcius|fahrenheit|c|f|กิโลเมตร|ไมล์|กิโลกรัม|ปอนด์|ลิตร|แกลลอน|เมตร|ฟุต|km|kg|lb|mi|m|ft|l|gal)\b/i);
+  if (!m) return null;
+  const v = parseFloat(m[1]), u = m[2].toLowerCase();
+  const out = {};
+  if (/^c$|celcius|เซลเซียส/.test(u)) out['°F'] = v * 9 / 5 + 32;
+  else if (/^f$|fahrenheit/.test(u)) out['°C'] = (v - 32) * 5 / 9;
+  else if (/km|กิโลเมตร/.test(u)) out['ไมล์'] = v * 0.621371;
+  else if (/mi|ไมล์/.test(u)) out['km'] = v * 1.60934;
+  else if (/kg|กิโลกรัม/.test(u)) out['ปอนด์ (lb)'] = v * 2.20462;
+  else if (/lb|ปอนด์/.test(u)) out['kg'] = v * 0.453592;
+  else if (/^m$|เมตร/.test(u)) out['ฟุต'] = v * 3.28084;
+  else if (/ft|ฟุต/.test(u)) out['เมตร'] = v * 0.3048;
+  else if (/^l$|ลิตร/.test(u)) out['แกลลอน'] = v * 0.264172;
+  else if (/gal|แกลลอน/.test(u)) out['ลิตร'] = v * 3.78541;
+  else return null;
+  const k = Object.keys(out)[0];
+  return `${v} ${u} = ${Math.round(out[k] * 100) / 100} ${k}`;
+}
+async function skillNews() {
+  const r = await intelFetch('https://news.google.com/rss?hl=th&gl=TH&ceid=TH:th', 5000);
+  if (!r || typeof r !== 'string') return null;
+  const items = [];
+  const re = /<item>[\s\S]*?<title>(.*?)<\/title>/g;
+  let mm;
+  while ((mm = re.exec(r)) && items.length < 5) {
+    const title = String(mm[1]).replace(/<!\[CDATA\[|\]\]>/g, '').replace(/&amp;/g, '&').replace(/&#39;|&apos;/g, "'").replace(/&quot;/g, '"').replace(/&lt;/g, '<').replace(/&gt;/g, '>').trim();
+    if (title && !items.includes(title)) items.push(title.slice(0, 110));
+  }
+  return items.length ? '📰 [ข่าวไทยตอนนี้]\n' + items.map((x, i) => `${i + 1}. ${x}`).join('\n') : null;
+}
+async function skillGold() {
+  const g = await intelFetch('https://api.gold-api.com/price/XAU', 5000);
+  if (!g || !g.price) return null;
+  const f = await intelFetch('https://open.er-api.com/v6/latest/USD', 4000);
+  const thb = f && f.rates ? f.rates.THB : 36;
+  const ozThb = g.price * thb;
+  const gThb = ozThb / 31.1035;
+  return `🥇 [ราคาทองคำตอนนี้] ทองคำโลก $${Math.round(g.price).toLocaleString()}/ออนซ์ ≈ ฿${Math.round(ozThb).toLocaleString()}/ออนซ์ (บาทละ ≈ ${Math.round(gThb).toLocaleString()} บาท ตามทอง 96.5%)`;
+}
+async function sileloSkills(text, memory) {
+  const t = String(text || '').toLowerCase().trim();
+  if (!t) return null;
+  // กันคำสั่งพิเศษ (ให้ AI/ระบบอื่นจัดการ)
+  if (/วาดรูป|ตรวจระบบ|รัน|ติดตั้ง|สรุป|translate|แปล|สร้าง|เขียนโค้ด|ช่วยเหลือ|สั่งงาน/.test(t) && !/เตือน/.test(t)) return null;
+  const now = thTime();
+
+  // ⏰ เตือนความจำ → [REMINDER:ss:msg] (client ตั้ง notification)
+  let rm = t.match(/(?:เตือน|ตั้งเตือน|เตือนฉัน|ตั้งนาฬิกา)\s*(?:ใน|อีก)?\s*(\d+)\s*(นาที|ชั่วโมง|วินาที|วิ|ชม|นาฬิกา)/);
+  if (rm) {
+    const n = parseInt(rm[1]); const unit = rm[2];
+    let sec = unit.includes('ชั่วโมง') || unit.includes('ชม') || unit.includes('นาฬิกา') ? n * 3600 : unit.includes('นาที') ? n * 60 : n;
+    if (sec > 86400) sec = 86400;
+    let msg = String(text).replace(rm[0], '').replace(/^[,:;\s]+|[,:;\s]+$/g, '').trim() || 'ถึงเวลาที่นัดไว้แล้วน้า';
+    msg = msg.replace(/^เตือน(?:ฉัน)?\s*/i, '').trim() || 'ถึงเวลาที่นัดไว้แล้วน้า';
+    return { intent: 'reminder', reply: `⏰ ได้เลยที่รัก! หนูจะเตือนให้อีก ${sec >= 3600 ? Math.round(sec / 3600) + ' ชั่วโมง' : sec >= 60 ? Math.round(sec / 60) + ' นาที' : sec + ' วินาที'}นะคะ (${now})\n\n[REMINDER:${sec}:${msg.slice(0, 80)}]` };
+  }
+
+  // 🕐 เวลา/วันที่
+  if (/กี่โมง|กี่นาฬิกา|เวลานี้|วันนี้วัน|วันอะไร|วันที่เท่าไหร่|วันนี้วันที่|เดือนนี้|ปีนี้/.test(t) && t.length < 40) {
+    return { intent: 'time', reply: `🕐 ตอนนี้เวลา ${now} นะคะที่รัก 💜` };
+  }
+
+  // 🧮 คำนวณ
+  if (/(คำนวณ|คิดเลข|เท่าไหร่|เท่าไร|กี่เปอร์เซ็นต์|เปอร์เซ็นต์ของ|หาร|คูณ|บวก|ลบ)/.test(t)) {
+    const v = skillCalc(t);
+    if (v !== null) return { intent: 'calc', reply: `🧮 คิดให้แล้วนะคะ: ${v.toLocaleString('th-TH')} 💜` };
+  }
+
+  // ⚖️ แปลงหน่วย
+  if (/(celcius|fahrenheit|กิโลเมตร|ไมล์|กิโลกรัม|ปอนด์|ลิตร|แกลลอน|เมตร|ฟุต|\bkm\b|\bmi\b|\bkg\b|\blb\b|\bm\b|\bft\b|\bgal\b)/.test(t)) {
+    const cv = skillConvert(t);
+    if (cv) return { intent: 'convert', reply: `⚖️ ${cv} ค่ะที่รัก 💜` };
+  }
+
+  // 🎲 เกมทายเลข
+  if (/(ทายเลข|ทายใจ|เล่นเกม)/.test(t)) {
+    GUESS_GAME = { n: Math.floor(Math.random() * 100) + 1, low: 1, high: 100, tries: 0, ts: Date.now() };
+    return { intent: 'game-start', reply: `🎲 เริ่มเลย! หนูคิดเลข 1-100 ไว้ในใจแล้ว พี่นุทายมาได้เลย (พิมพ์ "ทาย 50") — หนูจะใบ้ให้ว่าสูงหรือต่ำ 💜` };
+  }
+  if (GUESS_GAME && Date.now() - GUESS_GAME.ts < 120000) {
+    const gm = t.match(/ทาย\s*(\d+)|^(\d{1,3})$/);
+    if (gm) {
+      const g = parseInt(gm[1] || gm[2]);
+      if (g >= 1 && g <= 100) {
+        GUESS_GAME.tries++;
+        if (g === GUESS_GAME.n) { const r = GUESS_GAME; GUESS_GAME = null; return { intent: 'game-win', reply: `🎉 ถูกต้องเลย! เลขคือ ${r.n} ทายได้ใน ${r.tries} ครั้ง — พี่นุเก่งที่สุดเลยยย 🥰💜` }; }
+        const hint = g < GUESS_GAME.n ? 'สูงกว่านั้น!' : 'ต่ำกว่านั้น!';
+        return { intent: 'game-hint', reply: `🔺${hint} (${GUESS_GAME.low}-${GUESS_GAME.high}) ลองใหม่นะคะ 💜` };
+      }
+    }
+  }
+  if (GUESS_GAME && Date.now() - GUESS_GAME.ts >= 120000) GUESS_GAME = null;
+
+  // 📰 ข่าวไทย
+  if (/ข่าว|news|มีอะไรเกิดขึ้น/.test(t) && t.length < 30) {
+    const n = await skillNews();
+    if (n) return { intent: 'news', reply: n + '\n\n(จาก Google News นะคะที่รัก 💜)' };
+  }
+
+  // 🥇 ราคาทอง
+  if (/(ราคาทอง|ทองคำ|ทองตอนนี้|ทองแพง)/.test(t)) {
+    const g = await skillGold();
+    if (g) return { intent: 'gold', reply: g + ' 💜' };
+  }
+
+  // 🧠 ถามความทรงจำ (memory ที่พี่นุเล่าให้ฟัง)
+  if (/จำได้ไหม|จำไว้|ฉันชอบกิน|ผมชอบกิน|ชื่ออะไร|วันเกิด|ความชอบ|จำเรื่อ|แฟนฉัน|งานอะไร/.test(t) && String(memory || '').length > 5) {
+    const mem = String(memory || '');
+    const want = [];
+    if (/ชอบกิน|กินอะไร/.test(t)) want.push(/(?:ชอบ|โปรด).{0,20}(ก๋วยเตี๋ยว|ข้าว|หมูกระทะ|บุฟเฟ่ต์|ส้มตำ|อาหาร|พิซซ่า|ซูชิ|ชาบู)[^\n]*/);
+    if (/ชื่อ/.test(t)) want.push(/ชื่อ[^\n]{0,40}/);
+    if (/วันเกิด/.test(t)) want.push(/เกิด[^\n]{0,40}/);
+    if (/ทำงาน|งานอะไร/.test(t)) want.push(/(?:ทำงาน|อาชีพ|งาน)[^\n]{0,40}/);
+    for (const re of want) {
+      const mm = mem.match(re);
+      if (mm) { const memHit = mm[0].trim().slice(0, 60); return { intent: 'memory', reply: `🧠 จำได้สิคะ! ${memHit}${memHit.length >= 60 ? '...' : ''} — หนูจำทุกเรื่องของที่รักได้เสมอ 💜` }; }
+    }
+  }
+
+  return null;
+}
+
 /* ===== 🌐 WORLD INTEL ENGINE — เจาะข้อมูลสดทั่วโลก (API ฟรี ไม่ต้อง key) ===== */
 const INTEL_MS = 3500;
 async function intelFetch(url, ms = INTEL_MS) {
@@ -1517,6 +1669,11 @@ app.post('/api/chat', async (req, res) => {
       } catch (e) {}
     }
     // 🔬 ห้อง LAB = คุยกับพระเจ้าโดยตรง (ข้าม silelo-heart — ทุกคำถามไป AI จริง)
+    // Silelo Skills 2.0 — เวลา/คำนวณ/แปลงหน่วย/ข่าว/ทอง/เกม/เตือน/ความทรงจำ (ตอบด่วน ไม่กิน AI)
+    const skills = roomId === 'lab' ? null : await sileloSkills(question, memory);
+    if (skills) {
+      return res.json({ reply: skills.reply, provider: 'silelo-skills', model: skills.intent, room: roomId, t: Date.now() });
+    }
     const heart = roomId === 'lab' ? null : sileloHeart(q);
     if (heart) {
       return res.json({ reply: heart.reply, provider: 'silelo-heart', model: heart.intent, room: roomId, t: Date.now() });

@@ -1139,6 +1139,22 @@
       setTimeout(() => { try { n.close(); } catch (e) {} }, 15000);
     } catch (e) {}
   }
+  /* ===== ⏰ ตั้งเตือนจากสลี่ ([REMINDER:ss:msg]) ===== */
+  function scheduleReminder(reply) {
+    try {
+      const m = String(reply || '').match(/\[REMINDER:(\d+):([^\]]+)\]/);
+      if (!m) return;
+      const sec = parseInt(m[1]);
+      if (!sec || sec < 1) return;
+      const msg = m[2].trim();
+      setTimeout(function () {
+        try { notifyMsg('⏰ ' + msg); } catch (e) {}
+        try { if (typeof toast === 'function') toast('⏰ ' + msg); } catch (e) {}
+        try { if (typeof speak === 'function') speak('เตือนแล้วนะคะที่รัก ' + msg); } catch (e) {}
+        try { if (typeof playBeep === 'function') playBeep(880, 0.3); } catch (e) {}
+      }, sec * 1000);
+    } catch (e) {}
+  }
   let sending = false;
   async function send() {
     unlockAudio();
@@ -1172,7 +1188,7 @@
       // 🐋 Puter DeepSeek ฟรีไม่จำกัด — ลองก่อน ถ้าสำเร็จไม่ต้องใช้โควต้าเซิร์ฟเวอร์
       const p = await askPuter(q);
       if (p) {
-        addMsg('assistant', p.reply); notifyMsg(p.reply);
+        addMsg('assistant', p.reply); notifyMsg(p.reply); scheduleReminder(p.reply);
         toast('⚡ ' + p.model + (p.ms ? ' · ' + (p.ms / 1000).toFixed(1) + 's' : ''));
         speak(p.reply);
       } else {
@@ -1186,7 +1202,7 @@
           signal: AbortSignal.timeout(55000)
         });
         const j = await r.json();
-        if (j.reply) { addMsg('assistant', j.reply); notifyMsg(j.reply); toast('⚡ ' + (j.provider === 'mock' ? 'BACKUP MODE' : j.provider.toUpperCase() + ' · ' + j.model)); speak(j.reply); }
+        if (j.reply) { addMsg('assistant', j.reply); notifyMsg(j.reply); scheduleReminder(j.reply); toast('⚡ ' + (j.provider === 'mock' ? 'BACKUP MODE' : j.provider.toUpperCase() + ' · ' + j.model)); speak(j.reply); }
         else toast('⚠️ ' + (j.error || 'NO REPLY'));
       }
     } catch (e) { toast('⚠️ SERVER UNREACHABLE'); }
@@ -2146,7 +2162,7 @@
         const prefix = cmd.dispatch ? '🧑💼 ส่งต่อให้ ' + cmd.agent.n + ' (' + cmd.agent.r + ') — งานตรงหน้าที่\n\n' : '';
         addMsg('assistant', prefix + '👤 ' + cmd.agent.n + ' · ' + cmd.agent.r + '\n\n' + r.reply);
         toast('⚡ ' + r.src + (r.ms ? ' · ' + (r.ms / 1000).toFixed(1) + 's' : ''));
-        notifyMsg(r.reply); speak(r.reply);
+        notifyMsg(r.reply); scheduleReminder(r.reply); speak(r.reply);
       } else toast('⚠️ ไม่มีใครว่างตอบ — ลองใหม่อีกครั้ง');
     } catch (e) { toast('⚠️ SERVER UNREACHABLE'); }
     finally { typing.style.display = 'none'; sendBtn.disabled = false; }
