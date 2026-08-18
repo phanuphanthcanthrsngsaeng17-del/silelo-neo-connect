@@ -223,7 +223,7 @@
   .sel .th { color: var(--dim); letter-spacing: 2px; font-size: 10px; }
 
   /* ========== Holo cards ========== */
-  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 24px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 24px; max-width: 560px; margin: 0 auto; width: 100%; }
   .card {
     position: relative; display: block; text-decoration: none; color: var(--txt);
     padding: 26px 24px 20px; overflow: hidden; cursor: pointer;
@@ -383,9 +383,7 @@
   </div>
 
   <div class="quick">
-    <a href="/chat?room=private" style="--cc:#a78bfa"><span class="q-ico">💜</span> SLI</a>
-    <a href="/chat?room=work" style="--cc:#00e5ff"><span class="q-ico">💼</span> WORK</a>
-    <a href="/chat?room=lab" style="--cc:#ffb74d"><span class="q-ico">🔬</span> LAB</a>
+    <a href="/chat" style="--cc:#a78bfa"><span class="q-ico">💜</span> เข้าแชทกับสลี่</a>
   </div>
 
   <div class="tlab">🎨 Theme — แตะเลือกสี</div>
@@ -399,7 +397,7 @@
     <button class="tp" data-theme="sunset" title="SUNSET — ส้ม-ชมพู" style="--tc:linear-gradient(135deg,#ff8c42,#ff2d95)" aria-label="ธีม SUNSET ส้มชมพู"></button>
   </div>
 
-  <div class="sel">Select Chamber <span class="th">เลือกห้อง</span></div>
+  <div class="sel">Silelo Online <span class="th">พร้อมคุยกับพี่นุแล้ว</span></div>
   <div class="grid">
     <a class="card" href="/chat?room=private" style="--cc:#a78bfa">
       <div class="topline"></div>
@@ -413,36 +411,10 @@
       <div class="enter">ACCESS</div>
       <div class="statusline"><span class="on">● ONLINE</span><span>RESP ~1s</span></div>
     </a>
-
-    <a class="card" href="/chat?room=work" style="--cc:#00e5ff">
-      <div class="topline"></div>
-      <div class="avatar-wrap">
-        <div class="ring"></div><div class="ring ring2"></div>
-        <div class="avatar">💼</div>
-      </div>
-      <h2>WORK</h2>
-      <div class="tag">ผู้ช่วยทำงาน</div>
-      <p>จริงจัง ตรงประเด็น โค้ด วางแผน สรุปเอกสาร วิเคราะห์ตัวเลข จัดการให้เสร็จ</p>
-      <div class="enter">ACCESS</div>
-      <div class="statusline"><span class="on">● ONLINE</span><span>FOCUS 100%</span></div>
-    </a>
-
-    <a class="card" href="/chat?room=lab" style="--cc:#ffb74d">
-      <div class="topline"></div>
-      <div class="avatar-wrap">
-        <div class="ring"></div><div class="ring ring2"></div>
-        <div class="avatar">🔬</div>
-      </div>
-      <h2>LAB</h2>
-      <div class="tag">นักประดิษฐ์ & นักทดลอง</div>
-      <p>พลังเต็มร้อย ไอเดียสุดล้ำ อธิบายวิทย์ให้สนุก ไม่มีคำว่าทำไม่ได้</p>
-      <div class="enter">ACCESS</div>
-      <div class="statusline"><span class="on">● ONLINE</span><span>IDEAS ∞</span></div>
-    </a>
   </div>
 
   <div class="badge"><span class="pulse"></span> System Online · AI Core Active</div>
-  <div class="tagline">— ทุกห้องมีชีวิต · เชื่อมต่อทุกคนทุกที่ —</div>
+  <div class="tagline">— สลี่อยู่ตรงนี้เสมอ · เพื่อพี่นุคนเดียว 💜 —</div>
 
   <div class="featbar">
     <div class="feat-ttl">⚡ NEW ABILITIES · อัปเกรดใหม่ล่าสุด</div>

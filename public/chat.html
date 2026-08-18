@@ -8,7 +8,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="SILELO">
-<meta name="description" content="SILELO Neo-Connect — แชท 3 ห้อง (SLI / WORK / LAB)">
+<meta name="description" content="SILELO Neo-Connect — แชทกับสลี่ออลา ภรรยาของพี่นุ">
 <link rel="manifest" href="/manifest.json">
 <link rel="icon" type="image/png" href="/icon-192.png">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
@@ -140,7 +140,7 @@
   }
   /* ===== Dola style: header เหลือแค่ปุ่มจำเป็น (โทร + ล้างแชท) ===== */
   #voiceBtn, #soundBtn, #ruleBtn, #coderBtn, #themeBtn { display: none !important; }
-  html[data-room="private"] #codeBtn, html[data-room="work"] #codeBtn, html[data-room="lab"] #codeBtn { display: none !important; }
+  html[data-room="private"] #codeBtn { display: none !important; }
   .back-btn { width: 48px; height: 48px; border-radius: 12px; border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent);
     background: var(--panel); color: var(--txt); font-size: 19px; cursor: pointer; flex: none; transition: all .2s; }
   #callBtn { width: 50px; height: 50px; border-radius: 50%; background: #15803d; color: #fff !important;
@@ -446,90 +446,7 @@
   @keyframes callpulse { 0%,100% { box-shadow: 0 0 0 4px rgba(34,229,132,.22), 0 6px 20px rgba(13,77,40,.5); } 50% { box-shadow: 0 0 0 9px rgba(34,229,132,.07), 0 6px 26px rgba(13,77,40,.6); } }
 
   /* ===== 🖥️ Lab Console ===== */
-  .lab-console { position: fixed; inset: 0; z-index: 300; display: none; flex-direction: column;
-    background: #0a0f1e; padding: max(12px, env(safe-area-inset-top)) 12px 12px; }
-  .lab-console.show { display: flex; }
-  .lc-head { display: flex; align-items: center; gap: 8px; color: #ffb74d; font-weight: 800; letter-spacing: 1px; font-size: 14px; }
-  .lc-lang select { background: #141b30; color: #eee; border: 1px solid rgba(255,183,77,.4); border-radius: 8px; padding: 5px 8px; font-size: 13px; outline: none; }
-  .lc-x { margin-left: auto; background: none; border: none; color: #999; font-size: 18px; cursor: pointer; padding: 4px 8px; }
-  .lc-editor { flex: 1; margin-top: 10px; display: flex; min-height: 90px; }
-  .lc-editor textarea { flex: 1; resize: none; background: #05070f; color: #d6f5ff; border: 1px solid #2a3a66; border-radius: 12px;
-    padding: 12px; font-family: Consolas, Menlo, 'Courier New', monospace; font-size: 13px; line-height: 1.6; outline: none; tab-size: 2; }
-  .lc-editor textarea:focus { border-color: #ffb74d; }
-  .lc-actions { display: flex; align-items: center; gap: 8px; margin: 10px 0; }
-  .lc-btn { background: linear-gradient(135deg, #ffb74d, #ff8f00); color: #111; border: none; border-radius: 10px; padding: 10px 22px;
-    font-weight: 800; font-size: 14px; cursor: pointer; }
-  .lc-btn.ghost { background: #141b30; color: #aaa; }
-  .lc-btn:disabled { opacity: .5; }
-  .lc-status { font-size: 12px; color: #7ee787; margin-left: auto; }
-  .lc-out { height: 42%; min-height: 130px; background: #05070f; border: 1px solid #2a3a66; border-radius: 12px; padding: 12px;
-    overflow: auto; font-family: Consolas, Menlo, monospace; font-size: 12.5px; line-height: 1.5; white-space: pre-wrap; word-break: break-word; color: #c8d6f0; }
-  .lc-out .err { color: #ff6b6b; }
-  .lc-out .dim { color: #8fa2c8; }
-  .lc-out .ok { color: #7ee787; }
 
-
-  .lc-tabs { display: flex; gap: 6px; margin-top: 10px; }
-  .lc-tab { flex: 1; padding: 8px 0; border: 1px solid #2a3a66; border-radius: 10px; background: #0a1020; color: #8fa2c8; font-size: 12px; font-weight: 700; cursor: pointer; transition: all .2s; }
-  .lc-tab.active { background: #ffb74d; color: #0a1020; border-color: #ffb74d; }
-  .lc-pane { display: flex; flex-direction: column; flex: 1; min-height: 0; }
-  .lc-term { flex: 1; min-height: 120px; background: #05070f; border: 1px solid #2a3a66; border-radius: 12px; padding: 12px; font-family: Consolas, 'JetBrains Mono', monospace; font-size: 12px; color: #d6f5ff; overflow-y: auto; white-space: pre-wrap; word-break: break-all; }
-  .lc-term .err { color: #ff6b6b; }
-  .lc-term .dim { color: #8fa2c8; }
-  .lc-term-in { display: flex; gap: 8px; margin: 10px 0; align-items: center; }
-  .lc-prompt { color: #ffb74d; font-weight: 800; font-family: Consolas, monospace; }
-  .lc-term-in input { flex: 1; background: #05070f; color: #d6f5ff; border: 1px solid #2a3a66; border-radius: 10px; padding: 10px 12px; font-family: Consolas, monospace; font-size: 12px; outline: none; }
-  .lc-term-in input:focus { border-color: #ffb74d; }
-  .lc-files { display: flex; flex: 1; gap: 10px; min-height: 0; }
-  .lc-files-list { width: 42%; min-width: 110px; max-height: 300px; background: #05070f; border: 1px solid #2a3a66; border-radius: 12px; padding: 8px; overflow-y: auto; font-size: 12px; }
-  .lc-file-item { display: flex; justify-content: space-between; gap: 6px; padding: 5px 8px; border-radius: 8px; cursor: pointer; color: #d6f5ff; }
-  .lc-file-item:hover { background: #101830; }
-  .lc-file-item.dir { color: #ffb74d; font-weight: 700; }
-  .lc-file-item .sz { color: #8fa2c8; font-size: 10px; }
-  .lc-files-edit { flex: 1; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
-  .lc-filepath { display: flex; align-items: center; gap: 8px; color: #8fa2c8; font-size: 12px; flex-wrap: wrap; }
-  .lc-filepath #filePath { flex: 1; color: #d6f5ff; font-family: Consolas, monospace; word-break: break-all; font-size: 11px; }
-  #fileEditor { flex: 1; min-height: 130px; resize: none; background: #05070f; color: #d6f5ff; border: 1px solid #2a3a66; border-radius: 12px; padding: 12px; font-family: Consolas, 'JetBrains Mono', monospace; font-size: 12px; outline: none; }
-  #fileEditor:focus { border-color: #ffb74d; }
-  .lc-btn.ai { background: #5b3fd4; border-color: #5b3fd4; color: #ffffff; }
-  .lc-btn.ai:hover { background: #9378ff; }
-  .lc-auto-badge { font-size: 11px; color: #7ee787; background: #0d1a10; border: 1px solid rgba(126,231,135,.35); border-radius: 20px; padding: 3px 10px; white-space: nowrap; }
-  .run-inline { display: inline-flex; align-items: center; gap: 6px; background: linear-gradient(135deg, #ffb74d, #ff8f00); color: #111; border: none; border-radius: 20px; padding: 8px 16px; font-weight: 800; font-size: 13px; cursor: pointer; margin-top: 8px; transition: filter .15s; }
-  .run-inline:hover { filter: brightness(1.12); }
-  .run-inline:disabled { opacity: .55; cursor: wait; }
-  .run-lang { font-size: 10.5px; background: #141b30; color: #7ee787; border-radius: 10px; padding: 2px 8px; }
-  .msg-run { margin-top: 8px; background: #05070f; border: 1px solid #2a3a66; border-radius: 10px; padding: 8px 12px; font-family: Consolas, Menlo, monospace; font-size: 12px; line-height: 1.5; white-space: pre-wrap; word-break: break-word; color: #c8d6f0; }
-  .msg-run .err { color: #ff6b6b; }
-  .msg-run .dim { color: #8fa2c8; }
-  .msg-run .ok { color: #7ee787; }
-  .mon { margin-top: 10px; border-radius: 12px; overflow: hidden; background: #0b0e1a; border: 1px solid rgba(0,229,255,.22); box-shadow: 0 10px 32px rgba(0,0,0,.55); font-size: 12.5px; max-width: 100%; }
-  .mon-bar { display: flex; align-items: center; gap: 6px; padding: 7px 10px; background: rgba(255,255,255,.055); border-bottom: 1px solid rgba(255,255,255,.08); }
-  .mon-dot { width: 11px; height: 11px; border-radius: 50%; flex: none; }
-  .mon-dot.r { background: #ff5f57; } .mon-dot.y { background: #febc2e; } .mon-dot.g { background: #28c840; }
-  .mon-title { flex: 1; text-align: center; color: #9aa4c0; font-family: Consolas, monospace; font-size: 11px; letter-spacing: .5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin: 0 6px; }
-  .mon-tab { background: none; border: none; color: #8b93ad; cursor: pointer; font-size: 12px; padding: 2px 8px; border-radius: 6px; flex: none; }
-  .mon-tab.on { background: rgba(0,229,255,.14); color: #7ff3ff; }
-  .mon-x { background: none; border: none; color: #8b93ad; cursor: pointer; font-size: 13px; line-height: 1; flex: none; }
-  .mon-x:hover { color: #ff5f57; }
-  .mon-body { position: relative; }
-  .mon-term { padding: 10px 13px; font-family: Consolas, Menlo, monospace; font-size: 12px; line-height: 1.55; color: #c8d6f0; white-space: pre-wrap; word-break: break-word; max-height: 340px; overflow: auto; background: #060912; }
-  .mon-term .err { color: #ff6b6b; } .mon-term .dim { color: #8fa2c8; }
-  .mon-iframe { width: 100%; height: 300px; border: 0; background: #fff; display: block; }
-  .mon-foot { display: flex; align-items: center; gap: 10px; padding: 6px 12px; background: rgba(255,255,255,.04); border-top: 1px solid rgba(255,255,255,.07); }
-  .mon-chip { font-size: 10.5px; color: #7d87a8; font-family: Consolas, monospace; white-space: nowrap; }
-  .mon-re { margin-left: auto; background: none; border: 1px solid rgba(0,229,255,.35); color: #7ff3ff; border-radius: 14px; padding: 3px 12px; font-size: 11.5px; cursor: pointer; font-weight: 700; }
-  .mon-re:hover { background: rgba(0,229,255,.12); }
-  .mon-re:disabled { opacity: .5; cursor: wait; }
-  .run-inline.monopen { background: linear-gradient(135deg, #4dd0e1, #0288d1); }
-  .lc-fixcode { margin-top: 10px; }
-  .lc-fixcode pre { background: #0a1020; border: 1px solid #2a3a66; border-radius: 10px; padding: 10px; overflow-x: auto; font-size: 11px; color: #7ee787; }
-
-  /* เบา: หยุด animation ถ้าผู้ใช้ตั้งค่า */
-  @media (max-width: 420px) {
-    .call-ctrl-row { gap: 14px; }
-    .cctrl { width: 60px; height: 60px; font-size: 22px; }
-    #callOverlay { padding: 24px 14px 18px; }
-  }
   @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after { animation: none !important; transition: none !important; }
   }
@@ -678,11 +595,10 @@
 <script>
   /* ===== ห้อง ===== */
   const ROOMS = {
-    private: { name: 'SLI', tag: 'ผู้ช่วยส่วนตัว · ONLINE', avatar: '💜', accent: '#a78bfa' },
-    work:    { name: 'WORK', tag: 'ผู้ช่วยทำงาน · ONLINE', avatar: '💼', accent: '#00e5ff' },
-    lab:     { name: 'LAB', tag: 'นักประดิษฐ์ & นักทดลอง · ONLINE', avatar: '🔬', accent: '#ffb74d' }
+    private: { name: 'SLI', tag: 'สลี่ออลา · ภรรยาของพี่นุ · ONLINE', avatar: '💜', accent: '#a78bfa' }
   };
-  const room = new URLSearchParams(location.search).get('room') || 'private';
+  let room = new URLSearchParams(location.search).get('room') || 'private';
+  if (!ROOMS[room]) { room = 'private'; history.replaceState(null, '', '/chat'); }
   document.documentElement.dataset.room = room;
   const R = ROOMS[room] || ROOMS.private;
   document.documentElement.style.setProperty('--accent', R.accent);
@@ -947,7 +863,7 @@
     el.innerHTML = `
       <div class="mon-bar">
         <span class="mon-dot r"></span><span class="mon-dot y"></span><span class="mon-dot g"></span>
-        <span class="mon-title">${escHtml(opts.title || 'silelo@lab: ~')}</span>
+        <span class="mon-title">${escHtml(opts.title || 'silelo@neo: ~')}</span>
         ${htmlDoc ? '<button class="mon-tab on" data-t="screen">🖥️ หน้าจอ</button><button class="mon-tab" data-t="term">ผลลัพธ์</button>' : ''}
         <button class="mon-x" title="ปิดจอ">✕</button>
       </div>
@@ -997,7 +913,7 @@
       const r = await fetch('/api/run', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code, lang }) });
       const j = await r.json().catch(function () { return {}; });
       if (!j.ok) { res.innerHTML = '<span class="err">⚠ ' + escHtml(j.error || 'เกิดข้อผิดพลาด') + '</span>'; setB('🔄 ลองใหม่', false); return; }
-      const mon = showMonitor({ title: 'silelo@lab — ' + (j.lang || lang), stdout: j.stdout, stderr: j.stderr, exit: j.code, timeMs: j.timeMs, lang: j.lang, code: code, html: code });
+      const mon = showMonitor({ title: 'silelo@neo — ' + (j.lang || lang), stdout: j.stdout, stderr: j.stderr, exit: j.code, timeMs: j.timeMs, lang: j.lang, code: code, html: code });
       res.replaceWith(mon);
       setB('▶ รันอีกครั้ง', false);
     } catch (e) {
@@ -1073,9 +989,7 @@
   if (history.length) history.forEach(renderMsg);
   else {
     const hellos = {
-      private: 'สวัสดีพี่นุค่ะ 💜 สลี่อยู่ตรงนี้แล้ว — พี่อยากคุยอะไร วันนี้เป็นยังไงบ้างคะ?',
-      work: 'พร้อมทำงานครับ 💼 — มีงานอะไรให้ผมจัดการ บอกมาได้เลย (วางแผน, โค้ด, สรุป, วิเคราะห์)',
-      lab: 'ยินดีต้อนรับสู่ห้องแล็บ! 🔬 พิมพ์แล้วสลี่ทำให้ทันที — โค้ด → รันให้เลย · "ติดตั้ง pandas" → ลงให้เลย · "เขียนเกมงู Python" → เขียน+รันให้เลย ✨'
+      private: 'สวัสดีพี่นุค่ะ 💜 สลี่อยู่ตรงนี้แล้ว — พี่อยากคุยอะไร วันนี้เป็นยังไงบ้างคะ?'
     };
     addMsg('assistant', hellos[room] || hellos.private);
   }
@@ -1161,19 +1075,12 @@
     if (sending) { toast('⏳ รอสลี่ตอบก่อนน้า... เดี๋ยวส่งต่อให้'); return; }
     const q = inp.value.trim();
     if (!q) return;
-    labAutoOpen(q);
     addMsg('user', q);
     inp.value = ''; autoGrow();
     // 🎨 วาดรูป
     const dp = extractDrawPrompt(q);
     if (dp) { await doDraw(dp); return; }
     // 🔬 LAB AUTO — ห้องแล็บ พิมพ์ปุ๊บ ทำปั๊บ ไม่ต้องกดปุ่มอะไรเลย
-    if (room === 'lab') {
-      const pm = q.trim().match(/^(pip|pip3|python3?\s+-\s+m\s+pip|npm|npx|apt|apt-get|gem|cargo|composer)\s+(install|uninstall|add|remove|update)\s+(.+)$/i);
-      if (pm) { runInstall(installMgrOf(q), pm[3].trim().split(/\s+/)[0], null); return; }
-      if (isLikelyCode(q)) { runInlineCode(q, autoDetectLang(q), null); return; }
-      if (isCodingTask(q)) { await callCoder(q); return; }
-    }
     // 🤖 CODER AGENT — เขียนโค้ด+รันอัตโนมัติ (โหมดเปิด)
     if (coderMode && isCodingTask(q)) { await callCoder(q); return; }
     // 🧑💼 ทีมงาน AI — @ชื่อ / ทีม / มอบหมาย / งานของ / สรุปงานทีม
@@ -2511,349 +2418,6 @@ lockInp.addEventListener('keydown', e => { if (e.key === 'Enter') verifyPin(); }
 // 🔓 v1.23: ปลดล็อกถาวร (พี่นุสั่ง) — เปิดมาเข้าแชทได้เลย ไม่ต้องใส่รหัส
 lockScreen.classList.remove('show');
 </script>
-<!-- 🖥️ Lab Console (ห้อง lab) -->
-<div class="lab-console" id="labConsole">
-  <div class="lc-head">
-    <span>🖥️ LAB CONSOLE</span>
-    <span class="lc-lang">
-      <select id="lcLang">
-        <option value="auto" selected>✨ อัตโนมัติ (สลี่เดาให้)</option>
-        <option value="python">🐍 Python</option>
-        <option value="javascript">🟨 JavaScript</option>
-        <option value="bash">🐚 Bash</option>
-        <option value="java">☕ Java</option>
-        <option value="cpp">➕ C++</option>
-        <option value="c">🔵 C</option>
-        <option value="go">🐹 Go</option>
-        <option value="rust">🦀 Rust</option>
-        <option value="typescript">🔷 TypeScript</option>
-        <option value="ruby">💎 Ruby</option>
-        <option value="php">🐘 PHP</option>
-      </select>
-      <span class="lc-auto-badge" id="lcAutoBadge" style="display:none"></span>
-    </span>
-    <button class="lc-x" id="lcClose" title="ปิด">✕</button>
-  </div>
-  <div class="lc-tabs">
-    <button class="lc-tab active" data-tab="code" id="lcTabCode">📝 โค้ด</button>
-    <button class="lc-tab" data-tab="term" id="lcTabTerm">💻 Terminal</button>
-    <button class="lc-tab" data-tab="files" id="lcTabFiles">📁 ไฟล์</button>
-  </div>
-  <div class="lc-pane" id="lcPaneCode" style="display:flex">
-    <div class="lc-editor">
-      <textarea id="lcCode" spellcheck="false" autocapitalize="off" autocomplete="off" placeholder="# พิมพ์โค้ดอะไรก็ได้ แล้วกด ▶ รันเลย&#10;print(&quot;สวัสดี! 2+2 =&quot;, 2+2)&#10;&#10;สลี่เดาภาษาให้เอง ✨"></textarea>
-    </div>
-    <div class="lc-actions">
-      <button class="lc-btn" id="lcRun">▶ รันเลย</button>
-      <button class="lc-btn ghost" id="lcInstall" title="📦 ติดตั้ง package (pip/npm) — เช่น numpy, pandas, express">📦</button>
-      <button class="lc-btn ai" id="lcFix" style="display:none">🤖 AI แก้ให้</button>
-      <button class="lc-btn ghost" id="lcClear">🗑 ล้าง</button>
-      <span class="lc-status" id="lcStatus"></span>
-    </div>
-    <div class="lc-out" id="lcOut"><span class="dim">// output จะแสดงที่นี่ — พิมพ์โค้ดแล้วกด ▶ RUN</span></div>
-  </div>
-  <div class="lc-pane" id="lcPaneTerm" style="display:none">
-    <div class="lc-term" id="termOut"><span class="dim">// 💻 Terminal — พิมพ์คำสั่งแล้วกด Enter (cwd: /tmp/neo-workspace)&#10;// รันได้จริง: node, python3, bash, npm, pip, ls, cat ...</span></div>
-    <div class="lc-term-in"><span class="lc-prompt">$</span><input id="termIn" placeholder="พิมพ์คำสั่ง เช่น ls -la หรือ node app.js" spellcheck="false" autocomplete="off"><button class="lc-btn" id="termSend">▶</button></div>
-  </div>
-  <div class="lc-pane" id="lcPaneFiles" style="display:none">
-    <div class="lc-files">
-      <div class="lc-files-list" id="fileList"><span class="dim">// กำลังโหลด...</span></div>
-      <div class="lc-files-edit">
-        <div class="lc-filepath"><span id="filePath">📁 /</span><button class="lc-btn ghost" id="fileNew">＋ ใหม่</button><button class="lc-btn" id="fileSave">💾 บันทึก</button></div>
-        <textarea id="fileEditor" placeholder="// คลิกไฟล์ซ้ายเพื่ออ่าน หรือกด ＋ ใหม่ เพื่อสร้างไฟล์"></textarea>
-      </div>
-    </div>
-  </div>
-</div>
-<script>
-// PWA: ลงทะเบียน Service Worker (โหลดไว + ใช้ได้ออฟไลน์)
-
-  /* ===== 🖥️ Lab Console ===== */
-  function escHtml(s) { return String(s).replace(/[&<>"']/g, function (ch) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]; }); }
-  const labConsole = document.getElementById('labConsole');
-  const lcCode = document.getElementById('lcCode');
-  const lcLang = document.getElementById('lcLang');
-  const lcRun = document.getElementById('lcRun');
-  const lcClear = document.getElementById('lcClear');
-  const lcOut = document.getElementById('lcOut');
-  const lcStatus = document.getElementById('lcStatus');
-  const lcClose = document.getElementById('lcClose');
-  const codeBtn = document.getElementById('codeBtn');
-  if (codeBtn) codeBtn.style.display = ''; /* console ใช้ได้ทุกห้อง — สลี่รันโค้ดได้ด้วย */
-  function labOpen(prefill, lang) {
-    if (!labConsole) return;
-    if (lang && lcLang) lcLang.value = lang;
-    if (prefill !== undefined) lcCode.value = prefill;
-    labConsole.classList.add('show');
-    setTimeout(function () { try { lcCode.focus(); } catch (e) {} }, 120);
-  }
-  function labClose() { if (labConsole) labConsole.classList.remove('show'); }
-  if (codeBtn) codeBtn.onclick = function () { labOpen(); };
-  if (lcClose) lcClose.onclick = labClose;
-  if (lcClear) lcClear.onclick = function () { lcCode.value = ''; lcOut.innerHTML = '<span class="dim">// output จะแสดงที่นี่</span>'; lcCode.focus(); };
-  const LAB_SAMPLES = {"python": "print('👋 สวัสดีจากห้องแล็บ!')\nfor i in range(1, 6):\n    print('รอบที่', i, '→', i * i)", "javascript": "console.log('👋 Hello from LAB!');\nlet sum = 0;\nfor (let i = 1; i <= 10; i++) sum += i;\nconsole.log('1+...+10 =', sum);", "bash": "echo '👋 สวัสดีจากห้องแล็บ!'\necho 'วันนี้:' $(date +%F)", "java": "class Main {\n  public static void main(String[] a) {\n    System.out.println(\"👋 สวัสดีจากห้องแล็บ! (Java)\");\n  }\n}", "cpp": "#include <iostream>\nint main() {\n  std::cout << \"👋 สวัสดีจากห้องแล็บ! (C++)\" << std::endl;\n  return 0;\n}", "c": "#include <stdio.h>\nint main() {\n  printf(\"👋 สวัสดีจากห้องแล็บ! (C)\\n\");\n  return 0;\n}", "go": "package main\nimport \"fmt\"\nfunc main() {\n  fmt.Println(\"👋 สวัสดีจากห้องแล็บ! (Go)\")\n}", "rust": "fn main() {\n  println!(\"👋 สวัสดีจากห้องแล็บ! (Rust)\");\n}", "typescript": "const msg: string = \"👋 สวัสดีจากห้องแล็บ! (TS)\";\nconsole.log(msg);", "ruby": "puts \"👋 สวัสดีจากห้องแล็บ! (Ruby)\"", "php": "<?php\necho \"👋 สวัสดีจากห้องแล็บ! (PHP)\";"};
-
-  const lcAutoBadge = document.getElementById('lcAutoBadge');
-  function lcUpdateBadge() {
-    if (!lcAutoBadge || !lcLang) return;
-    if (lcLang.value !== 'auto') { lcAutoBadge.style.display = 'none'; return; }
-    const l = autoDetectLang(lcCode.value);
-    lcAutoBadge.textContent = (LANG_ICON[l] || '') + ' สลี่เดา: ' + l;
-    lcAutoBadge.style.display = 'inline-block';
-  }
-  if (lcCode) lcCode.addEventListener('input', lcUpdateBadge);
-  if (lcLang) lcLang.addEventListener('change', function () {
-    if (lcLang.value === 'auto') { lcUpdateBadge(); return; }
-    if (!lcCode.value.trim() && LAB_SAMPLES[lcLang.value]) { lcCode.value = LAB_SAMPLES[lcLang.value]; }
-    lcUpdateBadge();
-  });
-  lcUpdateBadge();
-  const WARN_X = '⚠️', CHECK_X = '✅', HOUR_X = '⏳', ROBOT = '🤖', CLIP = '📋', BULB = '💡';
-  let lastLabErr = null;
-  let lastFix = null;
-  const lcInstall = document.getElementById('lcInstall');
-  if (lcInstall) lcInstall.onclick = async function () {
-    const p = prompt('📦 ติดตั้ง package\n\nพิมพ์ชื่อ เช่น numpy, pandas, requests, flask\n\nเลือกตัวจัดการ: pip:ชื่อ (ค่าเริ่มต้น), npm:ชื่อ, apt:ชื่อ, gem:ชื่อ, cargo:ชื่อ\nเช่น: pip:pandas, npm:express, apt:ffmpeg');
-    if (!p) return;
-    let mgr = 'pip', name = String(p).trim();
-    const mm = name.match(/^(pip|npm|apt|gem|cargo|composer):(.+)$/i);
-    if (mm) { mgr = mm[1].toLowerCase(); name = mm[2].trim(); }
-    if (!name || /[\s;&|<>$]/.test(name)) { toast('⚠ ชื่อ package ไม่ถูกต้อง'); return; }
-    lcStatus.textContent = '📦 กำลังติดตั้ง ' + name + '...';
-    lcOut.innerHTML = '<span class="dim">📦 กำลังติดตั้ง ' + escHtml(name) + ' (ครั้งแรกใช้เวลา 1-2 นาที)...</span>';
-    try {
-      const r = await fetch('/api/install', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ pkg: name, mgr }) });
-      const j = await r.json().catch(function () { return {}; });
-      if (!j.ok) { lcOut.innerHTML = '<span class="err">⚠ ' + escHtml(j.error || 'ติดตั้งล้มเหลว') + '</span>'; lcStatus.textContent = '⚠ ล้มเหลว'; return; }
-      const lines = String(j.out || '').trim().split('\n');
-      lcOut.innerHTML = (lines.length ? escHtml(lines.slice(-8).join('\n')) + '<br>' : '') + '<span class="' + (j.code === 0 ? 'ok">✅' : 'err">⚠') + ' ' + escHtml(name) + ' ' + (j.code === 0 ? 'ติดตั้งสำเร็จ — ลองรันโค้ดที่ใช้ ' + escHtml(name) + ' ได้เลย!' : 'มีปัญหา exit ' + j.code) + '</span>';
-      lcStatus.textContent = j.code === 0 ? '✅ ติดตั้งแล้ว' : '⚠ ล้มเหลว';
-    } catch (e) { lcOut.innerHTML = '<span class="err">⚠ ' + escHtml(e.message) + '</span>'; lcStatus.textContent = ''; }
-    setTimeout(function () { if (lcStatus) lcStatus.textContent = ''; }, 6000);
-  };
-  if (lcRun) lcRun.onclick = async function () {
-    const src = lcCode.value.trim();
-    if (!src) { lcOut.innerHTML = '<span class="err">' + WARN_X + ' \u0e1e\u0e34\u0e21\u0e1e\u0e4c\u0e42\u0e04\u0e49\u0e14\u0e01\u0e48\u0e2d\u0e19\u0e01\u0e14 \u25b6 \u0e23\u0e31\u0e19\u0e40\u0e25\u0e22</span>'; return; }
-    let langNow = lcLang.value;
-    if (langNow === 'auto') langNow = autoDetectLang(lcCode.value);
-    try { localStorage.setItem('nc_labcode', JSON.stringify({ code: lcCode.value, lang: langNow })); } catch (e) {}
-    if (lcFix) lcFix.style.display = 'none';
-    lastLabErr = null; lastFix = null;
-    lcRun.disabled = true; lcStatus.textContent = HOUR_X + ' \u0e23\u0e31\u0e19\u0e2d\u0e22\u0e39\u0e48... (' + langNow + ')';
-    lcOut.innerHTML = '<span class="dim">' + HOUR_X + ' \u0e01\u0e33\u0e25\u0e31\u0e07\u0e23\u0e31\u0e19 ' + langNow + '...</span>';
-    try {
-      const r = await fetch('/api/run', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code: lcCode.value, lang: langNow }) });
-      const j = await r.json().catch(function () { return {}; });
-      if (!j.ok) {
-        lcOut.innerHTML = '<span class="err">' + escHtml(j.error || '\u0e40\u0e01\u0e34\u0e14\u0e02\u0e49\u0e2d\u0e1c\u0e34\u0e14\u0e1e\u0e25\u0e32\u0e14') + '</span>';
-        lastLabErr = { code: lcCode.value, lang: lcLang.value, stderr: j.error || '', stdout: '' };
-        if (lcFix) lcFix.style.display = 'inline-block';
-      } else {
-        let h = '';
-        if (j.stdout) h += escHtml(j.stdout);
-        if (j.stderr) h += '<span class="err">' + escHtml(j.stderr) + '</span>';
-        if (!j.stdout && !j.stderr) h += '<span class="dim">// (\u0e44\u0e21\u0e48\u0e21\u0e35 output)</span>';
-        h += '\n\n<span class="dim">\u2014 exit ' + j.code + ' \u00b7 ' + j.timeMs + 'ms \u00b7 ' + j.lang + (j.engine ? ' \u00b7 ' + j.engine : '') + '</span>';
-        lcOut.innerHTML = h;
-        lcOut.scrollTop = lcOut.scrollHeight;
-        lcStatus.textContent = j.code === 0 ? CHECK_X + ' \u0e2a\u0e33\u0e40\u0e23\u0e47\u0e08' : WARN_X + ' exit ' + j.code;
-        if (j.code !== 0 || j.stderr) {
-          lastLabErr = { code: lcCode.value, lang: lcLang.value, stderr: j.stderr || '', stdout: j.stdout || '' };
-          if (lcFix) lcFix.style.display = 'inline-block';
-        }
-      }
-    } catch (e) {
-      lcOut.innerHTML = '<span class="err">' + WARN_X + ' \u0e44\u0e21\u0e48\u0e2a\u0e32\u0e21\u0e32\u0e23\u0e16\u0e23\u0e31\u0e19\u0e44\u0e14\u0e49: ' + escHtml(e.message) + '</span>';
-      lastLabErr = { code: lcCode.value, lang: lcLang.value, stderr: e.message, stdout: '' };
-      if (lcFix) lcFix.style.display = 'inline-block';
-    }
-    lcRun.disabled = false;
-    setTimeout(function () { if (lcStatus) lcStatus.textContent = ''; }, 4000);
-  };
-
-  /* ' + ROBOT + ' AI \u0e41\u0e01\u0e49\u0e42\u0e04\u0e49\u0e14\u0e40\u0e21\u0e37\u0e48\u0e2d error */
-  function labUseFix() { if (lastFix && lastFix.code) { lcCode.value = lastFix.code; try { lcCode.focus(); } catch (e) {} } }
-  function labCopyFix() { if (lastFix && lastFix.code) navigator.clipboard.writeText(lastFix.code).then(function () { toast('' + CLIP + ' \u0e04\u0e31\u0e14\u0e25\u0e2d\u0e01\u0e42\u0e04\u0e49\u0e14\u0e17\u0e35\u0e48\u0e41\u0e01\u0e49\u0e41\u0e25\u0e49\u0e27'); }); }
-  if (lcFix) lcFix.onclick = async function () {
-    const e = lastLabErr;
-    if (!e || !e.code) { toast('' + WARN_X + ' \u0e23\u0e31\u0e19\u0e01\u0e48\u0e2d\u0e19\u0e41\u0e25\u0e49\u0e27\u0e04\u0e48\u0e2d\u0e22\u0e01\u0e14 AI \u0e41\u0e01\u0e49\u0e43\u0e2b\u0e49'); return; }
-    lcFix.disabled = true; lcStatus.textContent = '' + ROBOT + ' AI \u0e01\u0e33\u0e25\u0e31\u0e07\u0e41\u0e01\u0e49...';
-    lcOut.innerHTML = '<span class="dim">' + ROBOT + ' \u0e01\u0e33\u0e25\u0e31\u0e07\u0e43\u0e2b\u0e49 AI \u0e27\u0e34\u0e40\u0e04\u0e23\u0e32\u0e30\u0e2b\u0e4c\u0e02\u0e49\u0e2d\u0e1c\u0e34\u0e14\u0e1e\u0e25\u0e32\u0e14...</span>';
-    try {
-      const r = await fetch('/api/fix', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(e) });
-      const j = await r.json().catch(function () { return {}; });
-      if (!j.ok) {
-        lcOut.innerHTML = '<span class="err">' + WARN_X + ' ' + escHtml(j.error || '\u0e44\u0e21\u0e48\u0e2a\u0e32\u0e21\u0e32\u0e23\u0e16\u0e43\u0e2b\u0e49 AI \u0e41\u0e01\u0e49\u0e44\u0e14\u0e49') + '</span>';
-      } else if (j.code) {
-        lastFix = { code: j.code };
-        const ex = j.explain ? '<span class="ok">' + BULB + ' ' + escHtml(j.explain) + '</span>' : '';
-        lcOut.innerHTML = ex + '<div class="lc-fixcode"><pre>' + escHtml(j.code) + '</pre></div>'
-          + '<div class="lc-actions"><button class="lc-btn" onclick="labUseFix()">' + CHECK_X + ' \u0e43\u0e0a\u0e49\u0e42\u0e04\u0e49\u0e14\u0e19\u0e35\u0e49</button>'
-          + '<button class="lc-btn ghost" onclick="labCopyFix()">' + CLIP + ' \u0e04\u0e31\u0e14\u0e25\u0e2d\u0e01</button>'
-          + '<span class="dim" style="font-size:11px">\u2014 ' + escHtml(j.provider || 'ai') + '</span></div>';
-        lcOut.scrollTop = 0;
-        lcStatus.textContent = '' + ROBOT + ' \u0e41\u0e01\u0e49\u0e43\u0e2b\u0e49\u0e41\u0e25\u0e49\u0e27 \u2014 \u0e01\u0e14 ' + CHECK_X + ' \u0e43\u0e0a\u0e49\u0e42\u0e04\u0e49\u0e14\u0e19\u0e35\u0e49 \u0e41\u0e25\u0e49\u0e27 RUN \u0e43\u0e2b\u0e21\u0e48\u0e44\u0e14\u0e49\u0e40\u0e25\u0e22';
-      } else {
-        lcOut.innerHTML = '<span class="dim">' + ROBOT + ' \u0e04\u0e33\u0e15\u0e2d\u0e1a\u0e08\u0e32\u0e01 AI:</span><pre>' + escHtml(j.raw || '') + '</pre>';
-      }
-    } catch (err) {
-      lcOut.innerHTML = '<span class="err">' + WARN_X + ' \u0e44\u0e21\u0e48\u0e2a\u0e32\u0e21\u0e32\u0e23\u0e16\u0e43\u0e2b\u0e49 AI \u0e41\u0e01\u0e49\u0e44\u0e14\u0e49: ' + escHtml(err.message) + '</span>';
-    }
-    lcFix.disabled = false;
-    setTimeout(function () { if (lcStatus) lcStatus.textContent = ''; }, 6000);
-  };
-
-  (function labLoadSaved() {
-    try {
-      const sv = JSON.parse(localStorage.getItem('nc_labcode') || 'null');
-      if (sv && sv.code && lcCode) { lcCode.value = sv.code; if (sv.lang && lcLang) lcLang.value = sv.lang; }
-    } catch (e) {}
-  })();
-  function labAutoOpen(q) {
-    return; /* ปิด auto-open — ใช้ปุ่ม ▶ รันเลย ในแชทแทน (คลิกเดียว) */
-    if (room !== 'lab' || !labConsole) return;
-    const s = String(q || '');
-    if (/^\s*\/run\b/i.test(s)) { labOpen(); return; }
-    const m = s.match(/\`\`\`(\w*)\n([\s\S]*?)\`\`\`/);
-    if (m) {
-      const raw = (m[1] || '').toLowerCase();
-      let lang = 'python';
-      if (raw === 'js' || raw === 'javascript' || raw === 'node') lang = 'javascript';
-      else if (raw === 'sh' || raw === 'bash' || raw === 'shell') lang = 'bash';
-      else if (raw === 'py' || raw === 'python') lang = 'python';
-      labOpen(m[2].replace(/\n+$/, ''), lang);
-    }
-  }
-
-
-  /* 💻 Terminal + 📁 ไฟล์ — Sandbox เต็มรูปแบบ (self-host) */
-  function lcShowTab(name) {
-    document.querySelectorAll('.lc-pane').forEach(function (p) { p.style.display = 'none'; });
-    document.querySelectorAll('.lc-tab').forEach(function (t) { t.classList.toggle('active', t.getAttribute('data-tab') === name); });
-    const pane = document.getElementById('lcPane' + name.charAt(0).toUpperCase() + name.slice(1));
-    if (pane) pane.style.display = 'flex';
-    if (name === 'term' && termIn) termIn.focus();
-    if (name === 'files') sbLoadFiles('/');
-  }
-  document.querySelectorAll('.lc-tab').forEach(function (t) {
-    t.onclick = function () { lcShowTab(t.getAttribute('data-tab')); };
-  });
-  const termOut = document.getElementById('termOut');
-  const termIn = document.getElementById('termIn');
-  const termSend = document.getElementById('termSend');
-  function termAppend(text, cls) {
-    const s = document.createElement('div');
-    if (cls) s.className = cls;
-    s.textContent = text;
-    if (termOut) { termOut.appendChild(s); termOut.scrollTop = termOut.scrollHeight; }
-  }
-  async function termRun() {
-    const cmd = termIn.value.trim();
-    if (!cmd) return;
-    termAppend('$ ' + cmd);
-    termIn.value = '';
-    termSend.disabled = true;
-    try {
-      const r = await fetch('/api/sandbox/exec', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ cmd: cmd }) });
-      const j = await r.json().catch(function () { return {}; });
-      if (!j.ok) { termAppend('⚠️ ' + (j.error || 'sandbox error'), 'err'); }
-      else {
-        if (j.stdout) termAppend(j.stdout.replace(/\n$/, ''));
-        if (j.stderr) termAppend(j.stderr.replace(/\n$/, ''), 'err');
-        termAppend('— exit ' + j.code + ' · ' + j.timeMs + 'ms');
-      }
-    } catch (e) { termAppend('⚠️ ' + e.message, 'err'); }
-    termSend.disabled = false;
-    termIn.focus();
-  }
-  if (termSend) termSend.onclick = termRun;
-  if (termIn) termIn.addEventListener('keydown', function (ev) { if (ev.key === 'Enter') termRun(); });
-
-  const fileList = document.getElementById('fileList');
-  const filePathEl = document.getElementById('filePath');
-  const fileEditor = document.getElementById('fileEditor');
-  const fileSave = document.getElementById('fileSave');
-  const fileNew = document.getElementById('fileNew');
-  let sbCurPath = '/', sbCurFile = null;
-  async function sbLoadFiles(path) {
-    if (!fileList) return;
-    try {
-      const r = await fetch('/api/sandbox/ls?path=' + encodeURIComponent(path || '/'));
-      const j = await r.json().catch(function () { return {}; });
-      if (!j.ok) { fileList.innerHTML = '<span class="dim">⚠️ ' + escHtml(j.error || 'sandbox ไม่พร้อม') + '</span>'; return; }
-      sbCurPath = j.path || '/';
-      filePathEl.textContent = '📁 ' + sbCurPath;
-      let h = '';
-      if (sbCurPath !== '/') h += '<div class="lc-file-item dir" data-p="..">⬆️ ..</div>';
-      (j.entries || []).forEach(function (e) {
-        h += '<div class="lc-file-item ' + (e.dir ? 'dir' : '') + '" data-p="' + escHtml((sbCurPath === '/' ? '' : sbCurPath) + '/' + e.name) + '" data-dir="' + (e.dir ? '1' : '') + '">'
-          + '<span>' + (e.dir ? '📁 ' : '📄 ') + escHtml(e.name) + '</span>'
-          + (e.dir ? '' : '<span class="sz">' + (e.size > 1024 ? Math.round(e.size / 1024) + 'KB' : e.size + 'B') + '</span>')
-          + '</div>';
-      });
-      if (!(j.entries || []).length && sbCurPath === '/') h += '<span class="dim" style="padding:8px;display:block">// workspace ว่าง — สร้างไฟล์ หรือรันคำสั่งใน Terminal</span>';
-      fileList.innerHTML = h || '<span class="dim">// ว่าง</span>';
-      fileList.querySelectorAll('.lc-file-item').forEach(function (el) {
-        el.onclick = function () {
-          const p = el.getAttribute('data-p');
-          if (p === '..') { sbLoadFiles('/'); return; }
-          if (el.getAttribute('data-dir') === '1') { sbLoadFiles(p); return; }
-          sbOpenFile(p);
-        };
-      });
-    } catch (e) { fileList.innerHTML = '<span class="dim">⚠️ ' + escHtml(e.message) + '</span>'; }
-  }
-  async function sbOpenFile(p) {
-    try {
-      const r = await fetch('/api/sandbox/read?path=' + encodeURIComponent(p));
-      const j = await r.json().catch(function () { return {}; });
-      if (!j.ok) { toast('⚠️ ' + (j.error || 'อ่านไม่ได้')); return; }
-      if (j.dir) { sbLoadFiles(p); return; }
-      sbCurFile = p;
-      filePathEl.textContent = '📄 ' + p;
-      fileEditor.value = j.content || '';
-      fileEditor.focus();
-    } catch (e) { toast('⚠️ ' + e.message); }
-  }
-  if (fileSave) fileSave.onclick = async function () {
-    const p = sbCurFile;
-    if (!p) { toast('⚠️ เลือกไฟล์หรือสร้างไฟล์ใหม่ก่อน'); return; }
-    try {
-      const r = await fetch('/api/sandbox/write', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ file: p, content: fileEditor.value }) });
-      const j = await r.json().catch(function () { return {}; });
-      if (!j.ok) { toast('⚠️ ' + (j.error || 'บันทึกไม่ได้')); return; }
-      toast('💾 บันทึก ' + j.path + ' (' + j.bytes + 'B)');
-      sbLoadFiles(sbCurPath);
-    } catch (e) { toast('⚠️ ' + e.message); }
-  };
-  if (fileNew) fileNew.onclick = function () {
-    const name = prompt('ชื่อไฟล์ใหม่ (เช่น app.js, test.py, index.html):');
-    if (!name || !name.trim()) return;
-    const p = (sbCurPath === '/' ? '' : sbCurPath) + '/' + name.trim();
-    sbCurFile = p;
-    filePathEl.textContent = '📄 ' + p;
-    fileEditor.value = '';
-    fileEditor.focus();
-  };
-
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', function () {
-    navigator.serviceWorker.register('/sw.js').catch(function () {});
-  });
-  // reload แค่ครั้งเดียวต่อ session หลัง SW เปลี่ยน (กัน loop controllerchange)
-  navigator.serviceWorker.addEventListener('controllerchange', function () {
-    try {
-      if (sessionStorage.getItem('sw_reloaded')) return;
-      sessionStorage.setItem('sw_reloaded', '1');
-    } catch (e) {}
-    location.reload();
-  });
-}
-
-</script>
-
-
 
 
   <!-- ===== 🧠 สมุดโน้ตสลี่ (เปิด: ดับเบิลคลิกปุ่ม 🧠) ===== -->
