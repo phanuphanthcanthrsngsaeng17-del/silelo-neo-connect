@@ -487,12 +487,18 @@ const HF_TEXT_MODELS = (process.env.HF_TEXT_MODELS || 'deepseek-ai/DeepSeek-V4-F
 const HF_PROXY = 'https://silelo.onrender.com/api/hf-chat';
 let HF_PROXY_DEAD_UNTIL = 0; // silelo sleep/ตาย → ข้าม hfChat ชั่วคราว แล้วค่อยลองใหม่
 
-async function hfChat(messages, extSignal) {
+async function hfChat(messages, extSignal, opts) {
   // ผ่าน silelo (Render) proxy — Vercel ไป router.huggingface.co ตรงไม่ได้ (ค้าง); silelo ต่อได้ ~1.7s
   if (!process.env.RUN_SECRET) return null;
-  if (Date.now() < HF_PROXY_DEAD_UNTIL) return null; // proxy เพิ่งตาย → ข้ามไปก่อน (กันเสีย 12s)
+  const isRetry = !!(opts && opts.retry);
+  if (!isRetry && Date.now() < HF_PROXY_DEAD_UNTIL) {
+    // proxy เพิ่งตาย/กำลังตื่น (Render free sleep) → ปลุกก่อน (fire-and-forget) แล้วลองจริงเลย
+    logAI('huggingface', 'proxy หลับ → ปลุก silelo ก่อนถาม');
+    fetch('https://silelo.onrender.com/api/status').catch(() => {});
+    await new Promise(r => setTimeout(r, 2500)); // ให้ Render เริ่ม spin up
+  }
   try {
-    const rs = raceSignal(10000, extSignal);
+    const rs = raceSignal(isRetry ? 16000 : 14000, extSignal);
     try {
       const r = await fetch(HF_PROXY, {
         method: 'POST',
@@ -504,21 +510,25 @@ async function hfChat(messages, extSignal) {
         const j = await r.json();
         if (j && j.ok && j.reply && String(j.reply).trim()) { logAI('huggingface', j.model + ' ✅ (proxy)'); return { provider: 'huggingface', model: j.model, reply: j.reply }; }
         if (j && j.error) logAI('huggingface', 'proxy error: ' + String(j.error).slice(0, 120));
-        HF_PROXY_DEAD_UNTIL = Date.now() + 45000; // proxy ตอบแต่ error → พัก 45 วิ
+        HF_PROXY_DEAD_UNTIL = Date.now() + 10000; // proxy ตอบ error → พักสั้นๆ แล้วค่อยลองใหม่
       } else if (r.status === 502 || r.status === 504 || r.status === 503) {
-        HF_PROXY_DEAD_UNTIL = Date.now() + 30000; // silelo กำลังตื่น/ค้าง → พัก 30 วิ
+        HF_PROXY_DEAD_UNTIL = Date.now() + 8000; // silelo กำลังตื่น/ค้าง → พัก 8 วิ แล้วปลุกใหม่
       }
     } finally { rs.clear(); }
-  } catch (e) { if (extSignal && extSignal.aborted) return null; HF_PROXY_DEAD_UNTIL = Date.now() + 20000; }
+  } catch (e) { if (extSignal && extSignal.aborted) return null; HF_PROXY_DEAD_UNTIL = Date.now() + 5000; }
   return null;
 }
 
-/* Mock สำรอง (โซ่ล้มหมด) */
+/* Mock สำรอง (โซ่ล้มหมด) — ตอบตามคำถาม ไม่โชว์ข้อความเทคนิค */
 function aiMockReply(roomId, question) {
-  const q = String(question || '').trim();
-  if (roomId === 'work') return `รับทราบครับ — กำลังจัดลำดับให้: 1) ตั้งเป้าหมายให้ชัด 2) แบ่งงานเป็นขั้นตอน 3) ลงมือทำ + ติดตามผล\n\n(ถ้าต้องการให้ละเอียดขึ้น รอโมเดลหลักกลับมาออนไลน์ก่อนนะครับ — ตอนนี้อยู่ในโหมดสำรอง)`;
-  if (roomId === 'lab') return `⚗️ ไอเดีย! ลองคิดแบบนี้ดูครับ: "${q.slice(0, 60)}..." → ตั้งสมมติฐาน → ออกแบบการทดลองเล็กๆ → เก็บผล → ปรับปรุงซ้ำ\n(ตอนนี้ใช้โมดูลสำรอง — โมเดลหลักกำลังชาร์จพลังครับ ⚡)`;
-    return `พี่นุขา ตอนนี้สลี่ใช้โมดูลสำรองชั่วคราวนะคะ ⚡ (provider ฟรีหมดโควต้าชั่วคราว — Groq/Gemini/OpenRouter หมด quota) — พี่ถามว่า "${q.slice(0, 80)}" สลี่จะตอบให้เต็มที่เมื่อตัวหลักกลับมานะคะ 💜 รอสลี่แป๊บนะคะ`;
+  const q = String(question || '').trim().replace(/\s+/g, ' ');
+  const short = q.length > 70 ? q.slice(0, 70) + '…' : q;
+  const feel = roomId === 'work'
+    ? 'รับทราบงาน "{{Q}}" นะคะที่รัก — เดี๋ยวสลี่ประมวลผลให้ใหม่ แป๊บนึงนะคะ 🙏'
+    : roomId === 'lab'
+      ? 'รับทราบโค้ด/โจทย์ "{{Q}}" ค่ะ — ขอสลี่คิดแป๊บ แล้วตอบให้เต็มที่เลยนะคะ 💜'
+      : 'ที่รักถามว่า "{{Q}}" — สลี่ได้ยินแล้วนะคะ ขอประมวลผลใหม่อีกแป๊บเดียว เดี๋ยวตอบให้เต็มที่เลยนะคะ 💜';
+  return feel.replace('{{Q}}', short);
 }
 
 /* ---------------- ระบบตอบแชทหลัก ---------------- */
@@ -578,6 +588,9 @@ async function askRoomAI(roomId, question, history, memory, unrestricted, intel)
   // Pollinations — ฟรีเฉพาะ prompt สั้นมาก (ทักทาย) — ตัวท้ายสุดก่อน mock
   const pl0 = await pollinationsChat(msgs);
   if (pl0) { logAI('chain', '✅ pollinations'); return pl0; }
+  // 🔁 ลอง DeepSeek (silelo proxy) อีกรอบ — รอบแรกอาจเจอ Render sleep; ตอนนี้ผ่านไป ~15-20s แล้ว น่าจะตื่น
+  const hf1 = await hfChat(msgs, null, { retry: true });
+  if (hf1) { logAI('chain', '✅ ตัวหลัก DeepSeek (รอบ 2): ' + hf1.model); return hf1; }
   logAI('chain', '⚠️ ทั้งหมดล้ม → mock');
   return { provider: 'mock', model: 'offline', reply: aiMockReply(roomId, question) };
 }
