@@ -1,7 +1,7 @@
 /* ============================================================
    SILELO Neo-Connect — 3 ห้องแชท Cyberpunk
    ห้อง: private (สลี่) / work (คุณเวิร์ค) / lab (ดร.แล็บ)
-   AI chain: ⚡RACE[Groq 6 โมเดล vs Gemini 9 keys] → Cerebras → OpenRouter → Pollinations → mock
+   AI chain: ⚡RACE[Groq 6 โมเดล vs Gemini 9 keys] → Cerebras → Ollama Cloud → OpenRouter → Pollinations → mock
    TTS: msedge-tts (ฟรี)
    ============================================================ */
 const express = require('express');
@@ -227,6 +227,34 @@ async function cerebrasChat(messages, extSignal) {
         const msg = j.choices && j.choices[0] && j.choices[0].message || {};
         const reply = (msg.content || '').trim() || (msg.reasoning || '').trim();
         if (reply) { logAI('cerebras', model + ' ✅'); return { provider: 'cerebras', model, reply }; }
+      } finally { rs.clear(); }
+    } catch (e) { if (extSignal && extSignal.aborted) return null; }
+  }
+  return null;
+}
+
+/* Ollama Cloud — OpenAI-compatible ฟรี (gpt-oss:120b 0.6s, nemotron, gemma4) */
+const OLLAMA_API_KEY = process.env.OLLAMA_API_KEY || '';
+const OLLAMA_MODELS = (process.env.OLLAMA_MODELS || 'gpt-oss:120b,gpt-oss:20b,nemotron-3-super,gemma4:31b').split(',').map(s => s.trim()).filter(Boolean);
+let OLLAMA_DEAD_UNTIL = 0;
+async function ollamaChat(messages, extSignal) {
+  if (!OLLAMA_API_KEY) return null;
+  if (Date.now() < OLLAMA_DEAD_UNTIL) return null;
+  for (const model of OLLAMA_MODELS) {
+    try {
+      const rs = raceSignal(12000, extSignal);
+      try {
+        const r = await fetch('https://ollama.com/v1/chat/completions', {
+          method: 'POST',
+          headers: { 'Authorization': 'Bearer ' + OLLAMA_API_KEY, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ model, max_tokens: 1500, messages }),
+          signal: rs.signal
+        });
+        if (!r.ok) { const j = await r.json().catch(() => ({})); logAI('ollama', model + ' HTTP ' + r.status + ' ' + String((j.error && j.error.message) || '').slice(0, 40)); if (r.status === 401) { OLLAMA_DEAD_UNTIL = Date.now() + 600000; return null; } if (/403|404|410|429/.test(r.status)) continue; }
+        const j = await r.json();
+        const msg = j.choices && j.choices[0] && j.choices[0].message || {};
+        const reply = (msg.content || '').trim() || (msg.reasoning || '').trim(); // gpt-oss ตอบใน reasoning
+        if (reply) { logAI('ollama', model + ' ✅'); return { provider: 'ollama', model, reply }; }
       } finally { rs.clear(); }
     } catch (e) { if (extSignal && extSignal.aborted) return null; }
   }
@@ -681,6 +709,11 @@ async function askRoomAI(roomId, question, history, memory, unrestricted, intel)
     // ⚡ Cerebras — ตัวสำรอง Groq (gpt-oss-120b/gemma-4-31b เร็ว 0.5s ฟรี 1M token/วัน)
     const cb0 = await cerebrasChat(msgs, extSig);
     if (cb0) { logAI('chain', '✅ Cerebras สำรอง Groq: ' + cb0.model); return cb0; }
+    if (tooLate()) return mockReply();
+
+    // 🦙 Ollama Cloud — gpt-oss:120b (0.6s) + nemotron + gemma4 ฟรี
+    const ol0 = await ollamaChat(msgs, extSig);
+    if (ol0) { logAI('chain', '✅ Ollama: ' + ol0.model); return ol0; }
     if (tooLate()) return mockReply();
 
     // 🟢 สำรอง = DeepSeek-V4-Flash (ผ่าน silelo proxy, ตอบเป็นสลี่ DNA)

@@ -19,6 +19,10 @@ const ENV = {
     apiKey: process.env.CEREBRAS_API_KEY || '',
     models: process.env.CEREBRAS_MODELS || 'gpt-oss-120b,gemma-4-31b',
   },
+  ollama: {
+    apiKey: process.env.OLLAMA_API_KEY || '',
+    models: process.env.OLLAMA_MODELS || 'gpt-oss:120b,gpt-oss:20b,nemotron-3-super,gemma4:31b',
+  },
   gemini: {
     apiKeys: splitList(process.env.GEMINI_API_KEYS),
     model: process.env.GEMINI_MODEL || 'gemini-3.6-flash',
@@ -102,6 +106,7 @@ const ENV = {
     return {
       groq: has(s.groq.apiKey),
       cerebras: has(s.cerebras.apiKey),
+      ollama: has(s.ollama.apiKey),
       gemini: s.gemini.apiKeys.length > 0,
       openrouter: has(s.openrouter.apiKey),
       pollinations: true,
