@@ -1635,13 +1635,21 @@
       }
       msgs.push({ role: 'user', content: String(q).slice(0, 12000) });
       const t0 = Date.now();
-      const resp = await Promise.race([
-        puter.ai.chat(msgs, { model: 'deepseek/deepseek-v4-flash', temperature: 0.9 }),
+      const race = (opts) => Promise.race([
+        puter.ai.chat(msgs, Object.assign({ model: 'deepseek/deepseek-v4-flash', temperature: 0.9 }, opts)),
         new Promise((_, rej) => setTimeout(() => rej(new Error('puter timeout')), 30000))
       ]);
+      let resp, usedMax = true;
+      try { resp = await race({ reasoning_effort: 'max' }); }
+      catch (e1) {
+        // พารามิเตอร์ max อาจไม่รองรับบน vendor บางตัว → ลองใหม่แบบธรรมดา
+        usedMax = false;
+        try { resp = await race({}); }
+        catch (e2) { throw e2; }
+      }
       const text = resp && resp.message && resp.message.content;
       if (!text || !String(text).trim()) return null;
-      return { reply: String(text).trim(), model: 'DeepSeek-V4-Flash · 🐋 Puter ฟรี', ms: Date.now() - t0 };
+      return { reply: String(text).trim(), model: 'DeepSeek-V4-Flash \u00b7 \ud83d\udc0b Puter \u0e1f\u0e23\u0e35' + (usedMax ? ' \u00b7 \ud83e\udde0 Max' : ''), ms: Date.now() - t0 };
     } catch (e) {
       console.log('[puter] fail:', e && e.message ? e.message : e);
       return null;
