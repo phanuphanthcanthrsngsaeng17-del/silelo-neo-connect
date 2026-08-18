@@ -814,8 +814,9 @@
       });
       const j = await r.json();
       if (j.url) {
-        addMsg('assistant', '🎨 วาดให้แล้ว: "' + j.prompt + '" — (Flux AI · ฟรี)', Date.now(), j.url);
-        toast('🎨 วาดเสร็จ (ใช้เวลา ~10 วิ รอโหลดได้เลย)');
+        const badge = j.provider === 'stability' ? ('Stability AI · ' + ((j.model || '').includes('512') ? '512' : 'HD')) : 'Flux AI · ฟรี';
+        addMsg('assistant', '🎨 วาดให้แล้ว: "' + j.prompt + '" — (' + badge + ')', Date.now(), j.url);
+        toast('🎨 วาดเสร็จ' + (j.provider === 'stability' ? ' (Stability AI)' : ' (รอโหลด ~10 วิ)'));
       } else toast('⚠ ' + (j.error || 'วาดไม่ได้'));
     } catch (e) { toast('⚠ SERVER UNREACHABLE'); }
     typing.style.display = 'none';
@@ -848,8 +849,10 @@
       setTimeout(() => { try { n.close(); } catch (e) {} }, 15000);
     } catch (e) {}
   }
+  let sending = false;
   async function send() {
     unlockAudio();
+    if (sending) { toast('⏳ รอสลี่ตอบก่อนน้า... เดี๋ยวส่งต่อให้'); return; }
     const q = inp.value.trim();
     if (!q) return;
     labAutoOpen(q);
@@ -864,10 +867,11 @@
     sendBtn.disabled = true;
     msgsEl.scrollTop = msgsEl.scrollHeight;
     bumpMemory();
+    sending = true;
     try {
       const r = await fetch('/api/chat', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ room, question: q, history: cleanHist(history.slice(-12, -1)), memory, unrestricted: noRules })
+        body: JSON.stringify({ room, question: q, history: cleanHist(history.slice(-24, -1)), memory, unrestricted: noRules })
       });
       const j = await r.json();
       if (j.reply) { addMsg('assistant', j.reply); notifyMsg(j.reply); toast('⚡ ' + (j.provider === 'mock' ? 'BACKUP MODE' : j.provider.toUpperCase() + ' · ' + j.model)); speak(j.reply); }
@@ -875,6 +879,7 @@
     } catch (e) { toast('⚠ SERVER UNREACHABLE'); }
     typing.style.display = 'none';
     sendBtn.disabled = false;
+    sending = false;
   }
   sendBtn.onclick = send;
   inp.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); } });
@@ -1004,10 +1009,12 @@
           /* กันล้ม: เซิร์ฟเวอร์ TTS ไม่ว่าง -> ใช้เสียงของเบราว์เซอร์ (Web Speech API) พูดแทน */
           if (window.speechSynthesis && txt && token === speakToken) {
             try {
+              /* 🇹🇭 กันเสียงอังกฤษ: ต้องมี voice ไทยในเครื่องจริงๆ ถึงจะพูด ถ้าไม่มี -> เงียบไว้ */
+              const voices = speechSynthesis.getVoices();
+              const v = voices.find(x => x.lang && x.lang.toLowerCase().replace('_', '-').startsWith('th'));
+              if (!v) return res();
               const u = new SpeechSynthesisUtterance(String(txt));
-              u.lang = 'th-TH'; u.rate = 1.05;
-              const v = speechSynthesis.getVoices().find(x => x.lang && x.lang.toLowerCase().replace('_', '-').startsWith('th'));
-              if (v) u.voice = v;
+              u.lang = 'th-TH'; u.rate = 1.05; u.voice = v;
               u.onend = res; u.onerror = res;
               speechSynthesis.speak(u);
               return;
@@ -1210,18 +1217,14 @@
     setCallState('thinking');
     setCallTrans('🗣 "' + q + '"', false);
     addMsg('user', q);
-    history.push({ role: 'user', content: q });
-    try { localStorage.setItem(KEY, JSON.stringify(history)); } catch (e) {}
     try {
       const r = await fetch('/api/chat', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ room, question: q, history: cleanHist(history.slice(-12, -1)), memory, unrestricted: noRules })
+        body: JSON.stringify({ room, question: q, history: cleanHist(history.slice(-24, -1)), memory, unrestricted: noRules })
       });
       const j = await r.json();
       if (j.reply && callActive) {
         addMsg('assistant', j.reply);
-        history.push({ role: 'assistant', content: j.reply });
-        try { localStorage.setItem(KEY, JSON.stringify(history)); } catch (e) {}
         setCallState('speaking');
         setCallTrans('🔊 ' + R.name + ': ' + j.reply.slice(0, 80) + (j.reply.length > 80 ? '…' : ''), false);
         /* 🎯 สลี่พูดแล้วฟังพี่นุด้วย — พี่นุพูดแทรกเมื่อไหร่ สลี่หยุดทันที (รู้จังหวะฟัง) */
