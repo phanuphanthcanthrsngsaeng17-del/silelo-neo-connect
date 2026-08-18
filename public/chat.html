@@ -1736,18 +1736,61 @@
   let teamCustom = []; try { teamCustom = JSON.parse(localStorage.getItem('nc_team_custom') || '[]'); } catch (e) {}
   let teamEdits = {}; try { teamEdits = JSON.parse(localStorage.getItem('nc_team_edits') || '{}'); } catch (e) {}
   function allTeam() { return TEAM.concat(teamCustom).map(a => teamEdits[a.id] ? Object.assign({}, a, { d: teamEdits[a.id] }) : a); }
-  function saveTeamCustom() { try { localStorage.setItem('nc_team_custom', JSON.stringify(teamCustom)); } catch (e) {} }
-  function saveTeamEdits() { try { localStorage.setItem('nc_team_edits', JSON.stringify(teamEdits)); } catch (e) {} }
+  function saveTeamCustom() { try { localStorage.setItem('nc_team_custom', JSON.stringify(teamCustom)); } catch (e) {} teamSync(); }
+  function saveTeamEdits() { try { localStorage.setItem('nc_team_edits', JSON.stringify(teamEdits)); } catch (e) {} teamSync(); }
   function getAssign(id) { try { return JSON.parse(localStorage.getItem('nc_assign') || '{}')[id] || []; } catch (e) { return []; } }
+  /* ===== ☁️ CLOUD AUTOSAVE ทีม — Puter KV (ข้ามเครื่อง บันทึกอัตโนมัติ จนกล่าวพี่นุจะเปลี่ยน/รีเซ็ต) ===== */
+  const TEAM_CLOUD_KEY = 'nc_team_cloud_v2';
+  let teamSyncTimer = null;
+  function puterReady() {
+    try { return !!(window.puter && puter.auth && typeof puter.auth.isSignedIn === 'function' && typeof puterSignedIn !== 'undefined' && puterSignedIn); } catch (e) { return false; }
+  }
+  function teamSync() {
+    clearTimeout(teamSyncTimer);
+    teamSyncTimer = setTimeout(async () => {
+      if (!puterReady()) return;
+      try {
+        let assign = {}; try { assign = JSON.parse(localStorage.getItem('nc_assign') || '{}'); } catch (e) {}
+        const data = { ver: localStorage.getItem('nc_team_ver') || '2', custom: teamCustom, edits: teamEdits, assign, ts: Date.now() };
+        await puter.kv.set(TEAM_CLOUD_KEY, data);
+        try { localStorage.setItem('nc_team_ts', String(data.ts)); } catch (e) {}
+      } catch (e) { /* ออฟไลน์ — ข้าม, localStorage ยังเป็น backup */ }
+    }, 800);
+  }
+  async function teamSyncLoad() {
+    if (!puterReady()) return false;
+    try {
+      const cloud = await puter.kv.get(TEAM_CLOUD_KEY);
+      if (!cloud || !cloud.ver) return false;
+      if (cloud.ver !== (localStorage.getItem('nc_team_ver') || '2')) return false;
+      const localTs = parseInt(localStorage.getItem('nc_team_ts') || '0');
+      const localHas = !!(localStorage.getItem('nc_team_custom') || localStorage.getItem('nc_team_edits') || localStorage.getItem('nc_assign'));
+      if (localHas && localTs >= (cloud.ts || 0)) return false;
+      if (Array.isArray(cloud.custom)) { teamCustom = cloud.custom; saveTeamCustom(); }
+      if (cloud.edits && typeof cloud.edits === 'object') { teamEdits = cloud.edits; saveTeamEdits(); }
+      if (cloud.assign && typeof cloud.assign === 'object') { try { localStorage.setItem('nc_assign', JSON.stringify(cloud.assign)); } catch (e) {} }
+      try { localStorage.setItem('nc_team_ts', String(cloud.ts || Date.now())); } catch (e) {}
+      renderTeam('');
+      toast('☁️ โหลดทีมจากคลาวด์แล้ว — งานข้ามเครื่องครบ');
+      return true;
+    } catch (e) { return false; }
+  }
   function pushAssign(id, task) {
     let all = {}; try { all = JSON.parse(localStorage.getItem('nc_assign') || '{}'); } catch (e) {}
     all[id] = all[id] || []; all[id].push(task);
     try { localStorage.setItem('nc_assign', JSON.stringify(all)); } catch (e) {}
+    teamSync();
     return all[id].length - 1;
   }
   function findAgentByName(key) {
-    const k = String(key).toLowerCase();
-    return allTeam().find(a => a.id === k || a.n.toLowerCase() === k || a.n.toLowerCase().includes(k) || k.includes(a.n.toLowerCase())) || null;
+    const k = String(key).toLowerCase().trim();
+    if (!k) return null;
+    const isSubseq = (s, t) => { let i = 0; for (let j = 0; j < t.length && i < s.length; j++) if (s[i] === t[j]) i++; return i === s.length; };
+    return allTeam().find(a => {
+      const n = a.n.toLowerCase();
+      if (a.id === k || n === k || n.includes(k) || k.includes(n)) return true;
+      return isSubseq(k, n) && k.length >= 3; // "ป้ายแดง" → "นักการตลาดป้ายแดง"
+    }) || null;
   }
   const TEAM_ROUTE = [
     { re: /สลี่หัวหน้า|หัวหน้าทีม|บอส@silelo|สั่งการ|ตัดสินใจ|คุมทีม/, id: 'a1' },
@@ -1928,7 +1971,10 @@
   };
   document.getElementById('teamReset').onclick = () => {
     if (!confirm('ล้างทีมที่แก้ไข/เพิ่มเองทั้งหมด กลับเป็นชุด 50 คนเดิม?')) return;
-    teamCustom = []; teamEdits = {}; saveTeamCustom(); saveTeamEdits(); renderTeam(''); toast('↺ ทีมกลับเป็น 50 คนเดิมแล้ว');
+    teamCustom = []; teamEdits = {};
+    try { localStorage.removeItem('nc_assign'); } catch (e) {}
+    try { localStorage.removeItem('nc_team_ts'); } catch (e) {}
+    saveTeamCustom(); saveTeamEdits(); teamSync(); renderTeam(''); toast('↺ ทีมกลับเป็น 50 คนเดิมแล้ว — ล้างคลาวด์ด้วย');
   };
   /* ===== 🐋 PUTER — DeepSeek ฟรีไม่จำกัด (User-Pays: ใช้บัญชี Puter ของพี่นุเอง) ===== */
   const puterBtn = document.getElementById('puterBtn');
@@ -2043,6 +2089,7 @@
         puterOn = true;
         try { localStorage.setItem('nc_puter', '1'); } catch (e) {}
         syncPuterBtn();
+        teamSyncLoad();
         toast('✅ เชื่อมแล้ว! DeepSeek ฟรีไม่จำกัด 🐋 — พิมพ์ข้อความได้เลย');
       } catch (e) { toast('⚠️ เชื่อมไม่สำเร็จ/ยกเลิก — ระบบยังใช้เซิร์ฟเวอร์เดิม'); }
       return;
@@ -2057,6 +2104,7 @@
   if (window.puter && puter.auth && typeof puter.auth.isSignedIn === 'function') {
     try { puterSignedIn = !!puter.auth.isSignedIn(); } catch (e) { puterSignedIn = false; }
     syncPuterBtn();
+    if (puterSignedIn) teamSyncLoad();
   }
 
   /* ===== 🤖 CODER AGENT — เขียนโค้ด + รัน + แก้บั๊กเอง อัตโนมัติ ===== */
