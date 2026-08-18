@@ -538,6 +538,14 @@ async function askRoomAI(roomId, question, history, memory, unrestricted, intel)
   return { provider: 'mock', model: 'offline', reply: aiMockReply(roomId, question) };
 }
 
+/* ---------------- 🩺 DIAG (ตรวจ env runtime จริง) ---------------- */
+app.get('/api/diag', (req, res) => {
+  const k = ['GROQ_API_KEY','GEMINI_API_KEYS','OPENROUTER_API_KEY','HF_TOKEN','POLLINATIONS_MODEL','GEMINI_MODEL','RUN_SECRET','AUTH_SECRET','STABILITY_API_KEYS','LINE_LOGIN_CHANNEL_ID'];
+  const out = {};
+  for (const key of k) out[key] = (process.env[key] || '').length + ':' + String(process.env[key] || '').slice(0, 10);
+  res.json(out);
+});
+
 /* ---------------- TTS (Google TTS ฟรี หลัก → msedge-tts สำรอง) ---------------- */
 function googleTtsOne(text) {
   return new Promise((resolve, reject) => {
