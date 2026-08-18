@@ -23,6 +23,10 @@ const ENV = {
     apiKey: process.env.OLLAMA_API_KEY || '',
     models: process.env.OLLAMA_MODELS || 'gpt-oss:120b,gpt-oss:20b,nemotron-3-super,gemma4:31b',
   },
+  zai: {
+    apiKey: process.env.ZAI_API_KEY || '',
+    models: process.env.ZAI_MODELS || 'glm-4.7-flash,glm-4.5-flash',
+  },
   gemini: {
     apiKeys: splitList(process.env.GEMINI_API_KEYS),
     model: process.env.GEMINI_MODEL || 'gemini-3.6-flash',
@@ -107,6 +111,7 @@ const ENV = {
       groq: has(s.groq.apiKey),
       cerebras: has(s.cerebras.apiKey),
       ollama: has(s.ollama.apiKey),
+      zai: has(s.zai.apiKey),
       gemini: s.gemini.apiKeys.length > 0,
       openrouter: has(s.openrouter.apiKey),
       pollinations: true,

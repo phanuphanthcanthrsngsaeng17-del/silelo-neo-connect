@@ -1,7 +1,7 @@
 /* ============================================================
    SILELO Neo-Connect — 3 ห้องแชท Cyberpunk
    ห้อง: private (สลี่) / work (คุณเวิร์ค) / lab (ดร.แล็บ)
-   AI chain: ⚡RACE[Groq 6 โมเดล vs Gemini 9 keys] → Cerebras → Ollama Cloud → OpenRouter → Pollinations → mock
+   AI chain: ⚡RACE[Groq 6 โมเดล vs Gemini 9 keys] → Cerebras → Ollama Cloud → Z.AI GLM → OpenRouter → Pollinations → mock
    TTS: msedge-tts (ฟรี)
    ============================================================ */
 const express = require('express');
@@ -305,6 +305,39 @@ async function ollamaChat(messages, extSignal) {
         if (reply) { logAI('ollama', model + ' ✅'); return { provider: 'ollama', model, reply }; }
       } finally { rs.clear(); }
     } catch (e) { if (extSignal && extSignal.aborted) return null; }
+  }
+  return null;
+}
+
+/* Z.AI / Zhipu GLM — key {id}.{secret} (glm-4.7-flash ฟรี, จีน endpoint เร็ว 2.6s) */
+const ZAI_API_KEY = process.env.ZAI_API_KEY || '';
+const ZAI_MODELS = (process.env.ZAI_MODELS || 'glm-4.7-flash,glm-4.5-flash').split(',').map(s => s.trim()).filter(Boolean);
+let ZAI_DEAD_UNTIL = 0;
+async function zaiChat(messages, extSignal) {
+  if (!ZAI_API_KEY) return null;
+  if (Date.now() < ZAI_DEAD_UNTIL) return null;
+  const bases = ['https://open.bigmodel.cn/api/paas/v4/chat/completions', 'https://api.z.ai/api/paas/v4/chat/completions'];
+  for (const model of ZAI_MODELS) {
+    for (let b = 0; b < bases.length; b++) {
+      for (let attempt = 0; attempt < 2; attempt++) { // retry 429
+        try {
+          const rs = raceSignal(15000, extSignal);
+          try {
+            const r = await fetch(bases[b], {
+              method: 'POST',
+              headers: { 'Authorization': 'Bearer ' + ZAI_API_KEY, 'Content-Type': 'application/json' },
+              body: JSON.stringify({ model, max_tokens: 1500, messages }),
+              signal: rs.signal
+            });
+            if (!r.ok) { const j = await r.json().catch(() => ({})); const em = String((j.error && j.error.message) || '').slice(0, 40); if (r.status === 401) { logAI('zai', model + ' 401 ' + em); ZAI_DEAD_UNTIL = Date.now() + 600000; return null; } if (r.status === 429) { logAI('zai', model + ' 429 ' + em); if (attempt === 0) { await sleep(700); continue; } if (b === 0) break; continue; } if (/402|403/.test(r.status)) break; logAI('zai', model + ' HTTP ' + r.status + ' ' + em); if (b === 0) break; continue; }
+            const j = await r.json();
+            const msg = j.choices && j.choices[0] && j.choices[0].message || {};
+            const reply = (msg.content || '').trim() || (msg.reasoning_content || '').trim();
+            if (reply) { logAI('zai', model + ' ✅ (' + (b === 0 ? 'cn' : 'intl') + ')'); return { provider: 'zai', model, reply }; }
+          } finally { rs.clear(); }
+        } catch (e) { if (extSignal && extSignal.aborted) return null; }
+      }
+    }
   }
   return null;
 }
@@ -768,6 +801,11 @@ async function askRoomAI(roomId, question, history, memory, unrestricted, intel)
     // 🦙 Ollama Cloud — gpt-oss:120b (0.6s) + nemotron + gemma4 ฟรี
     const ol0 = await ollamaChat(msgs, extSig);
     if (ol0) { logAI('chain', '✅ Ollama: ' + ol0.model); return ol0; }
+    if (tooLate()) return mockReply();
+
+    // 🧪 Z.AI (Zhipu GLM) — glm-4.7-flash ฟรี 2.6s (จีน endpoint เร็ว, intl fallback)
+    const za0 = await zaiChat(msgs, extSig);
+    if (za0) { logAI('chain', '✅ Z.AI: ' + za0.model); return za0; }
     if (tooLate()) return mockReply();
 
     // 🟢 สำรอง = DeepSeek-V4-Flash (ผ่าน silelo proxy, ตอบเป็นสลี่ DNA)
