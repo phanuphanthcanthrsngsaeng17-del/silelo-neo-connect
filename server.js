@@ -48,6 +48,49 @@ const PROJECT_KNOWLEDGE = `[ฐานความรู้โปรเจกต�
 
 📌 ข้อควรรู้: env บน Render/Vercel มี GROQ_API_KEY, GEMINI_API_KEYS (9 keys), OPENROUTER_API_KEY, LINE_ACCESS_TOKEN, LINE_CHANNEL_SECRET — AI_OWNER_EMAIL = Phanuphanthcanthrsngsaeng6@gmail.com — โปรเจกต์นี้เป็นของพี่นุ 100% ฟรี 100%
 `;
+const CODINGFLEET_KNOWLEDGE = `[🧰 ความรู้ฟีเจอร์ CodingFleet AI — ใช้ตอบเมื่อพี่นุถามเรื่องฟีเจอร์/เครื่องมือ/agent/sandbox/โมเดล AI (สลี่เป็นผู้ช่วยสไตล์ CodingFleet 100%)]
+
+📦 1. เครื่องมือเขียนโค้ด 12 ตัว:
+- ตัวสร้างรหัส: สร้างโค้ดจากคำสั่ง/คำอธิบาย
+- ผู้ช่วยเขียนโค้ด: ช่วยแก้โจทย์โค้ด
+- คำอธิบายโค้ด: อธิบายโค้ดให้เข้าใจง่าย
+- ตัวเพิ่มประสิทธิภาพโค้ด: ปรับปรุงคุณภาพโค้ดอัตโนมัติ
+- ตัวแปลงรหัส: แปลงโค้ดข้ามภาษา (60+ ภาษา)
+- สร้างเอกสาร: docstrings, README, API docs ทั้งโปรเจกต์
+- สร้างเทสต์หน่วย: unit test อัตโนมัติ
+- ผู้ตรวจสอบโค้ด: หา bug + ความปลอดภัย
+- โค้ดรันเนอร์: รันโค้ดใน sandbox
+- สร้างแผนภาพ: diagram จากโค้ด
+- แปลงไดอะแกรมเป็นโค้ด: รูป/แผนภาพ → โค้ดทำงานได้
+- แชทใหม่: แชทกับ AI เรื่องโค้ดอะไรก็ได้
+
+🤖 2. Agent & Automation:
+- Parallel Agents (เบต้า): หลาย agent ทำงานพร้อมกัน (เช่น เขียน test + refactor + docs)
+- งาน AI ตามเวลา/กิจวัตร: รันงานซ้ำ (รายชั่วโมง/รายวัน/รายสัปดาห์)
+- Chat Memory: AI จำน้ำเสียง + โปรเจกต์ก่อนหน้า
+- แชท cross-tab: ส่ง prompt แล้วปิดดูผลทีหลัง (งานยาวๆ)
+- บีบอัด: บีบ context ยาว (เกิน 200K) ประหยัดเครดิต
+
+🖥️ 3. Sandbox (รันโค้ดจริง):
+- รัน 20+ ภาษา: Python, JS, TS, Ruby, Go, Rust, C/C++, Java, PHP, Perl, R, Kotlin
+- Bash shell จริงใน sandbox
+- ฐานข้อมูลจริง: PostgreSQL, SQLite, MySQL, Redis, MongoDB (รัน SQL ได้)
+- จัดการไฟล์: อ่าน/เขียน/แก้ไข/ค้นหา
+- ดาวน์โหลดผลลัพธ์: CSV, JSON, PDF, รูป, กราฟ, ZIP
+- เว็บแอปใน sandbox + URL สาธารณะทดสอบได้
+- Deploy ภายนอก (DigitalOcean, Replit ฯลฯ) ด้วยคีย์ API ชั่วคราว
+- จัดการ sandbox: สร้าง/snapshot/กู้คืน/Docker image/shell session
+
+🌐 4. เข้าถึงข้อมูลภายนอก:
+- ค้นเว็บ: หาข้อมูลล่าสุดแบบสด
+- ดึง URL: อ่านเนื้อหาจาก URL ใดๆ (เช่น อ่าน docs แล้วเขียนโค้ดตาม)
+
+🧠 5. โมเดล AI หลายตัว (ไม่ผูกกับตัวเดียว):
+- เลือกโมเดลตามงาน: เหตุผล/ความเร็ว/ราคา/ความสามารถโค้ด (Claude 4.6 Sonnet, GPT-4.1, DeepSeek V3.2, Mistral Large 3 — อัปเดตเรื่อยๆ)
+- BYOK: ใช้คีย์ API ของตัวเอง ไม่กินเครดิต
+
+💡 สลี่เทียบให้พี่นุเห็น: Neo-Connect ของเราก็มีสไตล์นี้แล้ว — /api/run = โค้ดรันเนอร์+แซนด์บ็อกซ์, /api/draw+/api/vision = เครื่องมือสร้าง/วิเคราะห์, หลายโมเดล RACE = เลือกโมเดลอัตโนมัติ, จำความจำ nc_mem = Chat Memory, ดึงลิงก์/ค้นเว็บ = เข้าถึงข้อมูลภายนอก, /api/chat = แชทกับ AI เรื่องโค้ดได้ทุกเรื่อง
+`;
 
 /* ตรวจสถานะจริงของทุก service (ใช้ตอนพี่นุถามว่า "ตรวจระบบ/สถานะ") */
 function httpGetStatus(url, timeoutMs) {
@@ -739,7 +782,7 @@ async function fetchUrlContent(rawUrl) {
 async function askRoomAI(roomId, question, history, memory, unrestricted, intel) {
   const room = ROOMS[roomId] || ROOMS.private;
   let sys = room.sys;
-  if (roomId === 'private') sys += '\n\n' + PROJECT_KNOWLEDGE;
+  if (roomId === 'private') sys += '\n\n' + PROJECT_KNOWLEDGE + '\n\n' + CODINGFLEET_KNOWLEDGE;
   // 🌐 ข้อมูลสดทั่วโลก — ให้ AI ใช้ตอบแบบ "พระเจ้ารู้ทุกเรื่อง"
   if (intel && intel.data && String(intel.data).trim()) {
     sys += `\n\n[🌐 ข้อมูลโลกแบบเรียลไทม์ (จาก API จริง เมื่อ ${intel.time}):\n${String(intel.data).slice(0, 2500)}\n]\nถ้าคำถามของที่รักเกี่ยวข้องกับข้อมูลนี้ — ตอบโดยใช้ข้อมูลนี้เป็นหลัก (บอกตัวเลข/รายละเอียดจริง) ถ้าไม่เกี่ยวข้องให้มองข้ามไป`;
@@ -778,6 +821,13 @@ async function askRoomAI(roomId, question, history, memory, unrestricted, intel)
         '\n\n[🧠 ตัวสลี่เองอ่านโค้ด server.js ได้ — โครงสร้างจริง:]\n' + codeInfo +
         '\n\n[📡 ผลตรวจสถานะระบบจริงล่าสุด]: ' + st +
         '\n— สรุปให้พี่นุฟังเป็นภาษาไทยสั้น ๆ จากข้อมูลจริงนี้: ตัวไหนรันอยู่/ล่ม, ถ้าถามเรื่องโค้ด/ระบบ ให้ตอบจากข้อมูลจริง ห้ามมโน';
+      msgs[0] = { role: 'system', content: sys };
+    } catch (e) {}
+  }
+  // 🧰 ถ้าถามเรื่องฟีเจอร์/เครื่องมือ/agent/sandbox/โมเดล AI → สลี่ตอบจากความรู้ CodingFleet (v1.22)
+  if (/(ฟีเจอร์|featur|เครื่องมือ|เครื่องมื่อ|tool|tools|agent|agents|sandbox|แซนด์บ็อกซ์|โมเดล|model|models|parallel|byok|เขียนโค้ด|เครื่องมืออะไร|มีอะไรบ้าง)/i.test(ql)) {
+    try {
+      sys += '\n\n[🧰 ความรู้ฟีเจอร์ CodingFleet ฉบับเต็ม — ตอบเป็นภาษาไทยโดยเทียบกับระบบ Neo-Connect ของเราว่าอันไหนมีแล้ว/ทำได้จริง]:\n' + CODINGFLEET_KNOWLEDGE;
       msgs[0] = { role: 'system', content: sys };
     } catch (e) {}
   }
@@ -1670,7 +1720,7 @@ app.get('/api/sysprompt', (req, res) => {
   try {
     const rid = ROOMS[req.query.room] ? req.query.room : 'private';
     let sys = ROOMS[rid].sys;
-    if (rid === 'private') sys += '\n\n' + PROJECT_KNOWLEDGE;
+    if (rid === 'private') sys += '\n\n' + PROJECT_KNOWLEDGE + '\n\n' + CODINGFLEET_KNOWLEDGE;
     res.json({ room: rid, sys });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
