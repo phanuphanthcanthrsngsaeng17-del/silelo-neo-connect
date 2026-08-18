@@ -736,7 +736,7 @@ async function askRoomAI(roomId, question, history, memory, unrestricted, intel)
   // 🔍 ถ้าพี่นุถามเรื่อง ตรวจ/สถานะ/ระบบ/โค้ด/บั๊ก/log/ทำงานยังไง → สลี่รู้จริง (v1.21 เข้าใจระบบตัวเอง 100%)
   const qs = String(question);
   const ql = qs.toLowerCase();
-  if (/(ตรวจ|สถานะ|ระบบ|ออนไลน์|ออนไลน|ล่ม|ขึ้นใหม่|ทำงานอยู่|ping|status|health|เวิร์คไหน|server|เซิร์ฟเวอร์|โค้ด|บั๊ก|bug|log|ทำงานยังไง|endpoint|api|รันอยู่)/i.test(ql)) {
+  if (/(ตรวจ|สถานะ|ระบบ|ออนไลน์|ออนไลน|ล่ม|ขึ้นใหม่|ทำงานอยู่|ping|status|health|เวิร์คไหน|server|เซิร์ฟเวอร์|โค้ด|บั๊ก|bug|log|ทำงานยังไง|endpoint|api|รันอยู่|รัน|หน่วยความจำ|ความจำ|memory|ram|uptime|นานแค่ไหน|เริ่มรัน|ใช้ไปเท่าไหร่)/i.test(ql)) {
     try {
       const st = await checkServices();
       const si = systemIntel();
