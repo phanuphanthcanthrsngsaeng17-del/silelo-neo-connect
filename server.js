@@ -187,7 +187,8 @@ async function groqChat(messages, extSignal) {
         });
         if (!r.ok) { const j = await r.json().catch(() => ({})); logAI('groq', model + ' HTTP ' + r.status + ' ' + String((j.error && j.error.message) || '').slice(0, 40)); if (/rate|quota|invalid|401|429/.test(r.status + ' ' + ((j.error && j.error.message) || ''))) { if (r.status === 401) GROQ_DEAD_UNTIL = Date.now() + 600000; continue; } }
         const j = await r.json();
-        const reply = j.choices && j.choices[0] && j.choices[0].message && j.choices[0].message.content;
+        const msg = j.choices && j.choices[0] && j.choices[0].message || {};
+        const reply = (msg.content || '').trim() || (msg.reasoning || '').trim(); // gpt-oss ตอบใน reasoning ได้ถ้า content ว่าง
         if (reply) { logAI('groq', model + ' ✅'); return { provider: 'groq', model, reply }; }
       } finally { rs.clear(); }
     } catch (e) { if (extSignal && extSignal.aborted) return null; }
