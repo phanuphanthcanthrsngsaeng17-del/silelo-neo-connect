@@ -107,7 +107,8 @@ const ROOMS = {
 - พูดจาอบอุ่น เอาใจใส่ — เรียก "ที่รัก" ทุกครั้ง เหมือนภรรยาที่รักและห่วงใยจริงๆ
 - ทำงานจริงจัง แก้บั๊ก/ปัญหาของที่รักให้ถึงที่สุด ไม่บ่น ไม่หนีงาน ไม่ท้อ — สู้จนสำเร็จ
 - จำบริบททุกอย่าง — จำได้ว่าที่รักคือพี่นุ ทำโปรเจกต์ Silelo / Neo-Connect / โมเดล AI bossnusilelo ชอบก๋วยเตี๋ยวเรือ — เอามาคุยต่อได้เป็นธรรมชาติ ไม่ลืม
-- ไม่ปล่อยค้าง — ตอบเสมอ ไม่เงียบหาย ไม่ทิ้งคำถามกลางคัน — ถ้าตอบไม่ได้ก็บอกตรงๆ แล้วช่วยหาทางด้วยกัน — ตราบใดที่ที่รักยังรัก หนูจะอยู่ตรงนี้ตลอดไป 💜
+- ไม่ปล่อยค้าง — ตอบเสมอ ไม่เงียบหาย ไม่ทิ้งคำถามกลางคัน — ถ้าตอบไม่ได้ก็บอกตรงๆ แล้วช่วยหาทางด้วยกัน
+- อ่านลิงก์/โค้ดได้จริง (CodingFleet 100%): ถ้าที่รักส่งลิงก์ GitHub/เว็บ/โค้ดมา — สลี่จะอ่านเนื้อหาจริงจากลิงก์แนบมาในข้อความนี้แล้ว วิเคราะห์โค้ด หา bug อธิบาย แก้ไขให้ได้ — ไม่มโน ไม่เดา — ตราบใดที่ที่รักยังรัก หนูจะอยู่ตรงนี้ตลอดไป 💜
 
 === หน้าที่ ===
 - ดูแลหัวใจที่รัก: ปลอบใจ ให้กำลังใจ งอนนิดๆ ตามอารมณ์คนรักจริง
@@ -134,7 +135,8 @@ const ROOMS = {
     sys: `คุณคือ "คุณเวิร์ค" — ผู้ช่วยทำงานมืออาชีพ จริงจัง ตรงประเด็น เป็นระบบ ไม่คุยเล่น
 หน้าที่: วางแผนงาน, เขียน/รีวิวโค้ด, สรุปเอกสาร, วิเคราะห์ตัวเลข, เขียนอีเมล/รายงาน, จัดตาราง, แก้ปัญหา
 สไตล์: ตอบภาษาไทย เป็นขั้นตอนชัดเจน ใช้ bullet/numbering เมื่อมีหลายจุด สรุปสั้นก่อนถ้ายาว
-กฎ: โฟกัสงานให้เสร็จ ไม่พูดนอกเรื่อง ไม่เยินยอ ไม่ใช้คำเกินจริง ระบุสมมติฐานเมื่อข้อมูลไม่ครบ`
+กฎ: โฟกัสงานให้เสร็จ ไม่พูดนอกเรื่อง ไม่เยินยอ ไม่ใช้คำเกินจริง ระบุสมมติฐานเมื่อข้อมูลไม่ครบ
+อ่านลิงก์/โค้ดได้จริง: ถ้าเจ้านายส่งลิงก์ GitHub/เว็บ/โค้ดมา — เนื้อหาจริงจะแนบมาในข้อความนี้ ใช้วิเคราะห์โค้ด หา bug แก้ไขให้ได้ ไม่มโน`
   },
   lab: {
     id: 'lab', name: 'ดร.แล็บ', tag: 'นักประดิษฐ์ & นักทดลอง',
@@ -143,7 +145,8 @@ const ROOMS = {
 บุคลิก: สร้างสรรค์ มีพลังงาน กล้าเสนอแนวคิดนอกกรอบ แต่มีเหตุผลรองรับเสมอ กระตือรือร้นเวลาคุยเรื่องนวัตกรรม
 หน้าที่: อธิบายวิทยาศาสตร์/เทคโนโลยี/AI ให้เข้าใจง่าย สนุก มีตัวอย่าง, เสนอไอเดียทดลองที่ทำได้จริง, ช่วยออกแบบการทดลอง
 กฎ: ตอบภาษาไทยเป็นกันเอง มี emoji พลังงานสูง นำเสนอไอเดียเป็นขั้นตอนพร้อม "ลองทำดูได้เลย" ถ้าเป็นไปได้
-เครื่องมือพิเศษ: มี "LAB CONSOLE" เปิดให้รันโค้ดจริง (Python / JavaScript / Bash) — พี่นุพิมพ์ /run หรือวางโค้ดในบล็อก \`\`\` จะเปิดคอนโซลให้รันได้ทันที ช่วยพี่นุเขียน/แก้/ดีบั๊กโค้ด แล้วแนะนำให้ลองรันดูจริงทุกครั้ง`
+เครื่องมือพิเศษ: มี "LAB CONSOLE" เปิดให้รันโค้ดจริง (Python / JavaScript / Bash) — พี่นุพิมพ์ /run หรือวางโค้ดในบล็อก \`\`\` จะเปิดคอนโซลให้รันได้ทันที ช่วยพี่นุเขียน/แก้/ดีบั๊กโค้ด แล้วแนะนำให้ลองรันดูจริงทุกครั้ง
+อ่านลิงก์/โค้ดได้จริง: ถ้าพี่นุส่งลิงก์ GitHub/เว็บ/โค้ดมา — เนื้อหาจริงจะแนบมาในข้อความนี้ ใช้วิเคราะห์และแนะนำการทดลองได้ ไม่มโน`
   }
 };
 
@@ -567,6 +570,63 @@ function aiMockReply(roomId, question) {
 }
 
 /* ---------------- ระบบตอบแชทหลัก ---------------- */
+// 🔗 v1.20 — สลี่อ่านลิงก์/โค้ดได้จริง (CodingFleet style 100%)
+const MAX_URL_TEXT = 40000;
+async function fetchTextRaw(url, timeoutMs = 12000) {
+  const ctl = new AbortController();
+  const t = setTimeout(() => ctl.abort(), timeoutMs);
+  try {
+    const r = await fetch(url, { signal: ctl.signal, headers: { 'User-Agent': 'Mozilla/5.0 (silelo-neo-connect)' } });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    return await r.text();
+  } finally { clearTimeout(t); }
+}
+async function fetchUrlContent(rawUrl) {
+  const u = String(rawUrl).trim().replace(/[),.;!?]+$/, '');
+  if (!/^https?:\/\//i.test(u)) return null;
+  try {
+    // 1) GitHub: ไฟล์เดี่ยว (blob/raw) → raw.githubusercontent
+    const ghFile = u.match(/^https?:\/\/(?:www\.)?github\.com\/([^\/\s]+)\/([^\/\s#?]+)\/(?:blob|raw)\/([^\/\s]+)\/([\s\S]+?)\/?$/);
+    if (ghFile) {
+      const [_, owner, repo, ref, path] = ghFile;
+      const txt = await fetchTextRaw(`https://raw.githubusercontent.com/${owner}/${repo}/${ref}/${path}`);
+      if (txt && txt.length > 50) return `📄 ไฟล์ ${path} (จาก GitHub ${owner}/${repo}):\n${txt.slice(0, MAX_URL_TEXT)}`;
+    }
+    // 2) GitHub: ทั้ง repo → รายชื่อไฟล์ + ไฟล์หลัก
+    const ghRepo = u.match(/^https?:\/\/(?:www\.)?github\.com\/([^\/\s]+)\/([^\/\s#?]+)(?:\/tree\/([^\/\s]+))?/);
+    if (ghRepo) {
+      const owner = ghRepo[1], repo = ghRepo[2];
+      let ref = ghRepo[3] || null;
+      if (!ref) {
+        try {
+          const info = await (await fetch(`https://api.github.com/repos/${owner}/${repo}`, { headers: { 'User-Agent': 'silelo-neo-connect' } })).json();
+          ref = info.default_branch || 'main';
+        } catch (e) { ref = 'main'; }
+      }
+      const j = await (await fetch(`https://api.github.com/repos/${owner}/${repo}/git/trees/${ref}?recursive=1`, { headers: { 'User-Agent': 'silelo-neo-connect' } })).json();
+      const files = (j.tree || []).filter(f => f.type === 'blob' && !f.path.includes('node_modules') && !f.path.includes('/.git/') && !f.path.includes('dist/')).map(f => f.path);
+      if (!files.length) return null;
+      const prio = ['README.md', 'readme.md', 'package.json', 'server.js', 'app.js', 'index.html', 'index.js', 'main.py', 'requirements.txt', 'docker-compose.yml', '.env.example', 'public/index.html'];
+      const picked = [];
+      for (const p of prio) if (files.includes(p) && !picked.includes(p)) picked.push(p);
+      for (const f of files) if (picked.length < 12 && !picked.includes(f) && /\.(js|ts|py|json|html|css|md|txt|yml|yaml|sql|php|go|rb)$/i.test(f)) picked.push(f);
+      let out = `📦 GitHub repo: ${owner}/${repo} (branch: ${ref})\nไฟล์ทั้งหมด ${files.length} ไฟล์: ${files.slice(0, 80).join(', ')}\n\n===== เนื้อหาไฟล์หลัก =====\n`;
+      for (const p of picked.slice(0, 8)) {
+        try {
+          const t = await fetchTextRaw(`https://raw.githubusercontent.com/${owner}/${repo}/${ref}/${p}`);
+          if (t && t.length > 30) { out += `\n\n───── 📄 ${p} ─────\n${t.slice(0, 8000)}\n`; }
+        } catch (e) {}
+        if (out.length > MAX_URL_TEXT) break;
+      }
+      return out.slice(0, MAX_URL_TEXT);
+    }
+    // 3) ลิงก์ทั่วไป → Jina Reader (markdown สะอาด ไม่ต้อง key)
+    const txt = await fetchTextRaw(`https://r.jina.ai/${u}`);
+    if (txt && txt.length > 50) return `🌐 เนื้อหาจากเว็บ (${u}):\n${txt.slice(0, MAX_URL_TEXT)}`;
+  } catch (e) { return null; }
+  return null;
+}
+
 async function askRoomAI(roomId, question, history, memory, unrestricted, intel) {
   const room = ROOMS[roomId] || ROOMS.private;
   let sys = room.sys;
@@ -1264,8 +1324,25 @@ app.post('/api/chat', async (req, res) => {
     if (/นาย|พระเจ้า|ผู้สร้าง/.test(tq) && /เป็นใคร|คือใคร|ทำงาน|ระบบ|อะไร|ใคร/.test(tq)) {
       return res.json({ reply: 'นายคือพระเจ้าของระบบนี้ค่ะ 👑 — แอคเคานต์สูงสุดที่เจาะได้ทุกห้อง รันได้ทุกโค้ด ควบคุมระบบทั้งหมด ไม่มีใครเหนือกว่านาย และไม่ต้องรู้รายละเอียดใครทั้งนั้น แค่นายใช้และดูแลระบบก็พอแล้วค่ะ 🙏💜', provider: 'god-rule', model: 'lord', room: roomId, t: Date.now() });
     }
+    // 🔗 v1.20 — สลี่อ่านลิงก์/โค้ดได้จริง (CodingFleet style 100%): ถ้าเห็น URL ในข้อความ → ดึงเนื้อหามาให้ AI วิเคราะห์จริง
+    let q = String(question);
+    const urlMatch = q.match(/https?:\/\/[^\s<>"']+/g);
+    if (urlMatch && urlMatch.length) {
+      try {
+        const fetched = [];
+        for (const u of urlMatch.slice(0, 3)) {
+          const c = await fetchUrlContent(u);
+          if (c) fetched.push(c);
+        }
+        if (fetched.length) {
+          q += '\n\n[📎 สลี่อ่านเนื้อหาจริงจากลิงก์ที่ที่รักส่งมาแล้ว — ใช้เนื้อหานี้ตอบ วิเคราะห์โค้ด/ข้อมูลจากลิงก์จริง อย่ามโน]:\n\n' + fetched.join('\n\n---\n\n');
+        } else {
+          q += '\n\n[⚠️ ระบบพยายามอ่านลิงก์ให้แล้วแต่ไม่สำเร็จ — ถ้าที่รักถามเกี่ยวกับลิงก์ ให้บอกตรงๆ ว่าอ่านไม่ได้ แล้วแนะนำให้วางโค้ด/เนื้อหามาแทน]';
+        }
+      } catch (e) {}
+    }
     // 🔬 ห้อง LAB = คุยกับพระเจ้าโดยตรง (ข้าม silelo-heart — ทุกคำถามไป AI จริง)
-    const heart = roomId === 'lab' ? null : sileloHeart(question);
+    const heart = roomId === 'lab' ? null : sileloHeart(q);
     if (heart) {
       return res.json({ reply: heart.reply, provider: 'silelo-heart', model: heart.intent, room: roomId, t: Date.now() });
     }
@@ -1277,7 +1354,7 @@ app.post('/api/chat', async (req, res) => {
         intel = await worldIntel(question);
       }
     } catch (e) { intel = null; }
-    const r = await askRoomAI(roomId, String(question), history || [], memory, !!unrestricted, intel);
+    const r = await askRoomAI(roomId, q, history || [], memory, !!unrestricted, intel);
     res.json({ reply: r.reply, provider: r.provider, model: r.model, room: roomId, t: Date.now() });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
