@@ -124,6 +124,24 @@
   .icon-btn.active { border-color: #ff3d00 !important; color: #fff !important; animation: rulepulse 1.2s ease-in-out infinite; }
   @keyframes rulepulse { 0%,100% { box-shadow: 0 0 6px rgba(255,61,0,.5); } 50% { box-shadow: 0 0 18px rgba(255,61,0,.9); } }
 
+  /* ===== จอมือถือ: ปุ่ม header เล็กลง ไม่ล้นจอ ===== */
+  @media (max-width: 560px) {
+    header { gap: 8px; padding: 8px 10px; }
+    .avatar-wrap { width: 40px; height: 40px; }
+    .avatar { font-size: 20px; }
+    .hinfo h1 { font-size: 13px; letter-spacing: 2px; }
+    .hbtns { gap: 4px; }
+    .icon-btn { width: 33px; height: 33px; font-size: 13.5px; border-radius: 5px; }
+    .back-btn { width: 33px; height: 33px; font-size: 15px; }
+    #statusDot { display: none; }
+  }
+  @media (max-width: 380px) {
+    .icon-btn { width: 30px; height: 30px; font-size: 12.5px; }
+    .hbtns { gap: 3px; }
+    header { padding: 8px 6px; gap: 6px; }
+    .hinfo h1 { font-size: 12px; }
+  }
+
   /* ===== Messages ===== */
   #msgs { flex: 1; overflow-y: auto; padding: 20px 16px 8px; display: flex; flex-direction: column; gap: 14px; scroll-behavior: smooth; }
   .msg { max-width: 82%; display: flex; flex-direction: column; animation: pop .28s cubic-bezier(.2,.9,.3,1.2); }
@@ -254,7 +272,7 @@
   @keyframes callPulse { 0%,100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 45%, transparent); } 50% { box-shadow: 0 0 0 8px transparent; } }
   #callOverlay {
     position: fixed; inset: 0; z-index: 100; display: none;
-    background: radial-gradient(120% 120% at 50% 0%, rgba(8,14,24,.98), rgba(2,4,9,.99));
+    background: radial-gradient(130% 130% at 50% -10%, #4b2a7a 0%, #3a2160 38%, #552a5e 68%, #6b2f56 100%);
     flex-direction: column; align-items: center;
     justify-content: space-between;
     padding: max(env(safe-area-inset-top), 40px) 24px max(env(safe-area-inset-bottom), 24px);
@@ -290,6 +308,13 @@
   }
   #callTrans.empty { color: rgba(200,225,240,.35); }
   /* ปุ่มแชร์จอ — เล็ก มุมขวาบน */
+  /* ===== ▶ คลื่นเสียงไมค์ (visualizer) ===== */
+  #callViz { width: min(280px, 86%); height: 46px; margin: 2px auto 0; display: flex; align-items: center; justify-content: center; }
+  #callViz canvas { width: 100%; height: 100%; display: block; }
+  #micHint { font-size: 11px; color: rgba(255,200,225,.85); min-height: 16px; margin-top: 3px; text-align: center; letter-spacing: .3px; }
+  #micHint.warn { color: #ffb3c1; font-weight: 600; }
+  .cctrl.warn { animation: micWarn 1s ease-in-out infinite alternate; }
+  @keyframes micWarn { from { box-shadow: 0 0 0 0 rgba(255,80,110,.55); } to { box-shadow: 0 0 0 8px rgba(255,80,110,0); } }
   .cshare {
     position: absolute; top: max(env(safe-area-inset-top), 18px); right: 16px;
     display: flex; flex-direction: column; align-items: center; gap: 2px;
@@ -509,6 +534,8 @@
     <div id="callTimer">00:00</div>
   </div>
   <div id="callTrans" class="empty">🎧 ฟังอยู่ พูดได้เลย...</div>
+  <div id="callViz"><canvas id="callVizCanvas" width="520" height="88"></canvas></div>
+  <div id="micHint"></div>
   <div class="call-ctrl-row">
     <button class="cctrl" id="stopTtsBtn" title="หยุดพูดทันที — สลี่จะหยุดแล้วฟังพี่นุ">⏹<span>หยุดพูด</span></button>
     <button class="cctrl" id="muteBtn" title="ปิด/เปิดไมค์">🤫<span>ไมค์</span></button>
@@ -1065,13 +1092,16 @@
   let callActive = false, callStateName = 'idle';
   let recog = null, stream = null, callTimer = null, callSec = 0;
   let finalText = '', silenceTimer = null, muted = false, speakerOn = true;
+  let vizAnalyser = null, vizData = null, vizRAF = null, micLevel = 0, micMon = null, silentCount = 0, micWarned = false;
+  const micHintEl = document.getElementById('micHint');
 
   callFace.textContent = R.avatar;
   callName.textContent = room === 'private' ? 'สลี่ออลา' : R.name;
 
   function setCallState(s) {
     callStateName = s;
-    const map = { connecting: 'CONNECTING...', listening: '🎧 กำลังฟัง... พูดได้เลย', thinking: '🧠 กำลังคิด...', speaking: '🔊 พูดอยู่...' };
+    if (s === 'listening') { silentCount = 0; micWarned = false; if (muteBtn) muteBtn.classList.remove('warn'); if (micHintEl) micHintEl.className = ''; }
+    const map = { connecting: 'CONNECTING...', listening: '🎧 กำลังฟัง... พูดได้เลย', thinking: '🧠 กำลังคิด...', speaking: '🔊 พูดอยู่...' , micblocked: '\u26d4\ufe0f \u0e44\u0e21\u0e42\u0e04\u0e23\u0e42\u0e1f\u0e19\u0e16\u0e39\u0e01\u0e1a\u0e25\u0e47\u0e2d\u0e01 \u2014 \u0e2d\u0e19\u0e38\u0e0d\u0e32\u0e15\u0e44\u0e21\u0e04\u0e4c\u0e41\u0e25\u0e49\u0e27\u0e25\u0e2d\u0e07\u0e43\u0e2b\u0e21\u0e48' };
     callState.textContent = map[s] || s;
     callAvatar.classList.toggle('speaking', s === 'speaking');
   }
@@ -1193,13 +1223,26 @@
     callTimer = setInterval(tickTimer, 1000);
     try {
       stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    } catch (e) {
-      toast('⛔ ไมโครโฟนถูกบล็อก — กด 🔒 แล้วอนุญาตไมค์ แล้วลองใหม่');
-      endCall(); return;
+        } catch (e) {
+      setCallState('micblocked');
+      callOverlay.classList.add('show');
+      setCallTrans('', true);
+      if (micHintEl) { micHintEl.textContent = '\u26d4\ufe0f ไมโครโฟนถูกบล็อก — กด \ud83d\udd12 แถบที่อยู่ \u2192 Microphone > Allow แล้วกดโทรใหม่ (ถ้าไม่มีปุ่ม ให้ล้างประวัติ/ตั้งค่าไมค์)'; micHintEl.className = 'warn'; }
+      toast('\u26d4 ไมโครโฟนถูกบล็อก — อนุญาตไมค์แล้วลองใหม่');
+      setTimeout(function () {
+        callOverlay.classList.remove('show');
+        setCallTrans('', true);
+      }, 3200);
+      return;
     }
     if (!initRecog()) { endCall(); return; }
     try { recog.start(); } catch (e) {}
     setCallState('listening');
+    startViz();
+    if (micHintEl) { micHintEl.textContent = '🎙️ พูดได้เลย — ถ้าเห็นคลื่นเสียงขยับคือไมค์ทำงาน'; micHintEl.className = ''; }
+    silentCount = 0; micWarned = false; muteBtn.classList.remove('warn');
+    if (micMon) clearInterval(micMon);
+    micMon = setInterval(micMonitorTick, 1000);
     toast('📞 สายเชื่อมต่อแล้ว — พูดได้เลย!');
     speak('สายถึงสลี่แล้วค่า พี่นุพูดกับสลี่ได้เลยนะคะ 💜');
   }
@@ -1297,6 +1340,10 @@
     clearInterval(callTimer);
     stopLive();
     stopVad();
+    stopViz();
+    if (micMon) { clearInterval(micMon); micMon = null; }
+    if (micHintEl) { micHintEl.textContent = ''; micHintEl.className = ''; }
+    muteBtn.classList.remove('warn');
     stopSpeaking();
     if (recog) { try { recog.stop(); } catch (e) {} recog = null; }
     if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; }
@@ -1337,6 +1384,62 @@
     } catch (e) {}
   }
   function stopVad() { vadRunning = false; vadCb = null; }
+  /* ===== VISUALIZER - show real mic level ===== */
+  function startViz() {
+    if (!stream || !callActive) return;
+    try {
+      const actx = vadCtx || new (window.AudioContext || window.webkitAudioContext)();
+      vadCtx = actx;
+      if (actx.state === 'suspended') actx.resume().catch(function () {});
+      if (!vizAnalyser) {
+        const src = actx.createMediaStreamSource(stream);
+        vizAnalyser = actx.createAnalyser();
+        vizAnalyser.fftSize = 64;
+        vizAnalyser.smoothingTimeConstant = 0.4;
+        src.connect(vizAnalyser);
+        vizData = new Uint8Array(vizAnalyser.frequencyBinCount);
+      }
+      const cvs = document.getElementById('callVizCanvas');
+      const g = cvs.getContext('2d');
+      const draw = () => {
+        if (!callActive) { vizRAF = null; return; }
+        vizAnalyser.getByteFrequencyData(vizData);
+        g.clearRect(0, 0, cvs.width, cvs.height);
+        const n = vizData.length, bw = cvs.width / n * 0.72, gap = (cvs.width - bw * n) / (n + 1);
+        let sum = 0;
+        for (let i = 0; i < n; i++) {
+          const v = vizData[i] / 255, h = Math.max(5, v * (cvs.height - 8));
+          g.fillStyle = 'hsla(' + (275 + v * 60) + ', 92%, ' + (60 + v * 15) + '%, .95)';
+          if (g.roundRect) { g.beginPath(); g.roundRect(gap + i * (bw + gap), cvs.height - h, bw, h, 3); g.fill(); }
+          else { g.fillRect(gap + i * (bw + gap), cvs.height - h, bw, h); }
+          sum += v;
+        }
+        micLevel = sum / n;
+        vizRAF = requestAnimationFrame(draw);
+      };
+      draw();
+    } catch (e) {}
+  }
+  function stopViz() {
+    if (vizRAF) { cancelAnimationFrame(vizRAF); vizRAF = null; }
+    const cvs = document.getElementById('callVizCanvas');
+    if (cvs) { const g = cvs.getContext('2d'); g.clearRect(0, 0, cvs.width, cvs.height); }
+    micLevel = 0;
+  }
+  function micMonitorTick() {
+    if (!callActive) return;
+    if (callStateName === 'listening' || callStateName === 'connecting') {
+      if (micLevel < 0.02) silentCount++;
+      else { silentCount = 0; micWarned = false; if (micHintEl) micHintEl.textContent = ''; }
+      if (silentCount >= 6 && !micWarned) {
+        micWarned = true;
+        if (micHintEl) { micHintEl.textContent = 'สัญญาณไมค์ไม่ออก — กด 🔒 แถบที่อยู่ อนุญาตไมค์แล้วลองใหม่ หรือเปลี่ยนอุปกอณ์เสียง'; micHintEl.className = 'warn'; }
+        muteBtn.classList.add('warn');
+        toast('ไม่ได้ยินเสียงพี่นุ — ตรวจสิทธิ์ไมค์ในเบราว์เซอร์ (🔒 แถบที่อยู่)');
+      } else if (micLevel >= 0.02 && micHintEl) { micHintEl.className = ''; }
+    }
+  }
+
 
   /* ⏹ ปุ่มหยุดพูด — สลี่เงียบแล้วฟังพี่นุทันที */
   const stopTtsBtn = document.getElementById('stopTtsBtn');
@@ -1361,7 +1464,7 @@
   muteBtn.onclick = () => {
     muted = !muted;
     muteBtn.classList.toggle('off', muted);
-    muteBtn.textContent = muted ? '🤫' : '🤫';
+    muteBtn.textContent = muted ? '\ud83d\udd07' : '\ud83c\udf99\ufe0f';
     if (stream) stream.getAudioTracks().forEach(t => t.enabled = !muted);
     toast(muted ? '🔇 ไมค์ปิด — บอทจะไม่ได้ยิน' : '🎙 ไมค์เปิดแล้ว');
   };
