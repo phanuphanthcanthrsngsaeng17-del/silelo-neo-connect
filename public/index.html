@@ -582,6 +582,10 @@
     setTimeout(function () { var el = document.getElementById('lockMsg'); if (el) el.textContent = '✅ เข้าสู่ระบบสำเร็จ'; }, 300);
     history.replaceState(null, '', location.pathname);
   }
+  /* ===== ⚡ ปลุก silelo (Render) กันหลับ — ping ทุก 4 นาที ===== */
+  function wakeSilelo() { try { fetch('https://silelo.onrender.com/', { method: 'GET', cache: 'no-store' }).catch(function(){}); } catch (e) {} }
+  try { wakeSilelo(); setInterval(wakeSilelo, 240000); } catch (e) {}
+
 </script>
 <script>
   // PWA: ลงทะเบียน Service Worker (โหลดไว + ใช้ได้ออฟไลน์)

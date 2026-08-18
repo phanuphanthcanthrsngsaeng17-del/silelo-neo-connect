@@ -17,6 +17,12 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&display=swap" rel="stylesheet">
 <script src="https://js.puter.com/v2/"></script>
+<script>
+  /* ===== ⚡ ปลุก silelo (Render) กันหลับ — ping ทุก 4 นาที ===== */
+  function wakeSilelo() { try { fetch('https://silelo.onrender.com/', { method: 'GET', cache: 'no-store' }).catch(function(){}); } catch (e) {} }
+  try { wakeSilelo(); setInterval(wakeSilelo, 240000); } catch (e) {}
+
+</script>
 <style>
   :root {
     --bg: #01030a; --cyan: #00e5ff; --purple: #a78bfa; --amber: #ffb74d; --pink: #ff2d95;
