@@ -30,7 +30,7 @@
   /* ===== DUSTY — theme สว่าง สะอาดตา (ค่าเริ่มต้น) ===== */
   body.theme-dusty {
     --accent: #8b7cf7; --cyan: #8b7cf7; --purple: #c4b5fd; --pink: #f9a8d4; --amber: #fbbf24;
-    --bg: #f5f6fb; --txt: #2a2f45; --dim: #667085;
+    --bg: #f5f6fb; --txt: #2a2f45; --dim: #545d73;
     --bot-grad1: rgba(167,139,250,.16); --bot-grad2: rgba(249,168,212,.12); --bot-border: rgba(167,139,250,.35);
     --panel: rgba(255,255,255,.8); --panel-2: rgba(255,255,255,.55);
     --field: #ffffff; --line: rgba(139,124,247,.3);
@@ -319,7 +319,7 @@
   .call-avatar.speaking .cface { animation: faceGlow 1s ease-in-out infinite alternate; }
   @keyframes faceGlow { from { box-shadow: 0 0 30px color-mix(in srgb, var(--accent) 30%, transparent); } to { box-shadow: 0 0 70px color-mix(in srgb, var(--accent) 80%, transparent); } }
   #callName { font-size: 24px; font-weight: 800; letter-spacing: 2px; }
-  #callState { font-size: 13px; color: var(--dim); margin: 8px 0 6px; letter-spacing: 1px; min-height: 18px; font-weight: 700; }
+  #callState { font-size: 13px; color: var(--dim); margin: 8px 0 6px; letter-spacing: 1px; min-height: 18px; font-weight: 800; }
   #callTimer { font-size: 32px; font-weight: 700; font-variant-numeric: tabular-nums; margin: 8px 0 0; color: var(--txt); }
   #callTrans {
     min-height: 44px; max-width: 88%; width: 320px; text-align: center; font-size: 14px;
@@ -336,7 +336,7 @@
   #callViz { width: min(280px, 86%); height: 46px; margin: 2px auto 0; display: flex; align-items: center; justify-content: center; }
   #callViz canvas { width: 100%; height: 100%; display: block; }
   #micHint { font-size: 11px; color: var(--dim); min-height: 16px; margin-top: 3px; text-align: center; letter-spacing: .3px; }
-  #micHint.warn { color: #d6336c; font-weight: 700; }
+  #micHint.warn { color: #be185d; font-weight: 700; }
   .cctrl.warn { animation: micWarn 1s ease-in-out infinite alternate; }
   @keyframes micWarn { from { box-shadow: 0 0 0 0 rgba(255,80,110,.55); } to { box-shadow: 0 0 0 8px rgba(255,80,110,0); } }
   .cshare {
