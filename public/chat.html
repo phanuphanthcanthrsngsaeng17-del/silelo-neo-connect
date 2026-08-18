@@ -867,6 +867,7 @@
     return /^(print|console\.|echo|ls|pwd|cd|cat|mkdir|rm|cp|mv|git|npm|pip|def |import |from |const |let |var |function |for |while |if |class |#include|System\.out|fmt\.|puts |<\?php|\d+\s*[+\-*\/]\s*\d+)/.test(s);
   }
   const LANG_ICON = { python: '🐍', javascript: '🟨', bash: '🐚', java: '☕', cpp: '➕', c: '🔵', go: '🐹', rust: '🦀', typescript: '🔷', ruby: '💎', php: '🐘' };
+  function escHtml(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;'); }
   function escAttr(s) { return String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
   function extractHtmlDoc(code) {
     const s = String(code || '');
@@ -2523,40 +2524,39 @@ lockScreen.classList.remove('show');
   </script>
 
 <script>
-/* ===== 🧭️ CODE TOOLS (CodingFleet style) ===== */
+/* ===== 🧰 CODE TOOLS (CodingFleet style) — v2 ===== */
 const CT_MODES = {
   create:    { label: '🐍 สร้างโค้ด', ask: 'สลี่จะสร้างโค้ดอะไรให้ (ภาษา python/javascript/bash/java/c/cpp/go/rust ฯลฯ)?' },
-  convert:   { label: '🔄 แปลงภาษา', ask: 'โค้ดที่จะแปลง (วางโค้ดในช่องพิมพ์) + ภาษาเป้าหมาย?' },
-  explain:   { label: '📖 อธิบายโค้ด', ask: 'วางโค้ดที่อยากให้อธิบาย (ในช่องพิมพ์)' },
-  improve:   { label: '⚡ ปรับปรุง', ask: 'วางโค้ดที่อยากให้ปรับปรุง (ในช่องพิมพ์)' },
-  comment:   { label: '💬 คอมเมนต์', ask: 'วางโค้ดที่อยากให้ใส่คอมเมนต์ (ในช่องพิมพ์)' },
-  unittest:  { label: '🧪 Unit Test', ask: 'วางโค้ดที่อยากให้สร้าง test (ในช่องพิมพ์)' },
-  diagram:   { label: '📊 ไดอแกรม', ask: 'อธิบายไดอแกรมที่อยากได้ (เช่น: ขั้นตอนเข้าสู่ระบบ)' },
-  refactor:  { label: '🔧 Refactor', ask: 'วางโค้ดที่อยาก refactor (ในช่องพิมพ์)' },
+  convert:   { label: '🔄 แปลงภาษา', ask: 'วางโค้ดที่จะแปลงในช่องพิมพ์ + บอกภาษาปลายทาง (เช่น: แปลง python นี้เป็น javascript)' },
+  explain:   { label: '📖 อธิบายโค้ด', ask: 'วางโค้ดที่อยากให้อธิบายในช่องพิมพ์' },
+  improve:   { label: '⚡ ปรับปรุง', ask: 'วางโค้ดที่อยากให้ปรับปรุงในช่องพิมพ์' },
+  comment:   { label: '💬 คอมเมนต์', ask: 'วางโค้ดที่อยากให้ใส่คอมเมนต์ในช่องพิมพ์' },
+  unittest:  { label: '🧪 Unit Test', ask: 'วางโค้ดที่อยากให้สร้าง unit test ในช่องพิมพ์' },
+  diagram:   { label: '📊 ไดอะแกรม', ask: 'อธิบายไดอะแกรมที่อยากได้ (เช่น: ขั้นตอนเข้าสู่ระบบ, โครงสร้างคลาส, ลำดับการทำงาน)' },
+  refactor:  { label: '🔧 Refactor', ask: 'วางโค้ดที่อยากให้ refactor ในช่องพิมพ์' },
   websearch: { label: '🌐 ค้นหาเว็บ', ask: 'พิมพ์สิ่งที่อยากค้นหา' }
 };
 let mermaidLoaded = false;
 function loadMermaid(cb) {
-  if (window.mermaid) { try { mermaid.initialize({ startOnLoad: false, theme: 'dark' }); } catch(e){} cb(); return; }
-  if (mermaidLoaded) { const iv = setInterval(() => { if (window.mermaid) { clearInterval(iv); try { mermaid.initialize({ startOnLoad: false, theme: 'dark' }); } catch(e){} cb(); } }, 200); setTimeout(() => clearInterval(iv), 8000); return; }
+  if (window.mermaid) { try { mermaid.initialize({ startOnLoad: false, theme: 'dark' }); } catch (e) {} cb(); return; }
+  if (mermaidLoaded) { const iv = setInterval(() => { if (window.mermaid) { clearInterval(iv); try { mermaid.initialize({ startOnLoad: false, theme: 'dark' }); } catch (e) {} cb(); } }, 200); setTimeout(() => clearInterval(iv), 8000); return; }
   mermaidLoaded = true;
   const sc = document.createElement('script');
   sc.src = 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js';
-  sc.onload = () => { try { mermaid.initialize({ startOnLoad: false, theme: 'dark' }); } catch(e){} cb(); };
+  sc.onload = () => { try { mermaid.initialize({ startOnLoad: false, theme: 'dark' }); } catch (e) {} cb(); };
   sc.onerror = () => { mermaidLoaded = false; cb(); };
   document.head.appendChild(sc);
 }
 function renderMermaidIn(el) {
-  /* render ```mermaid ... ``` ใน element ใดๆ */
-  const blocks = el.querySelectorAll('pre code.language-mermaid, code.language-mermaid');
+  const blocks = el.querySelectorAll('code.language-mermaid');
   blocks.forEach(bc => {
     const src = bc.textContent.trim();
     if (!src) return;
     loadMermaid(() => {
       if (!window.mermaid) return;
+      const pre = bc.closest('pre');
       const holder = document.createElement('div');
       holder.className = 'ct-mermaid';
-      const pre = bc.closest('pre');
       if (pre) { pre.style.display = 'none'; pre.parentNode.insertBefore(holder, pre.nextSibling); }
       mermaid.render('mmd' + Math.random().toString(36).slice(2, 8), src).then(r => { holder.innerHTML = r.svg; }).catch(() => { holder.remove(); if (pre) pre.style.display = ''; });
     });
@@ -2585,7 +2585,7 @@ function renderCodeToolResult(el, j) {
     if (j.run) {
       const run = document.createElement('div');
       run.className = 'ct-run ' + ((j.run.code === 0 && !j.run.stderr) ? 'ok' : 'err');
-      run.textContent = (j.run.stdout || '') + (j.run.stderr ? (j.run.stdout ? '\n' : '') + '⚠ ' + j.run.stderr : '') || '✅ รันผ่าน (ไม่มี output)';
+      run.textContent = (j.run.stdout || '') + (j.run.stderr ? ((j.run.stdout ? '\n' : '') + '⚠ ' + j.run.stderr) : '') || '✅ รันผ่าน (ไม่มี output)';
       box.appendChild(run);
       if (j.run.code !== 0 || j.run.stderr) {
         const again = document.createElement('button');
@@ -2593,19 +2593,19 @@ function renderCodeToolResult(el, j) {
         again.textContent = '🔁 สลี่แก้ให้อัตโนมัติ (run-iterate)';
         again.onclick = async () => {
           again.disabled = true; again.textContent = '⏳ AI กำลังแก้...';
-          const r2 = await fetch('/api/code', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ prompt: 'แก้โค้ดต่อไปนี้ให้ทำงานได้ ภาษา ' + (j.lang || 'python') + ':\n```\n' + j.code.slice(0, 4000) + '\n```\n
-error: ' + (j.run.stderr || '').slice(0, 1500) }) }).then(x => x.json()).catch(() => null);
-          if (r2 && r2.ok && r2.code) {
-            pre.textContent = r2.code;
-            run.className = 'ct-run ' + (r2.exitCode === 0 ? 'ok' : 'err');
-            run.textContent = (r2.stdout || '') + (r2.stderr ? '
-⚠ ' + r2.stderr : '') || '✅ รันผ่าน';
-            again.textContent = '✅ แก้สำเร็จ (' + (r2.attempts || 1) + ' รอบ)';
-            again.disabled = true;
-          } else {
-            again.textContent = '❌ แก้ไม่สำเร็จ: ' + ((r2 && r2.error) || '').slice(0, 80);
-            again.disabled = false;
-          }
+          try {
+            const r2 = await fetch('/api/code', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ prompt: 'แก้โค้ดต่อไปนี้ให้ทำงานได้ ภาษา ' + (j.lang || 'python') + ':\n```\n' + j.code.slice(0, 4000) + '\n```\n\nerror: ' + (j.run.stderr || '').slice(0, 1500) }) }).then(x => x.json());
+            if (r2 && r2.ok && r2.code) {
+              pre.textContent = r2.code;
+              run.className = 'ct-run ' + (r2.exitCode === 0 ? 'ok' : 'err');
+              run.textContent = (r2.stdout || '') + (r2.stderr ? '\n⚠ ' + r2.stderr : '') || '✅ รันผ่าน';
+              again.textContent = '✅ แก้สำเร็จ (' + (r2.attempts || 1) + ' รอบ)';
+              again.disabled = true;
+            } else {
+              again.textContent = '❌ แก้ไม่สำเร็จ: ' + ((r2 && r2.error) || 'unknown').slice(0, 80);
+              again.disabled = false;
+            }
+          } catch (e) { again.textContent = '❌ ' + e.message.slice(0, 60); again.disabled = false; }
         };
         box.appendChild(again);
       }
@@ -2623,15 +2623,15 @@ async function runCodeTool(mode) {
     let q = toolText();
     if (!q || q.length < 2) q = prompt(def.ask);
     if (!q) return;
-    payload = { mode, question: q, lang: 'python' };
+    payload = { mode: mode, question: q, lang: 'python' };
   } else {
     let code = toolText();
     if (!code || code.length < 3) code = prompt(def.ask);
     if (!code) return;
-    payload = { mode, code, lang: 'python' };
+    payload = { mode: mode, code: code, lang: 'python' };
   }
   inp.value = ''; autoGrow();
-  const el = addMsg('assistant', '🧭️ **' + def.label + '** — สลี่กำลังทำให้...');
+  const el = addMsg('assistant', '🧰 **' + def.label + '** — สลี่กำลังทำให้...');
   typing.style.display = 'flex'; sendBtn.disabled = true;
   try {
     let j;
@@ -2639,8 +2639,7 @@ async function runCodeTool(mode) {
       const r = await fetch('/api/websearch', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ q: payload.question }) });
       j = await r.json().catch(() => ({}));
       if (j.ok && j.results && j.results.length) {
-        const lines = j.results.map(r => '🔗 <b>' + escHtml(r.title) + '</b>
-   <a href="' + escAttr(r.url) + '" target="_blank" rel="noopener" style="color:#7dd3fc">' + escHtml(r.url) + '</a>' + (r.snippet ? '\n   ' + escHtml(r.snippet) : '')).join('\n\n');
+        const lines = j.results.map(r => '🔗 <b>' + escHtml(r.title) + '</b>\n   <a href="' + escAttr(r.url) + '" target="_blank" rel="noopener" style="color:#7dd3fc">' + escHtml(r.url) + '</a>' + (r.snippet ? '\n   ' + escHtml(r.snippet) : '')).join('\n\n');
         el.innerHTML = '🔍 **ผลค้นหา live** — ' + escHtml(payload.question) + ':\n\n' + lines;
       } else if (j.answer) {
         el.innerHTML = j.answer;
@@ -2679,6 +2678,7 @@ document.addEventListener('DOMContentLoaded', () => {
   if (tb) tb.onclick = () => { const ct = document.getElementById('codeTools'); ct.style.display = ct.style.display === 'none' ? 'flex' : 'none'; };
   document.querySelectorAll('.ct-btn').forEach(b => b.onclick = () => runCodeTool(b.dataset.mode));
 });
-</script>\n
+</script>
+\n
 </body>
 </html>
