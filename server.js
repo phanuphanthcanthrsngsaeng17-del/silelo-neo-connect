@@ -427,6 +427,7 @@ async function pollinationsChat(messages, extSignal) {
 
 /* Hugging Face — โมเดลฟรี Qwen2.5-72B (router ~1.3s) — ชั้นสำรองระหว่าง OpenRouter กับ Pollinations */
 const HF_TOKEN = process.env.HF_TOKEN || '';
+const HF_KEYS = HF_TOKEN.split(/[,;.\n]/).map(s => s.trim()).filter(s => s.startsWith('hf_'));
 const HF_TEXT_MODELS = (process.env.HF_TEXT_MODELS || 'deepseek-ai/DeepSeek-V4-Flash,Qwen/Qwen2.5-72B-Instruct,Qwen/Qwen3.6-27B').split(',').map(s => s.trim()).filter(Boolean);
 const HF_PROXY = 'https://silelo.onrender.com/api/hf-chat';
 async function hfChat(messages, extSignal) {
@@ -1080,12 +1081,12 @@ app.post('/api/draw', async (req, res) => {
     }
 
     // ชั้น 1.5: Hugging Face FLUX.1-schnell ฟรี (วาดคุณภาพสูง ไม่กินเครดิต)
-    if (process.env.HF_TOKEN) {
+    if (HF_KEYS.length) {
       try {
         const ctl = AbortSignal.timeout ? AbortSignal.timeout(60000) : undefined;
         const r = await fetch('https://api-inference.huggingface.co/models/black-forest-labs/FLUX.1-schnell', {
           method: 'POST',
-          headers: { 'Authorization': 'Bearer ' + process.env.HF_TOKEN, 'Content-Type': 'application/json' },
+          headers: { 'Authorization': 'Bearer ' + HF_KEYS[0], 'Content-Type': 'application/json' },
           body: JSON.stringify({ inputs: p }),
           signal: ctl
         });

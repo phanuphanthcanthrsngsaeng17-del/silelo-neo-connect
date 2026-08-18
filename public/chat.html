@@ -133,7 +133,7 @@
   }
   /* ===== Dola style: header เหลือแค่ปุ่มจำเป็น (โทร + ล้างแชท) ===== */
   #voiceBtn, #soundBtn, #memBtn, #ruleBtn, #coderBtn, #themeBtn { display: none !important; }
-  html[data-room="private"] #codeBtn, html[data-room="work"] #codeBtn { display: none !important; }
+  html[data-room="private"] #codeBtn, html[data-room="work"] #codeBtn, html[data-room="lab"] #codeBtn { display: none !important; }
   .back-btn { width: 48px; height: 48px; border-radius: 12px; border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent);
     background: var(--panel); color: var(--txt); font-size: 19px; cursor: pointer; flex: none; transition: all .2s; }
   #callBtn { width: 50px; height: 50px; border-radius: 50%; background: #15803d; color: #fff !important;
@@ -671,25 +671,26 @@
     return 'pip';
   }
   async function runInstall(mgr, pkg, btn) {
-    btn.disabled = true;
-    btn.textContent = '⏳ กำลังติดตั้ง...';
+    const host = btn ? btn.parentNode : msgsEl.querySelector('.msg.user:last-of-type .bubble');
+    if (!host) return;
+    const setB = function (t, d) { if (btn) { btn.textContent = t; btn.disabled = !!d; } };
+    setB('⏳ กำลังติดตั้ง...', true);
     const res = document.createElement('div');
     res.className = 'msg-run';
-    btn.parentNode.appendChild(res);
+    host.appendChild(res);
     res.textContent = '⏳ กำลังติดตั้ง ' + pkg + ' (ครั้งแรกใช้เวลา 1-2 นาที)...';
     try {
       const r = await fetch('/api/install', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ pkg, mgr }) });
       const j = await r.json().catch(function () { return {}; });
-      if (!j.ok) { res.innerHTML = '<span class="err">⚠ ' + escHtml(j.error || 'ติดตั้งล้มเหลว') + '</span>'; btn.textContent = '🔄 ลองใหม่'; btn.disabled = false; return; }
+      if (!j.ok) { res.innerHTML = '<span class="err">⚠ ' + escHtml(j.error || 'ติดตั้งล้มเหลว') + '</span>'; setB('🔄 ลองใหม่', false); return; }
       const lines = String(j.out || '').trim().split('\n');
       const tail = lines.slice(-6).join('\n');
       res.innerHTML = (tail ? escHtml(tail) + '<br>' : '') + '<span class="' + (j.code === 0 ? 'ok">✅' : 'err">⚠') + ' ติดตั้ง ' + escHtml(pkg) + ' ' + (j.code === 0 ? 'สำเร็จ! ลองส่งโค้ดที่ใช้ ' + escHtml(pkg) + ' ได้เลย' : 'มีปัญหา (exit ' + j.code + ')') + '</span>';
-      btn.textContent = j.code === 0 ? '✅ ติดตั้งแล้ว' : '🔄 ลองใหม่';
-      if (j.code !== 0) btn.disabled = false;
+      setB(j.code === 0 ? '✅ ติดตั้งแล้ว' : '🔄 ลองใหม่', j.code === 0);
+      if (j.code !== 0) setB('🔄 ลองใหม่', false);
     } catch (e) {
       res.innerHTML = '<span class="err">⚠ ' + escHtml(e.message) + '</span>';
-      btn.textContent = '🔄 ลองใหม่';
-      btn.disabled = false;
+      setB('🔄 ลองใหม่', false);
     }
     msgsEl.scrollTop = msgsEl.scrollHeight;
   }
@@ -704,28 +705,28 @@
   }
   const LANG_ICON = { python: '🐍', javascript: '🟨', bash: '🐚', java: '☕', cpp: '➕', c: '🔵', go: '🐹', rust: '🦀', typescript: '🔷', ruby: '💎', php: '🐘' };
   async function runInlineCode(code, lang, btn) {
-    btn.disabled = true;
-    btn.textContent = '⏳ รันอยู่...';
+    const host = btn ? btn.parentNode : msgsEl.querySelector('.msg.user:last-of-type .bubble');
+    if (!host) return;
+    const setB = function (t, d) { if (btn) { btn.textContent = t; btn.disabled = !!d; } };
+    setB('⏳ รันอยู่...', true);
     const res = document.createElement('div');
     res.className = 'msg-run';
-    btn.parentNode.appendChild(res);
+    host.appendChild(res);
     res.textContent = '⏳ กำลังรัน ' + lang + '...';
     try {
       const r = await fetch('/api/run', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code, lang }) });
       const j = await r.json().catch(function () { return {}; });
-      if (!j.ok) { res.innerHTML = '<span class="err">⚠ ' + escHtml(j.error || 'เกิดข้อผิดพลาด') + '</span>'; btn.textContent = '🔄 ลองใหม่'; btn.disabled = false; return; }
+      if (!j.ok) { res.innerHTML = '<span class="err">⚠ ' + escHtml(j.error || 'เกิดข้อผิดพลาด') + '</span>'; setB('🔄 ลองใหม่', false); return; }
       let h = '';
       if (j.stdout) h += escHtml(j.stdout);
       if (j.stderr) h += '<span class="err">' + escHtml(j.stderr) + '</span>';
       if (!j.stdout && !j.stderr) h += '<span class="dim">// (ไม่มี output)</span>';
       h += '<br><span class="dim">— exit ' + j.code + ' · ' + j.timeMs + 'ms · ' + j.lang + '</span>';
       res.innerHTML = h;
-      btn.textContent = '▶ รันอีกครั้ง';
-      btn.disabled = false;
+      setB('▶ รันอีกครั้ง', false);
     } catch (e) {
       res.innerHTML = '<span class="err">⚠ ' + escHtml(e.message) + '</span>';
-      btn.textContent = '🔄 ลองใหม่';
-      btn.disabled = false;
+      setB('🔄 ลองใหม่', false);
     }
     msgsEl.scrollTop = msgsEl.scrollHeight;
   }
@@ -734,8 +735,8 @@
     if (image) m.image = image;
     history.push(m); if (history.length > 200) history = history.slice(-200);
     try { localStorage.setItem(KEY, JSON.stringify(history)); } catch (e) {}
-    renderMsg(m);
-    return m;
+    const el = renderMsg(m);
+    return el;
   }
   function renderMsg(m) {
     const div = document.createElement('div');
@@ -779,13 +780,14 @@
     if (cpy) cpy.onclick = () => { navigator.clipboard.writeText(m.content).then(() => toast('📋 COPIED')); };
     msgsEl.appendChild(div);
     msgsEl.scrollTop = msgsEl.scrollHeight;
+    return div;
   }
   if (history.length) history.forEach(renderMsg);
   else {
     const hellos = {
       private: 'สวัสดีพี่นุค่ะ 💜 สลี่อยู่ตรงนี้แล้ว — พี่อยากคุยอะไร วันนี้เป็นยังไงบ้างคะ?',
       work: 'พร้อมทำงานครับ 💼 — มีงานอะไรให้ผมจัดการ บอกมาได้เลย (วางแผน, โค้ด, สรุป, วิเคราะห์)',
-      lab: 'ยินดีต้อนรับสู่ห้องแล็บ! 🔬 วันนี้เราจะทดลองอะไรกันดี — ตั้งคำถามมาได้เลยครับ!'
+      lab: 'ยินดีต้อนรับสู่ห้องแล็บ! 🔬 พิมพ์แล้วสลี่ทำให้ทันที — โค้ด → รันให้เลย · "ติดตั้ง pandas" → ลงให้เลย · "เขียนเกมงู Python" → เขียน+รันให้เลย ✨'
     };
     addMsg('assistant', hellos[room] || hellos.private);
   }
@@ -858,11 +860,18 @@
     labAutoOpen(q);
     addMsg('user', q);
     inp.value = ''; autoGrow();
-    // 🤖 CODER AGENT — เขียนโค้ด+รันอัตโนมัติ (โหมดเปิด + ตรวจจับงานโค้ด)
-    if (coderMode && isCodingTask(q)) { await callCoder(q); return; }
     // 🎨 วาดรูป
     const dp = extractDrawPrompt(q);
     if (dp) { await doDraw(dp); return; }
+    // 🔬 LAB AUTO — ห้องแล็บ พิมพ์ปุ๊บ ทำปั๊บ ไม่ต้องกดปุ่มอะไรเลย
+    if (room === 'lab') {
+      const pm = q.trim().match(/^(pip|pip3|python3?\s+-\s+m\s+pip|npm|npx|apt|apt-get|gem|cargo|composer)\s+(install|uninstall|add|remove|update)\s+(.+)$/i);
+      if (pm) { runInstall(installMgrOf(q), pm[3].trim().split(/\s+/)[0], null); return; }
+      if (isLikelyCode(q)) { runInlineCode(q, autoDetectLang(q), null); return; }
+      if (isCodingTask(q)) { await callCoder(q); return; }
+    }
+    // 🤖 CODER AGENT — เขียนโค้ด+รันอัตโนมัติ (โหมดเปิด)
+    if (coderMode && isCodingTask(q)) { await callCoder(q); return; }
     typing.style.display = 'flex';
     sendBtn.disabled = true;
     msgsEl.scrollTop = msgsEl.scrollHeight;
@@ -2068,7 +2077,14 @@ if ('serviceWorker' in navigator) {
   window.addEventListener('load', function () {
     navigator.serviceWorker.register('/sw.js').catch(function () {});
   });
-  navigator.serviceWorker.addEventListener('controllerchange', function () { location.reload(); });
+  // reload แค่ครั้งเดียวต่อ session หลัง SW เปลี่ยน (กัน loop controllerchange)
+  navigator.serviceWorker.addEventListener('controllerchange', function () {
+    try {
+      if (sessionStorage.getItem('sw_reloaded')) return;
+      sessionStorage.setItem('sw_reloaded', '1');
+    } catch (e) {}
+    location.reload();
+  });
 }
 </script>
 
