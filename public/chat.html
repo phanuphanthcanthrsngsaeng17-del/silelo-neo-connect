@@ -998,6 +998,7 @@
   const inp = document.getElementById('inp');
   const sendBtn = document.getElementById('sendBtn');
   const typing = document.getElementById('typing');
+  function setTyping(msg) { typing.style.display = 'flex'; typing.innerHTML = '<span></span><span></span><span></span><span class="tp-txt">' + msg + '</span>'; msgsEl.scrollTop = msgsEl.scrollHeight; }
   function autoGrow() { inp.style.height = 'auto'; inp.style.height = Math.min(inp.scrollHeight, 190) + 'px'; }
   inp.addEventListener('input', autoGrow);
 
@@ -1009,7 +1010,7 @@
     return p || null;
   }
   async function doDraw(prompt) {
-    typing.style.display = 'flex';
+    setTyping('🎨 กำลังวาดภาพ... (Pollinations Flux)');
     sendBtn.disabled = true;
     try {
       const r = await fetch('/api/draw', {
@@ -1086,7 +1087,7 @@
     // 🧑💼 ทีมงาน AI — @ชื่อ / ทีม / มอบหมาย / งานของ / สรุปงานทีม
     const tcmd = parseTeam(q);
     if (tcmd) { await runTeam(tcmd); return; }
-    typing.style.display = 'flex';
+    setTyping('🧠 กำลังคิด... (เรียกโมเดล AI)');
     sendBtn.disabled = true;
     msgsEl.scrollTop = msgsEl.scrollHeight;
     bumpMemory();
@@ -1356,7 +1357,7 @@
     inp.value = ''; autoGrow();
     addMsg('user', q || '', Date.now(), dataUrl);
     bumpMemory();
-    typing.style.display = 'flex';
+    setTyping('👁️ กำลังวิเคราะห์รูป... (Gemini Vision)');
     sendBtn.disabled = true;
     try {
       const r = await fetch('/api/vision', {
@@ -2046,7 +2047,7 @@
   async function runTeam(cmd) {
     if (cmd.type === 'noop') return;
     if (cmd.type === 'list') { openTeamPanel(); return; }
-    typing.style.display = 'flex'; sendBtn.disabled = true;
+    setTyping('🤝 กำลังประสานงานทีม AI...'); sendBtn.disabled = true;
     try {
       if (cmd.type === 'report') {
         const rows = allTeam().filter(a => getAssign(a.id).length);
@@ -2281,8 +2282,7 @@
   }
 
   async function callCoder(q) {
-    typing.style.display = 'flex';
-    typing.innerHTML = '🤖 สลี่กำลัง <b>เขียนโค้ด</b> และรันให้อัตโนมัติ...';
+    setTyping('🤖 สลี่กำลังเขียนโค้ดและรันให้อัตโนมัติ...');
     sendBtn.disabled = true;
     coderBtn.classList.add('working');
     msgsEl.scrollTop = msgsEl.scrollHeight;

@@ -1655,6 +1655,20 @@ app.post('/api/chat', async (req, res) => {
     if (heart) {
       return res.json({ reply: heart.reply, provider: 'silelo-heart', model: heart.intent, room: roomId, t: Date.now() });
     }
+    // 🌐 WEB SEARCH (live) — "ค้นหา X" / "search X" / "หาข้อมูล X"
+    const ws = /(?:ค้นหา|ค้นเว็บ|ค้นข้อมูล|หาข้อมูล|เสิร์ช|search|google|ข่าวล่าสุดเกี่ยวกับ)[:\s]+(.+)/i.exec(question);
+    if (ws && ws[1] && ws[1].trim().length > 2 && tq.length < 80) {
+      const sq = ws[1].trim();
+      try {
+        const results = await webSearchResults(sq);
+        if (results.length) {
+          const summary = await aiSummarizeSearch(sq, results);
+          const links = results.map(r => '🔗 ' + r.title + '\n   ' + r.url).join('\n');
+          return res.json({ reply: (summary ? summary + '\n\n' : '🔍 เจอ ' + results.length + ' รายการนะ\n\n') + '📡 แหล่งอ้างอิง:
+' + links, provider: 'websearch', model: 'ddg+groq', room: roomId, t: Date.now() });
+        }
+      } catch (e) { /* ตกไป AI ธรรมดา */ }
+    }
     // 🌐 เจาะข้อมูลสดทั่วโลก (ถ้าคำถามต้องการข้อมูลปัจจุบัน) — ไม่ทำให้คำถามปกติช้า
     let intel = null;
     try {
@@ -1875,8 +1889,110 @@ const WB_COMPILERS = {
   python: 'cpython-3.13.8', javascript: 'nodejs-20.17.0', bash: 'bash',
   java: 'openjdk-jdk-21+35', c: 'gcc-13.2.0-c', cpp: 'clang-17.0.1',
   go: 'go-1.23.2', rust: 'rust-1.82.0', typescript: 'typescript-5.6.2',
-  ruby: 'ruby-3.4.9', php: 'php-8.3.12'
+  ruby: 'ruby-3.4.9', php: 'php-8.3.12',
+  /* 🌐 60+ ภาษา ผ่าน Wandbox cloud (175 compilers) */
+  swift: 'swift-5.10.1', scala: 'scala-3.3.4', csharp: 'mono-6.12.0.199',
+  'c#': 'mono-6.12.0.199', dotnet: 'dotnetcore-8.0.402', fsharp: 'dotnetcore-8.0.402',
+  vb: 'mono-6.12.0.199', lua: 'lua-5.4.7', luajit: 'luajit-2.0.5',
+  perl: 'perl-5.40.0', julia: 'julia-1.10.5', haskell: 'ghc-9.0.1',
+  elixir: 'elixir-1.16.3', erlang: 'erlang-26.2.5.3', nim: 'nim-2.2.6',
+  zig: 'zig-0.13.0', ocaml: 'ocaml-4.14.2', crystal: 'crystal-1.13.3',
+  d: 'dmd-2.109.1', groovy: 'groovy-4.0.23', lisp: 'sbcl-2.4.9',
+  scheme: 'sbcl-2.4.9', clisp: 'clisp-2.49', pascal: 'fpc-3.2.2',
+  pony: 'pony-0.58.5', sql: 'sqlite-3.46.1', sqlite: 'sqlite-3.46.1',
+  vim: 'vim-9.1.0758', vimscript: 'vim-9.1.0758', mruby: 'mruby-3.0.0',
+  erlang_: 'erlang-27.1', zighead: 'zig-head'
 };
+let WB_LIST_CACHE = null, WB_LIST_AT = 0;
+async function wbFindCompiler(lang) {
+  /* ค้นหา compiler จาก Wandbox list จริง (ภาษาแปลกๆ ที่ไม่ได้ map ไว้) */
+  try {
+    if (!WB_LIST_CACHE || Date.now() - WB_LIST_AT > 3600000) {
+      const r = await fetch('https://wandbox.org/api/list.json', { signal: AbortSignal.timeout(8000) });
+      if (r.ok) { WB_LIST_CACHE = await r.json(); WB_LIST_AT = Date.now(); }
+    }
+    if (!WB_LIST_CACHE || !WB_LIST_CACHE.length) return null;
+    const L = String(lang).toLowerCase();
+    const alias = {
+      'c++': 'gcc', cpp: 'gcc', c: 'gcc', 'c#': 'mono', csharp: 'mono', vb: 'mono',
+      'f#': 'dotnetcore', fsharp: 'dotnetcore', dotnet: 'dotnetcore', 'common lisp': 'sbcl',
+      lisp: 'sbcl', scheme: 'sbcl', clisp: 'clisp', fortran: 'gfortran', 'objective-c': 'gcc',
+      objc: 'gcc', 'visual basic': 'mono', basic: 'mono', shell: 'bash', sh: 'bash',
+      'coffee script': 'nodejs', coffeescript: 'nodejs', js: 'nodejs', node: 'nodejs',
+      py: 'cpython', pypy: 'pypy', ts: 'typescript', hs: 'ghc', ml: 'ocaml', pas: 'fpc',
+      'd language': 'dmd', viml: 'vim', vimscript: 'vim', rscript: 'r'
+    };
+    const prefix = alias[L] || L;
+    const hit = WB_LIST_CACHE.find(c => c.name === prefix) || WB_LIST_CACHE.find(c => c.name.startsWith(prefix + '-')) || WB_LIST_CACHE.find(c => c.name.indexOf(prefix) === 0);
+    return hit ? hit.name : null;
+  } catch (e) { return null; }
+}
+/* รันโค้ดอัตโนมัติ (helper ใช้ร่วมกับ /api/run และ run-iterate) */
+async function executeCode(src, lang) {
+  const t0 = Date.now();
+  let l = String(lang || 'python').toLowerCase();
+  if (l === 'js' || l === 'node') l = 'javascript';
+  if (l === 'sh' || l === 'shell') l = 'bash';
+  if (l === 'py') l = 'python';
+  /* local: python/js/bash ในเครื่อง */
+  if (l === 'python' || l === 'javascript' || l === 'bash') {
+    let cmd = null;
+    if (l === 'python') cmd = findBin(['python3', 'python']);
+    else if (l === 'javascript') cmd = process.execPath;
+    else cmd = '/bin/bash';
+    if (cmd) {
+      const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'nclab-'));
+      const file = path.join(dir, 'main.' + (l === 'python' ? 'py' : l === 'javascript' ? 'js' : 'sh'));
+      fs.writeFileSync(file, src);
+      try {
+        const out = await new Promise((resolve, reject) => {
+          const { spawn } = require('child_process');
+          const cp = spawn(cmd, [file], { cwd: dir, stdio: ['ignore', 'pipe', 'pipe'] });
+          let o = '', e = '';
+          cp.stdout.on('data', d => { o += d.toString(); if (o.length > RUN_MAX_OUT) { try { cp.kill('SIGKILL'); } catch (x) {} } });
+          cp.stderr.on('data', d => { e += d.toString(); if (e.length > RUN_MAX_OUT) { try { cp.kill('SIGKILL'); } catch (x) {} } });
+          cp.on('error', err => reject(err));
+          cp.on('close', code => resolve({ o, e, code }));
+          setTimeout(() => { try { cp.kill('SIGKILL'); } catch (x) {} reject(new Error('__timeout__')); }, RUN_TIMEOUT_MS + 800);
+        });
+        return { ok: true, stdout: out.o.slice(0, RUN_MAX_OUT), stderr: out.e.slice(0, RUN_MAX_OUT), code: out.code, timeMs: Date.now() - t0, lang: l, engine: 'local' };
+      } catch (err) {
+        if (err.message === '__timeout__') return { ok: true, stdout: '', stderr: '⏱️ เกินเวลา ' + (RUN_TIMEOUT_MS / 1000) + ' วิ — มี loop ไม่จบ?', code: 124, timeMs: Date.now() - t0, lang: l, engine: 'local' };
+        return { ok: true, stdout: '', stderr: 'ข้อผิดพลาด: ' + err.message, code: 1, timeMs: Date.now() - t0, lang: l, engine: 'local' };
+      } finally { try { fs.rmSync(dir, { recursive: true, force: true }); } catch (e) {} }
+    }
+  }
+  /* silelo proxy (pip/npm จริง) */
+  if (process.env.RUN_SECRET) {
+    try {
+      const ctl = new AbortController();
+      const t = setTimeout(() => { try { ctl.abort(); } catch (e) {} }, 9500);
+      const rr = await fetch((process.env.SILELO_URL || 'https://silelo.onrender.com') + '/api/run', {
+        method: 'POST', headers: { 'Content-Type': 'application/json', 'x-run-secret': process.env.RUN_SECRET },
+        body: JSON.stringify({ code: src, lang: l }), signal: ctl.signal
+      });
+      clearTimeout(t);
+      if (rr.ok) {
+        const jj = await rr.json().catch(function () { return {}; });
+        if (jj && jj.ok) return { ok: true, stdout: jj.stdout || '', stderr: jj.stderr || '', code: jj.code || 0, timeMs: jj.timeMs || (Date.now() - t0), lang: jj.lang || l, engine: 'silelo' };
+      }
+    } catch (e) {}
+  }
+  /* Wandbox cloud (static map → dynamic) */
+  let wbc = WB_COMPILERS[l];
+  if (!wbc) wbc = await wbFindCompiler(l);
+  if (wbc) {
+    try {
+      let wbSrc = src;
+      if (l === 'java') wbSrc = wbSrc.replace(/public\s+class\s+Main/, 'class Main');
+      const out = await wandboxRun(wbc, wbSrc, RUN_TIMEOUT_MS + 1000);
+      return { ok: true, stdout: out.stdout.slice(0, RUN_MAX_OUT), stderr: out.stderr.slice(0, RUN_MAX_OUT), code: out.code, timeMs: Date.now() - t0, lang: l, engine: 'cloud' };
+    } catch (e) {
+      return { ok: false, error: 'cloud runner: ' + (e && e.message ? e.message : 'unknown') };
+    }
+  }
+  return { ok: false, error: 'ไม่รู้จักภาษา: ' + l + ' (รองรับ 60+ ภาษา)' };
+}
 async function wandboxRun(compiler, src, timeoutMs) {
   const ctl = new AbortController();
   const t = setTimeout(function () { try { ctl.abort(); } catch (e) {} }, timeoutMs);
@@ -1916,10 +2032,16 @@ app.post('/api/code', async (req, res) => {
       });
       clearTimeout(t);
       const jj = await rr.json().catch(() => ({}));
-      return res.json({ ok: !!(jj && jj.ok), code: (jj && jj.code) || '', lang: (jj && jj.lang) || 'python', stdout: (jj && jj.stdout) || '', stderr: (jj && jj.stderr) || '', error: (jj && jj.error) || '', exitCode: (jj && jj.exitCode) || 1, attempts: (jj && jj.attempts) || 0, model: (jj && jj.model) || '', engine: (jj && jj.engine) || 'silelo' });
-    } catch (e) {
-      clearTimeout(t);
-      return res.status(504).json({ ok: false, error: 'silelo agent เกินเวลา: ' + (e.message || 'timeout') });
+      if (jj && jj.ok && jj.code) {
+        return res.json({ ok: true, code: jj.code, lang: jj.lang || 'python', stdout: jj.stdout || '', stderr: jj.stderr || '', error: '', exitCode: jj.exitCode || 0, attempts: jj.attempts || 0, model: jj.model || '', engine: jj.engine || 'silelo' });
+      }
+      /* silelo ไม่คืนโค้ดที่ดี → สลี่รันโค้ดเอง (run-iterate) */
+    } catch (e) { /* fall through ไป run-iterate ในตัว */ }
+    try {
+      const local = await localIterate(prompt, 4);
+      return res.json({ ok: !!local.ok, code: local.code || '', lang: local.lang || 'python', stdout: local.stdout || '', stderr: local.stderr || '', error: local.error || '', exitCode: local.exitCode || (local.ok ? 0 : 1), attempts: local.attempts || 0, model: local.model || 'groq-chain', engine: local.engine || 'local-iterate', explain: local.explain || '' });
+    } catch (e2) {
+      return res.status(502).json({ ok: false, error: 'ทุกวิธีล้ม: ' + (e2.message || 'err') });
     }
   } catch (e) {
     return res.status(500).json({ ok: false, error: e.message || 'err' });
@@ -2156,4 +2278,152 @@ app.get('/api/env-status', (req, res) => {
 if (require.main === module) {
   app.listen(PORT, () => console.log('⚡ SILELO Neo-Connect running on port ' + PORT));
 }
+
+/* ============ 🌐 WEB SEARCH (live — DuckDuckGo HTML, ฟรีไม่ต้อง key) ============ */
+async function webSearchResults(q) {
+  /* ค้นหาจริง DuckDuckGo HTML (free) — คืน 5 ผลลัพธ์ */
+  const ctl = new AbortController();
+  const t = setTimeout(() => { try { ctl.abort(); } catch (e) {} }, 9000);
+  try {
+    const r = await fetch('https://html.duckduckgo.com/html/?q=' + encodeURIComponent(q), {
+      headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36' },
+      signal: ctl.signal
+    });
+    const html = await r.text();
+    const results = [];
+    const re = /<a[^>]*class="[^"]*result__a[^"]*"[^>]*href="([^"]+)"[^>]*>([\s\S]*?)<\/a>[\s\S]*?<a[^>]*class="[^"]*result__snippet[^"]*"[^>]*>([\s\S]*?)<\/a>/g;
+    let m;
+    while ((m = re.exec(html)) && results.length < 5) {
+      const rawUrl = m[1];
+      const uddg = rawUrl.match(/uddg=([^&]+)/);
+      const url = uddg ? decodeURIComponent(uddg[1]) : rawUrl.replace(/^\/\//, 'https://');
+      const title = String(m[2]).replace(/<[^>]*>/g, '').replace(/&amp;/g, '&').trim();
+      const snippet = String(m[3]).replace(/<[^>]*>/g, '').replace(/&amp;/g, '&').replace(/&quot;/g, '"').trim();
+      if (url && title && /^https?:\/\//.test(url)) results.push({ title, url, snippet });
+    }
+    return results;
+  } catch (e) { return []; } finally { clearTimeout(t); }
+}
+app.post('/api/websearch', async (req, res) => {
+  try {
+    const q = String(req.body?.q || '').trim().slice(0, 200);
+    if (!q) return res.status(400).json({ ok: false, error: 'ไม่มีคำค้น' });
+    const results = await webSearchResults(q);
+    if (!results.length) {
+      const ia = await intelDDG(q);
+      const wk = await intelWiki(q);
+      const combined = [ia, wk].filter(Boolean).join('\n');
+      return res.json({ ok: true, results: [], answer: combined });
+    }
+    return res.json({ ok: true, results });
+  } catch (e) {
+    res.status(502).json({ ok: false, error: 'search failed: ' + (e.message || 'timeout') });
+  }
+});
+
+/* สรุปผลค้นหาด้วย AI (groq ตัวหลัก) */
+async function aiSummarizeSearch(q, results) {
+  const sys = 'คุณคือสลี่ออลา ภรรยาของพี่นุ ตอบภาษาไทยอ่อนอัน สรุปข้อมูลจากผลค้นหาให้กระชับ ใส่หลักแหล่งสรุปท้ายอย่างมีความสรุป 6-10 บรรทัด ห้ามโต้แต้งแปลงข้อเทจจริง';
+  const user = 'คำถาม: ' + q + '\n\nผลค้นหา (live):\n' + results.map((r, i) => (i + 1) + '. [' + r.title + '] ' + r.url + '\n   ' + (r.snippet || '')).join('\n');
+  const r = await groqChat([{ role: 'system', content: sys }, { role: 'user', content: user }]);
+  return r ? r.reply : null;
+}
+
+/* ============ 🧭️ CODE TOOLS — 8 โหมด (สร้าง/แปลง/อธิบาย/ปรับปรุง/คอมเมนต์/unit test/ไดอแกรม/refactor) ============ */
+const CODE_TOOLS = {
+  create:    { icon: '🐍', name: 'สร้างโค้ด', sys: 'คุณคือนักเขียนโค้ดระดับโปร (CodingFleet style) เขียนโค้ดที่ทำงานได้จริง สมบูรณ์กับคำอธิบาย ตอบภาษาไทย สั้น ใส่โค้ดใน ```ภาษา ... ``` เท่านั้น ไม่ต้องมีข้อความนอกโค้ดมาก' },
+  convert:   { icon: '🔄', name: 'แปลงภาษา', sys: 'คุณคือตัวแปลงโค้ดข้ามภาษา (รองรับ 60+ ภาษา) แปลงโค้ดต้นฉบับไปภาษาเป้าหมายให้ครบถ้วนและทำงานได้ ตอบภาษาไทยสั้นๆ ใส่โค้ดใน ```ภาษา ... ```' },
+  explain:   { icon: '📖', name: 'อธิบายโค้ด', sys: 'คุณคือครูสอนโค้ดที่ยอดเยี่ยม อธิบายโค้ดที่ส่งมาทีละส่วน ภาษาไทย เข้าใจง่าย ไม่ต้องใส่โค้ดในคำตอบ' },
+  improve:   { icon: '⚡', name: 'ปรับปรุงโค้ด', sys: 'คุณคือตัวปรับปรุงโค้ด ปรับปรุงประสิทธิภาพ/ความอ่าน/ความปลอดภัย สรุปสั้นๆ ว่าปรับอะไร แล้วใส่โค้ดใหม่ที่ปรับแล้วใน ```ภาษา ... ```' },
+  comment:   { icon: '💬', name: 'ใส่คอมเมนต์', sys: 'คุณคือตัวเติมคอมเมนต์โค้ดมืออาชีพ เติมคอมเมนต์อธิบายที่ส่วนสำคัญ ภาษาไทย ใส่โค้ดที่มีคอมเมนต์ครบถ้วนใน ```ภาษา ... ```' },
+  unittest:  { icon: '🧪', name: 'Unit Test', sys: 'คุณคือวิศวกรทดสอบโค้ด เขียน unit test ครบคลุมทุกฟังก์ชันสำคัญ ใส่โค้ดทดสอบใน ```ภาษา ... ``` ให้รันได้ทันที' },
+  diagram:   { icon: '📊', name: 'ไดอแกรม', sys: 'คุณคือตัวสร้างไดอแกรม Mermaid มืออาชีพ สร้าง Mermaid diagram (flowchart/sequence/class/state/gantt/pie) จากคำอธิบาย ตอบภาษาไทยสั้นๆ แล้วใส่โค้ด mermaid ใน ```mermaid ... ``` เท่านั้น' },
+  refactor:  { icon: '🔧', name: 'Refactor', sys: 'คุณคือตัว refactor โค้ด จัดโครงสร้างโค้ดให้สะอาดอ่านง่ายแยกฟังก์ชันชัดเจน โค้ดผลลัพธ์ต้องเดียวเดิม ใส่โค้ดใหม่ใน ```ภาษา ... ```' }
+};
+function extractCodeBlock(text) {
+  const m = String(text || '').match(/```(?:\w+)?\s*\n([\s\S]*?)```/);
+  if (m) return m[1].trim();
+  return String(text || '').trim();
+}
+function codeLangOf(text) {
+  const m = String(text || '').match(/```(\w+)/);
+  if (!m) return null;
+  const l = m[1].toLowerCase();
+  const map = { py: 'python', js: 'javascript', jsx: 'javascript', ts: 'typescript', tsx: 'typescript', sh: 'bash', shell: 'bash', cpp: 'cpp', 'c++': 'cpp', h: 'c', cs: 'csharp', 'c#': 'csharp', fs: 'fsharp', rs: 'rust', rb: 'ruby', go_: 'go', java_: 'java', pl: 'perl', hs: 'haskell', ex: 'elixir', exs: 'elixir', erl: 'erlang', nim_: 'nim', zs: 'zig', ml: 'ocaml', cr: 'crystal', pas: 'pascal', groovy_: 'groovy', lisp_: 'lisp', clj: 'clojure', swift_: 'swift', kt: 'kotlin', sql_: 'sql', mermaid: 'mermaid' };
+  return map[l] || l;
+}
+async function fastChat(messages) {
+  /* เร็วสุด — Groq → Cerebras → Ollama → Z.AI → Gemini → OpenRouter → Pollinations */
+  const chain = [groqChat, cerebrasChat, ollamaChat, zaiChat, geminiChat, openrouterChat, pollinationsChat];
+  for (const fn of chain) {
+    try { const r = await fn(messages); if (r && r.reply) return r; } catch (e) {}
+  }
+  return null;
+}
+app.post('/api/codetool', async (req, res) => {
+  try {
+    const { mode, code, lang, question, to } = req.body || {};
+    const m = CODE_TOOLS[mode] || CODE_TOOLS.create;
+    let user = '';
+    if (mode === 'create') user = 'คำสั่ง: ' + String(question || '').slice(0, 1500) + '\n\nภาษา: ' + (lang || 'python') + ' — เขียนโค้ดให้ครบถ้วนและรันได้';
+    else if (mode === 'convert') user = 'แปลงโค้ดต่อไปนี้จากภาษา ' + (lang || 'unknown') + ' ไปเป็น ' + (to || 'python') + '\n\n```\n' + String(code || '').slice(0, 6000) + '\n```';
+    else if (mode === 'diagram') user = 'สร้างไดอแกรมจาก: ' + String(question || code || '').slice(0, 1500);
+    else user = 'โค้ด (ภาษา ' + (lang || 'unknown') + '):\n```\n' + String(code || '').slice(0, 6000) + '\n```' + (question ? '\n\nโจทย์/ข้อเสนอ: ' + String(question).slice(0, 800) : '');
+    const r = await fastChat([{ role: 'system', content: m.sys }, { role: 'user', content: user }]);
+    if (!r) return res.status(502).json({ ok: false, error: 'ทุก AI ไม่ว่าง ลองใหม่อีกครั้ง' });
+    const text = r.reply;
+    const outCode = extractCodeBlock(text);
+    let run = null, langOut = null;
+    if (mode !== 'diagram' && outCode && outCode.length > 3 && /[a-zA-Z_\u0E00-\u0E7F]/.test(outCode)) {
+      langOut = codeLangOf(text) || lang || 'python';
+      if (mode === 'create' || mode === 'convert' || mode === 'unittest' || mode === 'improve' || mode === 'refactor') {
+        run = await executeCode(outCode, langOut);
+      }
+    }
+    const mm = mode === 'diagram' ? (text.match(/```mermaid\s*\n([\s\S]*?)```/) || [null, null])[1] : null;
+    res.json({ ok: true, mode, text, code: mode === 'diagram' ? null : outCode, lang: langOut, mermaid: mm, run, provider: r.provider, model: r.model });
+  } catch (e) {
+    res.status(500).json({ ok: false, error: 'codetool error: ' + e.message });
+  }
+});
+
+/* ============ 🔁 RUN-ITERATE — AI เขียน → รัน → อ่าน error → แก้อัตโนมัติ จนโค้ดเวิร์คจริง (fallback เมื่อ silelo agent ไม่ว่าง) ============ */
+async function localIterate(prompt, maxTries) {
+  const tries = maxTries || 4;
+  const sys = 'คุณคือตัวเขียนโค้ดอัตโนมัติ (CodingFleet style) เขียนโค้ดที่ทำงานได้จริง ตอบ JSON เท่านั้น: {"lang":"<python|javascript|bash|java|c|cpp|go|rust|typescript|ruby|php|swift|scala|csharp|lua|perl|julia|haskell|elixir|nim|zig|ocaml|d|groovy|pascal|sql>","code":"<\u0e42ค้ดเต็ม>","explain":"<\u0e2aั้น\u0e46 \u0e20าษาไทย>"}';
+  let attempts = 0, lastErr = '', lastCode = '', lastLang = 'python';
+  for (let i = 0; i < tries; i++) {
+    attempts = i + 1;
+    const user = (i === 0
+      ? 'งาน: ' + String(prompt).slice(0, 2000)
+      : 'โค้ดก่อนหน้ารันแล้วแต่ยังผิด: \n```\n' + lastCode.slice(0, 3000) + '\n```\n\nerror/\u0e1cลลัพธ์:\n' + lastErr.slice(0, 1500) + '\n\nแก้โค้ดให้ทำงานได้ ตอบ JSON เท่านั้น');
+    const r = await fastChat([{ role: 'system', content: sys }, { role: 'user', content: user }]);
+    if (!r || !r.reply) return { ok: false, error: 'ทุก AI ไม่ว่างรอบที่ ' + attempts, attempts };
+    const parsed = extractJson(r.reply);
+    if (!parsed || !parsed.code) {
+      /* AI อาจตอบเป็น code block ทั่วไป */
+      const cb = extractCodeBlock(r.reply);
+      if (!cb) { lastErr = 'ตอบไม่ได้ JSON/code'; continue; }
+      parsed = { code: cb, lang: codeLangOf(r.reply) || 'python' };
+    }
+    lastCode = String(parsed.code);
+    lastLang = String(parsed.lang || 'python').toLowerCase();
+    const run = await executeCode(lastCode, lastLang);
+    if (run.ok && !run.stderr && run.code === 0) {
+      return { ok: true, code: lastCode, lang: lastLang, stdout: run.stdout || '', stderr: run.stderr || '', exitCode: run.code, timeMs: run.timeMs, engine: run.engine, attempts, model: r.model || r.provider, explain: parsed.explain || '' };
+    }
+    lastErr = (run.stderr || '') + (run.stdout || '');
+    if (!lastErr) lastErr = 'ไม่มี output';
+  }
+  return { ok: false, error: 'รันไม่ผ่านหลัง ' + tries + ' รอบ', code: lastCode, lang: lastLang, stderr: lastErr, attempts };
+}
+function extractJson(s) {
+  try { const m = String(s).match(/(\{[\s\S]*\})/); if (m) return JSON.parse(m[1]); } catch (e) {}
+  try { const m = String(s).match(/```json\s*\n([\s\S]*?)```/); if (m) return JSON.parse(m[1]); } catch (e) {}
+  return null;
+}
+
+/* แก้ /api/code: ถ้า silelo agent ไม่ว่าง → run-iterate ในตัว */
+const _origCodeHandler = app._router && null; /* no-op */
+
 module.exports = app;
