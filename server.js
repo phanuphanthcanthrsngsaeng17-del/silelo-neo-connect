@@ -375,7 +375,7 @@ async function summarizeMemory(history) {
 
 /* OpenRouter — DeepSeek-V4-Flash (ตัวแรก) + :free models, timeout 8 วิ */
 const OPENROUTER_KEYS = (process.env.OPENROUTER_API_KEY || '').split(',').map(s => s.trim()).filter(Boolean);
-const OPENROUTER_TEXT_MODELS = (process.env.OPENROUTER_TEXT_MODELS || 'deepseek/deepseek-v4-flash,nvidia/nemotron-3-ultra-550b-a55b:free,google/gemma-4-26b-a4b-it:free,z-ai/glm-5.2:free,dots-studio/dots-3-note-preview:free').split(',').map(s => s.trim()).filter(Boolean);
+const OPENROUTER_TEXT_MODELS = (process.env.OPENROUTER_TEXT_MODELS || 'deepseek/deepseek-v4-flash,nvidia/nemotron-3-ultra-550b-a55b:free,nvidia/nemotron-3-super-120b-a12b:free,nvidia/nemotron-3.5-lightning:free,google/gemma-4-31b-it:free,google/gemma-4-26b-a4b-it:free,openai/gpt-oss-20b:free,dots-studio/dots-3-note-preview:free,poolside/laguna-s-2.1:free,cohere/north-mini-code:free').split(',').map(s => s.trim()).filter(Boolean);
 let OR_DEAD_UNTIL = 0; // key 401 → ข้ามไปก่อน แล้วค่อยลองใหม่
 async function openrouterChat(messages, extSignal) {
   if (!OPENROUTER_KEYS.length) return null;
