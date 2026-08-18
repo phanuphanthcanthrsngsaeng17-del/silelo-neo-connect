@@ -170,7 +170,7 @@ async function raceProviders(calls, timeoutMs) {
 
 /* Groq — 6 โมเดล เรียงความเร็ว-ฉลาด */
 const GROQ_API_KEY = process.env.GROQ_API_KEY || '';
-const GROQ_MODELS = (process.env.GROQ_MODELS || 'openai/gpt-oss-120b,qwen/qwen3.6-27b,openai/gpt-oss-20b,groq/compound-mini').split(',').map(s => s.trim()).filter(Boolean);
+const GROQ_MODELS = (process.env.GROQ_MODELS || 'openai/gpt-oss-20b,openai/gpt-oss-120b,qwen/qwen3.6-27b,groq/compound-mini').split(',').map(s => s.trim()).filter(Boolean);
 let GROQ_DEAD_UNTIL = 0; // key 401 → ข้ามไปก่อน แล้วค่อยลองใหม่ (กันเสียเวลา)
 async function groqChat(messages, extSignal) {
   if (!GROQ_API_KEY) return null;
@@ -631,7 +631,7 @@ app.get('/api/diag', async (req, res) => {
     } catch (e) { out[name] = { status: 'ERR', ms: Date.now() - t0, body: String(e.message || e).slice(0, 160) }; }
   };
   const msgs = [{ role: 'user', content: 'ตอบสั้นๆ ว่า สวัสดี' }];
-  await raw('groq', 'https://api.groq.com/openai/v1/chat/completions', { method: 'POST', headers: { 'Authorization': 'Bearer ' + process.env.GROQ_API_KEY, 'Content-Type': 'application/json' }, body: JSON.stringify({ model: 'openai/gpt-oss-120b', max_tokens: 30, messages: msgs }) });
+  await raw('groq', 'https://api.groq.com/openai/v1/chat/completions', { method: 'POST', headers: { 'Authorization': 'Bearer ' + process.env.GROQ_API_KEY, 'Content-Type': 'application/json' }, body: JSON.stringify({ model: GROQ_MODELS[0], max_tokens: 30, messages: msgs }) });
   const gk = (process.env.GEMINI_API_KEYS || '').split(',')[0];
   await raw('gemini', 'https://generativelanguage.googleapis.com/v1beta/models/' + (process.env.GEMINI_MODEL || 'gemini-3.6-flash') + ':generateContent?key=' + gk, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contents: [{ parts: [{ text: 'สวัสดี' }] }], generationConfig: { maxOutputTokens: 30 } }) });
   const ok = (process.env.OPENROUTER_API_KEY || '').split(',')[0];

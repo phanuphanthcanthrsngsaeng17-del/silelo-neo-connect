@@ -13,7 +13,7 @@ const ENV = {
   // 🧠 AI — สมองหลัก
   groq: {
     apiKey: process.env.GROQ_API_KEY || '',
-    models: process.env.GROQ_MODELS || 'openai/gpt-oss-120b,llama-3.3-70b-versatile,qwen/qwen3.6-27b,openai/gpt-oss-20b,groq/compound-mini,llama-3.1-8b-instant',
+    models: process.env.GROQ_MODELS || 'openai/gpt-oss-20b,openai/gpt-oss-120b,qwen/qwen3.6-27b,groq/compound-mini',
   },
   gemini: {
     apiKeys: splitList(process.env.GEMINI_API_KEYS),
