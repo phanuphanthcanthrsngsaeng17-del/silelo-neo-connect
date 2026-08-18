@@ -1182,7 +1182,8 @@
         }
         const r = await fetch('/api/chat', {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ room, question: q, history: cleanHist(history.slice(-24, -1)), memory: getMemoryFor(q), unrestricted: noRules })
+          body: JSON.stringify({ room, question: q, history: cleanHist(history.slice(-24, -1)), memory: getMemoryFor(q), unrestricted: noRules }),
+          signal: AbortSignal.timeout(55000)
         });
         const j = await r.json();
         if (j.reply) { addMsg('assistant', j.reply); notifyMsg(j.reply); toast('⚡ ' + (j.provider === 'mock' ? 'BACKUP MODE' : j.provider.toUpperCase() + ' · ' + j.model)); speak(j.reply); }
@@ -2268,7 +2269,7 @@
       const wantMax = pm ? !!pm.max : true;
       const race = (opts) => Promise.race([
         puter.ai.chat(msgs, Object.assign({}, baseOpts, opts)),
-        new Promise((_, rej) => setTimeout(() => rej(new Error('puter timeout')), 30000))
+        new Promise((_, rej) => setTimeout(() => rej(new Error('puter timeout')), 12000))
       ]);
       let resp, usedMax = true;
       try { resp = await race(wantMax ? { reasoning_effort: 'max' } : {}); }

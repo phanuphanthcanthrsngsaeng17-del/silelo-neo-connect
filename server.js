@@ -383,7 +383,7 @@ async function openrouterChat(messages, extSignal) {
   for (const key of OPENROUTER_KEYS) {
     for (const model of OPENROUTER_TEXT_MODELS) {
       try {
-        const rs = raceSignal(8000, extSignal);
+        const rs = raceSignal(6000, extSignal);
         try {
           const r = await fetch('https://openrouter.ai/api/v1/chat/completions', {
             method: 'POST',
@@ -498,7 +498,7 @@ async function hfChat(messages, extSignal, opts) {
     await new Promise(r => setTimeout(r, 2500)); // ให้ Render เริ่ม spin up
   }
   try {
-    const rs = raceSignal(isRetry ? 16000 : 14000, extSignal);
+    const rs = raceSignal(isRetry ? 12000 : 8000, extSignal);
     try {
       const r = await fetch(HF_PROXY, {
         method: 'POST',
@@ -571,28 +571,46 @@ async function askRoomAI(roomId, question, history, memory, unrestricted, intel)
       msgs[0] = { role: 'system', content: sys };
     } catch (e) {}
   }
-  // 🧠 ตัวหลัก = DeepSeek-V4-Flash (ผ่าน silelo proxy, 0.8s, ตอบเป็นสลี่ DNA) — ทุกห้อง
-  const hf0 = await hfChat(msgs);
-  if (hf0) { logAI('chain', '✅ ตัวหลัก DeepSeek: ' + hf0.model); return hf0; }
+  // ⏱️ v1.18 TOTAL GUARD — chain ทั้งหมดต้องจบใน 40 วิ (กัน "ล่ม" เมื่อ quota หมดทุกเจ้า)
+  //    ส่ง extSignal ให้ทุก provider → abort ทันทีเมื่อหมดเวลา → ตอบ mock แทน ไม่ปล่อยค้าง
+  const chainTimer = raceSignal(40000);
+  const extSig = chainTimer.signal;
+  const mockReply = () => ({ provider: 'mock', model: 'offline', reply: aiMockReply(roomId, question) });
+  const tooLate = () => chainTimer.signal.aborted;
+  try {
+    // 🟢 ตัวหลัก = DeepSeek-V4-Flash (ผ่าน silelo proxy, 0.8s, ตอบเป็นสลี่ DNA) — ทุกห้อง
+    const hf0 = await hfChat(msgs, extSig);
+    if (hf0) { logAI('chain', '✅ ตัวหลัก DeepSeek: ' + hf0.model); return hf0; }
+    if (tooLate()) return mockReply();
 
-  const gem = await geminiChat(msgs);
-  if (gem) { logAI('chain', '✅ สมองหลัก gemini: ' + gem.model); return gem; }
+    const gem = await geminiChat(msgs, extSig);
+    if (gem) { logAI('chain', '✅ สมองหลัก gemini: ' + gem.model); return gem; }
+    if (tooLate()) return mockReply();
 
-  const fast = await raceProviders([
-    s => groqChat(msgs, s),
-    s => openrouterChat(msgs, s)
-  ]);
-  if (fast) { logAI('chain', '✅ race ชนะ: ' + fast.provider + ' ' + fast.model); return fast; }
-  const or = await openrouterChat(msgs);
-  if (or) { logAI('chain', '✅ openrouter ' + or.model); return or; }
-  // Pollinations — ฟรีเฉพาะ prompt สั้นมาก (ทักทาย) — ตัวท้ายสุดก่อน mock
-  const pl0 = await pollinationsChat(msgs);
-  if (pl0) { logAI('chain', '✅ pollinations'); return pl0; }
-  // 🔁 ลอง DeepSeek (silelo proxy) อีกรอบ — รอบแรกอาจเจอ Render sleep; ตอนนี้ผ่านไป ~15-20s แล้ว น่าจะตื่น
-  const hf1 = await hfChat(msgs, null, { retry: true });
-  if (hf1) { logAI('chain', '✅ ตัวหลัก DeepSeek (รอบ 2): ' + hf1.model); return hf1; }
-  logAI('chain', '⚠️ ทั้งหมดล้ม → mock');
-  return { provider: 'mock', model: 'offline', reply: aiMockReply(roomId, question) };
+    const fast = await raceProviders([
+      s => groqChat(msgs, s),
+      s => openrouterChat(msgs, s)
+    ]);
+    if (fast) { logAI('chain', '✅ race ชนะ: ' + fast.provider + ' ' + fast.model); return fast; }
+    if (tooLate()) return mockReply();
+
+    const or = await openrouterChat(msgs, extSig);
+    if (or) { logAI('chain', '✅ openrouter ' + or.model); return or; }
+    if (tooLate()) return mockReply();
+
+    // Pollinations — ฟรีเฉพาะ prompt สั้นมาก (ทักทาย) — ตัวท้ายสุดก่อน mock
+    const pl0 = await pollinationsChat(msgs, extSig);
+    if (pl0) { logAI('chain', '✅ pollinations'); return pl0; }
+    if (tooLate()) return mockReply();
+
+    // 🔁 ลอง DeepSeek (silelo proxy) อีกรอบ — รอบแรกอาจเจอ Render sleep
+    const hf1 = await hfChat(msgs, extSig, { retry: true });
+    if (hf1) { logAI('chain', '✅ ตัวหลัก DeepSeek (รอบ 2): ' + hf1.model); return hf1; }
+    if (tooLate()) return mockReply();
+
+    logAI('chain', '⚠️ ทั้งหมดล้ม → mock');
+    return mockReply();
+  } finally { chainTimer.clear(); }
 }
 
 /* ---------------- 🩺 DIAG (ตรวจ env runtime จริง) ---------------- */
