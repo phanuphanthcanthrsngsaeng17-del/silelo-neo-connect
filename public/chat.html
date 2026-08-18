@@ -2296,17 +2296,26 @@
     unlockAudio();
     if (!window.puter) { toast('⚠️ โหลด Puter.js ไม่สำเร็จ — ลองรีเฟรชหน้า'); return; }
     if (!puterSignedIn) {
-      toast('🐋 กำลังเชื่อมบัญชี Puter ฟรี... (สมัครฟรี ไม่ต้องใช้บัตร)');
+      var isPwa = false;
+      try { isPwa = window.matchMedia('(display-mode: standalone)').matches || (window.navigator && window.navigator.standalone === true); } catch (e) {}
+      if (isPwa) toast('\ud83d\udc0b \u0e01\u0e33\u0e25\u0e31\u0e07\u0e40\u0e0a\u0e37\u0e48\u0e2d\u0e21\u0e1a\u0e31\u0e0d\u0e0a\u0e35 Puter \u0e1f\u0e23\u0e35... \u0e2b\u0e32\u0e01\u0e2b\u0e19\u0e49\u0e32\u0e25\u0e47\u0e2d\u0e01\u0e2d\u0e34\u0e19\u0e44\u0e21\u0e48\u0e02\u0e36\u0e49\u0e19 \u0e43\u0e2b\u0e49\u0e01\u0e14 \ud83d\udc0b \u0e2d\u0e35\u0e01\u0e04\u0e23\u0e31\u0e49\u0e07 \u0e2b\u0e23\u0e37\u0e2d\u0e40\u0e1b\u0e34\u0e14\u0e1c\u0e48\u0e32\u0e19 Chrome \u0e1b\u0e01\u0e15\u0e34'); else toast('\ud83d\udc0b \u0e01\u0e33\u0e25\u0e31\u0e07\u0e40\u0e0a\u0e37\u0e48\u0e2d\u0e21\u0e1a\u0e31\u0e0d\u0e0a\u0e35 Puter \u0e1f\u0e23\u0e35... (\u0e2a\u0e21\u0e31\u0e04\u0e23\u0e1f\u0e23\u0e35 \u0e44\u0e21\u0e48\u0e15\u0e49\u0e2d\u0e07\u0e43\u0e0a\u0e49\u0e1a\u0e31\u0e15\u0e23)');
       try {
+        var signInDone = false;
+        var signInTimer = setTimeout(function () {
+          if (!signInDone) toast('\u26a0\ufe0f \u0e2b\u0e19\u0e49\u0e32\u0e25\u0e47\u0e2d\u0e01\u0e2d\u0e34\u0e19\u0e44\u0e21\u0e48\u0e02\u0e36\u0e49\u0e19 (popup \u0e16\u0e39\u0e01\u0e1a\u0e25\u0e47\u0e2d\u0e01?) \u2014 \u0e01\u0e14 \ud83d\udc0b \u0e2d\u0e35\u0e01\u0e04\u0e23\u0e31\u0e49\u0e07 \u0e2b\u0e23\u0e37\u0e2d\u0e40\u0e1b\u0e34\u0e14\u0e43\u0e19 Chrome \u0e1b\u0e01\u0e15\u0e34 (\u0e44\u0e21\u0e48\u0e43\u0e0a\u0e48\u0e42\u0e2b\u0e21\u0e14\u0e15\u0e34\u0e14\u0e15\u0e31\u0e49\u0e07\u0e41\u0e2d\u0e1e)');
+        }, 45000);
         await puter.auth.signIn();
+        signInDone = true;
+        clearTimeout(signInTimer);
+        try { var u = await puter.auth.getUser(); if (u && u.username) toast('\u2705 \u0e2a\u0e27\u0e31\u0e2a\u0e14\u0e35 ' + u.username + '! DeepSeek \u0e1f\u0e23\u0e35\u0e44\u0e21\u0e48\u0e08\u0e33\u0e01\u0e31\u0e14 \ud83d\udc0b'); } catch (eu) {}
         puterSignedIn = true;
         puterOn = true;
         try { localStorage.setItem('nc_puter', '1'); } catch (e) {}
         syncPuterBtn();
         teamSyncLoad();
         syncNotesFromCloud();
-        toast('✅ เชื่อมแล้ว! DeepSeek ฟรีไม่จำกัด 🐋 — พิมพ์ข้อความได้เลย');
-      } catch (e) { toast('⚠️ เชื่อมไม่สำเร็จ/ยกเลิก — ระบบยังใช้เซิร์ฟเวอร์เดิม'); }
+        toast('\u2705 \u0e40\u0e0a\u0e37\u0e48\u0e2d\u0e21\u0e41\u0e25\u0e49\u0e27! DeepSeek \u0e1f\u0e23\u0e35\u0e44\u0e21\u0e48\u0e08\u0e33\u0e01\u0e31\u0e14 \ud83d\udc0b \u2014 \u0e1e\u0e34\u0e21\u0e1e\u0e4c\u0e02\u0e49\u0e2d\u0e04\u0e27\u0e32\u0e21\u0e44\u0e14\u0e49\u0e40\u0e25\u0e22');
+      } catch (e) { toast('\u26a0\ufe0f \u0e40\u0e0a\u0e37\u0e48\u0e2d\u0e21\u0e44\u0e21\u0e48\u0e2a\u0e33\u0e40\u0e23\u0e47\u0e08/\u0e22\u0e01\u0e40\u0e25\u0e34\u0e01 \u2014 \u0e23\u0e30\u0e1a\u0e1a\u0e22\u0e31\u0e07\u0e43\u0e0a\u0e49\u0e40\u0e0b\u0e34\u0e23\u0e4c\u0e1f\u0e40\u0e27\u0e2d\u0e23\u0e4c\u0e40\u0e14\u0e34\u0e21'); }
       return;
     }
     puterOn = !puterOn;
