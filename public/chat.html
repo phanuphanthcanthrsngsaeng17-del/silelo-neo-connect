@@ -92,6 +92,7 @@
     background-repeat: repeat; background-size: 420px 420px; }
 
   .app { position: relative; z-index: 2; display: flex; flex-direction: column; height: 100%; max-width: 880px; margin: 0 auto; width: 100%; overflow-x: clip; }
+  body.dropzone::after { content: '📎 วางไฟล์ตรงนี้เลย! สลี่อ่านให้เอง'; position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(10,16,32,.78); color: #a78bfa; font-size: 20px; font-weight: 800; z-index: 9999; pointer-events: none; border: 3px dashed #a78bfa; }
 
   /* ===== Header ===== */
   .ct-btn { background: rgba(167,139,250,.12); color: #cdd9f5; border: 1px solid rgba(167,139,250,.35); border-radius: 9px; padding: 6px 10px; font-size: 11.5px; font-weight: 700; cursor: pointer; transition: all .15s; }
@@ -1415,6 +1416,63 @@
     typing.style.display = 'none';
     sendBtn.disabled = false;
   };
+
+  /* ===== 📎 AUTO FILE — ลาก/แปะไฟล์มาแล้วสลี่อ่านเอง ไม่ต้องกดปุ่ม ===== */
+  function extOf(n) { return (n.split('.').pop() || '').toLowerCase(); }
+  const TEXT_EXTS = new Set(['txt','md','csv','json','log','js','py','html','css','java','c','cpp','h','go','rs','rb','php','sql','xml','yml','yaml','ini','ts','jsx','tsx','sh','bat','env']);
+  function loadJs(src) { return new Promise((res, rej) => { const s = document.createElement('script'); s.src = src; s.onload = res; s.onerror = () => rej(new Error('โหลด lib ไม่ได้')); document.head.appendChild(s); }); }
+  async function readPdf(f) {
+    if (!window.pdfjsLib) await loadJs('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js');
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    const doc = await pdfjsLib.getDocument({ data: await f.arrayBuffer() }).promise;
+    let out = '';
+    for (let i = 1; i <= Math.min(doc.numPages, 15); i++) { const pg = await doc.getPage(i); const tc = await pg.getTextContent(); out += tc.items.map(x => x.str).join(' ') + '\n'; }
+    return out;
+  }
+  async function readDocx(f) {
+    if (!window.mammoth) await loadJs('https://cdn.jsdelivr.net/npm/mammoth@1.6.0/mammoth.browser.min.js');
+    const r = await mammoth.extractRawText({ arrayBuffer: await f.arrayBuffer() });
+    return r.value;
+  }
+  async function readXlsx(f) {
+    if (!window.XLSX) await loadJs('https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js');
+    const wb = XLSX.read(await f.arrayBuffer());
+    let out = '';
+    for (const sn of wb.SheetNames.slice(0, 5)) { out += '## แผ่น: ' + sn + '\n' + XLSX.utils.sheet_to_csv(wb.Sheets[sn]) + '\n'; }
+    return out;
+  }
+  async function handleDroppedFile(f) {
+    if (!f) return;
+    const ext = extOf(f.name);
+    if (f.type.startsWith('image/')) { try { const dt = new DataTransfer(); dt.items.add(f); imgFile.files = dt.files; imgFile.dispatchEvent(new Event('change')); } catch (e) { toast('❌ แนบรูปไม่สำเร็จ'); } return; }
+    toast('📖 กำลังอ่าน ' + f.name + '...');
+    let text = '';
+    try {
+      if (ext === 'pdf') text = await readPdf(f);
+      else if (ext === 'docx') text = await readDocx(f);
+      else if (ext === 'xlsx' || ext === 'xls') text = await readXlsx(f);
+      else if (TEXT_EXTS.has(ext) || (f.type && f.type.startsWith('text/'))) text = await f.text();
+      else { toast('❌ ไฟล์ .' + ext + ' ยังอ่านไม่ได้'); return; }
+    } catch (e) { toast('❌ อ่านไฟล์ไม่สำเร็จ: ' + e.message); return; }
+    if (!text || !text.trim()) { toast('⚠️ ไม่มีข้อความในไฟล์'); return; }
+    const q = '📎 [ไฟล์: ' + f.name + ']\n\n' + text.trim().slice(0, 9000) + '\n\nช่วยอ่านและสรุป/วิเคราะห์ไฟล์นี้ให้หน่อย (ภาษาไทย กระชับ เข้าใจง่าย)';
+    inp.value = q; autoGrow();
+    send();
+  }
+  let dragDepth = 0;
+  document.addEventListener('dragenter', e => { dragDepth++; document.body.classList.add('dropzone'); e.preventDefault(); });
+  document.addEventListener('dragover', e => { e.preventDefault(); });
+  document.addEventListener('dragleave', e => { dragDepth--; if (dragDepth <= 0) { dragDepth = 0; document.body.classList.remove('dropzone'); } e.preventDefault(); });
+  document.addEventListener('drop', async e => {
+    e.preventDefault(); dragDepth = 0; document.body.classList.remove('dropzone');
+    const files = e.dataTransfer && e.dataTransfer.files ? [...e.dataTransfer.files] : [];
+    for (const f of files) await handleDroppedFile(f);
+  });
+  inp.addEventListener('paste', async e => {
+    const items = e.clipboardData && e.clipboardData.items ? [...e.clipboardData.items] : [];
+    const files = items.filter(it => it.kind === 'file').map(it => it.getAsFile());
+    if (files.length) { e.preventDefault(); for (const f of files) await handleDroppedFile(f); }
+  });
 
   /* ===== 📞 VOICE CALL (โทรคุยสด) ===== */
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
