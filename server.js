@@ -344,6 +344,59 @@ async function ollamaChat(messages, extSignal) {
   return null;
 }
 
+/* 🏠 Multi-Model Hub (Ollama local — multimodel_hub.py) — 10 โมเดล Router + Ensemble
+   รันที่บ้าน: python multimodel_hub.py  →  http://localhost:8080
+   สลี่เชื่อมผ่าน env OLLAMA_HUB_URL (เช่าได้ใส่ tunnel อย่าง cloudflared) */
+const OLLAMA_HUB_URL = (process.env.OLLAMA_HUB_URL || '').replace(/\/$/, '');
+let OLLAMA_HUB_DEAD_UNTIL = 0;
+async function multimodelHubChat(messages, extSignal, hubOpts) {
+  if (!OLLAMA_HUB_URL) return null;
+  if (Date.now() < OLLAMA_HUB_DEAD_UNTIL) return null;
+  const body = {
+    messages,
+    model: (hubOpts && hubOpts.model) || 'auto',
+    ensemble: !!(hubOpts && hubOpts.ensemble),
+    temperature: 0.7,
+    max_tokens: 2000
+  };
+  try {
+    const rs = raceSignal(25000, extSignal);
+    try {
+      const r = await fetch(OLLAMA_HUB_URL + '/v1/chat/completions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+        signal: rs.signal
+      });
+      if (!r.ok) {
+        const j = await r.json().catch(() => ({}));
+        logAI('hub', 'HTTP ' + r.status + ' ' + String(j.error || '').slice(0, 60));
+        if (r.status === 401 || r.status === 404) { OLLAMA_HUB_DEAD_UNTIL = Date.now() + 600000; return null; }
+        return null;
+      }
+      const j = await r.json();
+      if (j.choices && j.choices[0]) {
+        const c = j.choices[0];
+        let reply = (c.message && c.message.content || '').trim();
+        if (body.ensemble) {
+          const parts = [];
+          for (const ch of j.choices) {
+            const t = (ch.message && ch.message.content || '').trim();
+            const mn = ch.model || 'model';
+            if (t) parts.push('[' + mn + '] ' + t);
+          }
+          if (parts.length) reply = parts.slice(0, 3).join('\n\n---\n\n');
+        }
+        if (reply) {
+          logAI('hub', (j.hub_note || body.ensemble ? 'ensemble' : 'auto') + ' ✅');
+          return { provider: 'multimodel-hub', model: (body.ensemble ? 'ensemble' : (j.hub_note || 'auto')), reply };
+        }
+      }
+    } finally { rs.clear(); }
+  } catch (e) { if (extSignal && extSignal.aborted) return null; logAI('hub', 'err: ' + String(e.message || e).slice(0, 50)); }
+  return null;
+}
+
 /* Z.AI / Zhipu GLM — key {id}.{secret} (glm-4.7-flash ฟรี, จีน endpoint เร็ว 2.6s) */
 const ZAI_API_KEY = process.env.ZAI_API_KEY || '';
 const ZAI_MODELS = (process.env.ZAI_MODELS || 'glm-4.7-flash,glm-4.5-flash').split(',').map(s => s.trim()).filter(Boolean);
@@ -2353,12 +2406,27 @@ function codeLangOf(text) {
 }
 async function fastChat(messages) {
   /* เร็วสุด — Groq → Cerebras → Ollama → Z.AI → Gemini → OpenRouter → Pollinations */
-  const chain = [groqChat, cerebrasChat, ollamaChat, zaiChat, geminiChat, openrouterChat, pollinationsChat];
+  const chain = [groqChat, cerebrasChat, ollamaChat, multimodelHubChat, zaiChat, geminiChat, openrouterChat, pollinationsChat];
   for (const fn of chain) {
     try { const r = await fn(messages); if (r && r.reply) return r; } catch (e) {}
   }
   return null;
 }
+
+// ============ 🏠 Multi-Model Hub API (Ollama บ้าน — multimodel_hub.py) ============
+app.post('/api/hub', async (req, res) => {
+  try {
+    const { question, system, model, ensemble } = req.body || {};
+    if (!OLLAMA_HUB_URL) return res.json({ ok: false, error: 'OLLAMA_HUB_URL ยังไม่ได้ตั้ง (env) — รันที่บ้าน: python multimodel_hub.py แล้วใส่ tunnel' });
+    const msgs = [];
+    if (system) msgs.push({ role: 'system', content: String(system).slice(0, 4000) });
+    msgs.push({ role: 'user', content: String(question || '').slice(0, 6000) });
+    const r = await multimodelHubChat(msgs, null, { model, ensemble: !!ensemble });
+    if (!r) return res.json({ ok: false, error: 'hub ไม่ตอบ (offline?) — ตรวจอุณหภูมิ: ' + OLLAMA_HUB_URL });
+    return res.json({ ok: true, ...r });
+  } catch (e) { return res.json({ ok: false, error: String(e.message || e) }); }
+});
+
 app.post('/api/codetool', async (req, res) => {
   try {
     const { mode, code, lang, question, to } = req.body || {};
