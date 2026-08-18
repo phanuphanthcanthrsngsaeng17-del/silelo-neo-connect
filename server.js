@@ -539,10 +539,20 @@ async function askRoomAI(roomId, question, history, memory, unrestricted, intel)
 }
 
 /* ---------------- 🩺 DIAG (ตรวจ env runtime จริง) ---------------- */
-app.get('/api/diag', (req, res) => {
-  const k = ['GROQ_API_KEY','GEMINI_API_KEYS','OPENROUTER_API_KEY','HF_TOKEN','POLLINATIONS_MODEL','GEMINI_MODEL','RUN_SECRET','AUTH_SECRET','STABILITY_API_KEYS','LINE_LOGIN_CHANNEL_ID'];
-  const out = {};
-  for (const key of k) out[key] = (process.env[key] || '').length + ':' + String(process.env[key] || '').slice(0, 10);
+app.get('/api/diag', async (req, res) => {
+  const msgs = [{ role: 'user', content: 'ตอบสั้นๆ: สวัสดี' }];
+  const out = { env: {} };
+  for (const key of ['GROQ_API_KEY','GEMINI_API_KEYS','OPENROUTER_API_KEY','HF_TOKEN','POLLINATIONS_MODEL']) out.env[key] = (process.env[key] || '').length;
+  const tryOne = async (name, fn) => {
+    const t0 = Date.now();
+    try { const r = await fn(); out[name] = { ok: !!r, ms: Date.now() - t0, model: r && r.model, err: r ? null : 'no-result' }; }
+    catch (e) { out[name] = { ok: false, ms: Date.now() - t0, err: String(e.message || e).slice(0, 160) }; }
+  };
+  await tryOne('groq', () => groqChat(msgs));
+  await tryOne('gemini', () => geminiChat(msgs));
+  await tryOne('openrouter', () => openrouterChat(msgs));
+  await tryOne('hf', () => hfChat(msgs));
+  await tryOne('pollinations', () => pollinationsChat(msgs));
   res.json(out);
 });
 
