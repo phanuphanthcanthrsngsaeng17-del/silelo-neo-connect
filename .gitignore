@@ -1,5 +1,17 @@
-node_modules/
+# ==========================================
+# 🔐 SILELO Private System — ห้ามเผยแพร่ข้อมูลลับ
+# ==========================================
 .env
+.env.*
+!.env.example
+*.key
+*.pem
+secrets/
+node_modules/
+npm-debug.log
+.DS_Store
+dist/
+build/
 *.log
 *.py
 .vercel

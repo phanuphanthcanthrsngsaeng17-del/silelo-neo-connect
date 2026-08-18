@@ -136,7 +136,7 @@
   html[data-room="private"] #codeBtn, html[data-room="work"] #codeBtn { display: none !important; }
   .back-btn { width: 48px; height: 48px; border-radius: 12px; border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent);
     background: var(--panel); color: var(--txt); font-size: 19px; cursor: pointer; flex: none; transition: all .2s; }
-  #callBtn { width: 50px; height: 50px; border-radius: 50%; background: linear-gradient(145deg, #16a34a, #0f6b36); color: #fff !important;
+  #callBtn { width: 50px; height: 50px; border-radius: 50%; background: #15803d; color: #fff !important;
     font-size: 22px; border: none; flex: none; display: flex; align-items: center; justify-content: center; cursor: pointer;
     box-shadow: 0 4px 16px rgba(34,197,94,.4); animation: callpulse 1.8s ease-in-out infinite; transition: all .15s; }
   #callBtn:active { transform: scale(.9); }
@@ -330,7 +330,7 @@
   #callTrans.empty { color: var(--dim); }
   /* ปุ่มแชร์จอ — เล็ก มุมขวาบน */
   /* Dola style: หน้าโทรเหลือ 3 ปุ่ม (ไมค์/ลำโพง/กล้อง) + วางสายใหญ่กลางล่าง */
-  #screenBtn, #stopTtsBtn { display: none !important; }
+  #stopTtsBtn { display: none !important; }
   .call-ctrl-row { gap: 26px; }
   /* ===== ▶ คลื่นเสียงไมค์ (visualizer) ===== */
   #callViz { width: min(280px, 86%); height: 46px; margin: 2px auto 0; display: flex; align-items: center; justify-content: center; }
@@ -342,11 +342,14 @@
   .cshare {
     position: absolute; top: max(env(safe-area-inset-top), 18px); right: 16px;
     display: flex; flex-direction: column; align-items: center; gap: 2px;
-    background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.1);
-    color: rgba(220,240,255,.75); border-radius: 12px; padding: 8px 12px; cursor: pointer; font-size: 16px;
+    background: color-mix(in srgb, var(--txt) 10%, transparent);
+    border: 1px solid color-mix(in srgb, var(--txt) 35%, transparent);
+    color: var(--txt); border-radius: 12px; padding: 8px 12px; cursor: pointer; font-size: 16px;
+    box-shadow: 0 2px 14px rgba(0,0,0,.25);
   }
-  .cshare span { font-size: 10px; letter-spacing: .5px; }
-  .cshare.on { background: rgba(0,229,255,.14); border-color: rgba(0,229,255,.5); color: #00e5ff; }
+  .cshare:disabled { cursor: not-allowed; }
+  .cshare span { font-size: 10px; letter-spacing: .5px; color: var(--txt); }
+  .cshare.on { background: color-mix(in srgb, var(--accent) 18%, transparent); border-color: color-mix(in srgb, var(--accent) 60%, transparent); color: var(--accent); }
   /* 3 ปุ่มควบคุม — ใหญ่ กดง่าย */
   .call-ctrl-row { display: flex; gap: 30px; align-items: center; }
   .cctrl {
@@ -546,7 +549,7 @@
 
 <!-- 📞 หน้าจอโทร -->
 <div id="callOverlay">
-  <button class="cshare" id="screenBtn" title="แชร์หน้าจอให้ AI ดูแบบสด">📺<span>แชร์จอ</span></button>
+  <button class="cshare" id="screenBtn" title="แชร์หน้าจอมือถือให้ AI ดูสด — สลี่จะเห็นเมนูแอพในมือถือ">📺<span>แชร์จอ</span></button>
   <div class="call-top">
     <div class="call-avatar" id="callAvatar">
       <div class="ring2"></div><div class="ring2"></div><div class="ring2"></div>
@@ -819,6 +822,32 @@
     sendBtn.disabled = false;
   }
 
+
+  /* ===== 🔔 แจ้งเตือนข้อความใหม่ (Notification API) ===== */
+  function askNotifyPerm() {
+    try {
+      if ('Notification' in window && Notification.permission === 'default') {
+        setTimeout(() => Notification.requestPermission().catch(() => {}), 3000);
+      }
+    } catch (e) {}
+  }
+  function notifyMsg(text) {
+    try {
+      if (!('Notification' in window)) return;
+      if (Notification.permission !== 'granted') return;
+      if (!document.hidden) return; // กำลังเปิดแชทอยู่ → ไม่ต้องแจ้ง
+      const clean = String(text || '').replace(/\s+/g, ' ').trim().slice(0, 120);
+      if (!clean) return;
+      const n = new Notification('💜 สลี่ · ' + (typeof room === 'string' ? room.toUpperCase() : 'NEO') + ' — ข้อความใหม่', {
+        body: clean,
+        icon: '/icon-192.png',
+        badge: '/icon-192.png',
+        tag: 'silelo-msg'
+      });
+      n.onclick = () => { window.focus(); n.close(); };
+      setTimeout(() => { try { n.close(); } catch (e) {} }, 15000);
+    } catch (e) {}
+  }
   async function send() {
     unlockAudio();
     const q = inp.value.trim();
@@ -841,7 +870,7 @@
         body: JSON.stringify({ room, question: q, history: cleanHist(history.slice(-12, -1)), memory, unrestricted: noRules })
       });
       const j = await r.json();
-      if (j.reply) { addMsg('assistant', j.reply); toast('⚡ ' + (j.provider === 'mock' ? 'BACKUP MODE' : j.provider.toUpperCase() + ' · ' + j.model)); speak(j.reply); }
+      if (j.reply) { addMsg('assistant', j.reply); notifyMsg(j.reply); toast('⚡ ' + (j.provider === 'mock' ? 'BACKUP MODE' : j.provider.toUpperCase() + ' · ' + j.model)); speak(j.reply); }
       else toast('⚠ ' + (j.error || 'NO REPLY'));
     } catch (e) { toast('⚠ SERVER UNREACHABLE'); }
     typing.style.display = 'none';
@@ -976,7 +1005,7 @@
           if (window.speechSynthesis && txt && token === speakToken) {
             try {
               const u = new SpeechSynthesisUtterance(String(txt));
-              u.lang = 'th-TH'; u.rate = 0.95;
+              u.lang = 'th-TH'; u.rate = 1.05;
               const v = speechSynthesis.getVoices().find(x => x.lang && x.lang.toLowerCase().replace('_', '-').startsWith('th'));
               if (v) u.voice = v;
               u.onend = res; u.onerror = res;
@@ -1274,6 +1303,13 @@
   /* ===== 📺📷 แชร์หน้าจอ/กล้อง — AI มองเห็นแบบสด ===== */
   const screenBtn = document.getElementById('screenBtn');
   const camBtn = document.getElementById('camBtn');
+  // 🔍 ปิดปุ่มแชร์จอถ้าเบราว์เซอร์ไม่รองรับ (iPhone/iPad/Safari/LINE ในแอป) — กันกดแล้วงง
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getDisplayMedia) {
+    screenBtn.disabled = true;
+    screenBtn.title = 'แชร์จอใช้ได้เฉพาะ Chrome บน Android หรือคอมพิวเตอร์ (iPhone ยังไม่รองรับ)';
+    screenBtn.style.opacity = '.35';
+    screenBtn.style.filter = 'grayscale(1)';
+  }
   let liveStream = null, liveTimer = null, liveMode = null, lastSpeakAt = 0, liveBusy = false;
   const liveVideo = document.createElement('video');
   liveVideo.id = 'liveVideo';
@@ -1323,11 +1359,13 @@
   async function startLive(mode) {
     if (liveStream) stopLive();
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { toast('⚠ เบราว์เซอร์นี้ไม่รองรับกล้อง/หน้าจอ'); return; }
-    if (mode === 'screen' && !navigator.mediaDevices.getDisplayMedia) { toast('⚠ เบราว์เซอร์นี้ไม่รองรับการแชร์หน้าจอ (ใช้ Chrome/Edge บนคอม)'); return; }
+    if (mode === 'screen' && !navigator.mediaDevices.getDisplayMedia) { toast('📺 แชร์จอใช้ได้เฉพาะ Chrome บน Android หรือคอมพิวเตอร์ — iPhone/iPad ยังไม่รองรับ'); return; }
     try {
-      liveStream = mode === 'screen'
-        ? await navigator.mediaDevices.getDisplayMedia({ video: true })
-        : await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+      if (mode === 'screen') {
+        liveStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
+      } else {
+        liveStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+      }
     } catch (e) {
       toast('⚠ ไม่สามารถเปิด' + (mode === 'screen' ? 'หน้าจอ' : 'กล้อง') + 'ได้ — ปฏิเสธหรือไม่รองรับ');
       return;
@@ -1342,6 +1380,15 @@
     const t = liveStream.getVideoTracks()[0];
     if (t) t.onended = () => stopLive();
     toast(mode === 'screen' ? '📺 AI เห็นหน้าจอแล้ว!' : '📷 AI เห็นกล้องแล้ว!');
+    if (mode === 'screen') {
+      // 💡 แนะนำครั้งแรก (หลังเลือกหน้าจอสำเร็จแล้ว)
+      try {
+        if (!localStorage.getItem('nc_screenhint')) {
+          localStorage.setItem('nc_screenhint', '1');
+          setTimeout(() => toast('📺 ถ้าอยากให้สลี่เห็นเมนูแอพอื่นในมือถือ ให้เลือก "แชร์ทั้งหน้าจอ" ตอนกดแชร์จอครั้งหน้า (ไม่ใช่ "แท็บนี้")', 8000), 1500);
+        }
+      } catch (e) {}
+    }
     liveLoop();
   }
 
@@ -1679,7 +1726,7 @@ async function verifyPin() {
   try {
     const r = await fetch('/api/unlock', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ pin }) });
     const j = await r.json();
-    if (j.ok) { try { localStorage.setItem(LOCK_KEY, '1'); } catch (e) {} lockScreen.classList.remove('show'); lockMsg.textContent = ''; lockInp.value = ''; if (typeof maybeAutoCall === 'function') setTimeout(maybeAutoCall, 700); }
+    if (j.ok) { try { localStorage.setItem(LOCK_KEY, '1'); } catch (e) {} lockScreen.classList.remove('show'); lockMsg.textContent = ''; lockInp.value = ''; if (typeof maybeAutoCall === 'function') setTimeout(maybeAutoCall, 700); askNotifyPerm(); }
     else { lockMsg.textContent = 'รหัสไม่ถูกต้อง ❌'; lockInp.value = ''; lockInp.focus(); }
   } catch (e) { lockMsg.textContent = 'เชื่อมต่อเซิร์ฟเวอร์ไม่ได้'; lockInp.value = ''; }
 }
