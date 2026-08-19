@@ -465,6 +465,107 @@
   @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after { animation: none !important; transition: none !important; }
   }
+
+  /* ===== 💜 DOLA STYLE — merged ===== */
+  /* ============ 💜 DOLA STYLE — แถบเลื่อน / ไซด์บาร์ / ตั้งค่า / หน้าโทร ============ */
+  /* 🎚️ แถบเลื่อนสไตล์ Dola: ไล่สีม่วง-ชมพู, ปุ่มกลมขาว, 4-6px, มุมมนเต็มที่ (Apple) */
+  * { scrollbar-width: thin; scrollbar-color: #ffffff #a78bfa; }
+  *::-webkit-scrollbar { width: 5px; height: 5px; }
+  *::-webkit-scrollbar-track { background: linear-gradient(180deg, rgba(167,139,250,.28), rgba(255,45,149,.28)); border-radius: 999px; }
+  *::-webkit-scrollbar-thumb { background: linear-gradient(180deg, #ffffff, #f3e8ff); border-radius: 999px; border: 1.5px solid rgba(167,139,250,.4); box-shadow: 0 0 8px rgba(255,45,149,.35); }
+  *::-webkit-scrollbar-thumb:hover { background: #ffffff; }
+  *::-webkit-scrollbar-corner { background: transparent; }
+  .bubble { font-size: var(--msg-fs, 15px); }
+  #menuBtn { font-size: 19px; font-weight: 700; }
+  /* ===== ไซด์บาร์สไตล์ Dola ===== */
+  .dola-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.55); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); z-index: 500; opacity: 0; pointer-events: none; transition: opacity .25s; }
+  .dola-overlay.show { opacity: 1; pointer-events: auto; }
+  .dola-sidebar { position: fixed; top: 0; left: 0; bottom: 0; width: min(320px, 86vw); z-index: 501; background: linear-gradient(180deg, rgba(16,10,30,.96), rgba(8,4,16,.97)); backdrop-filter: blur(26px); -webkit-backdrop-filter: blur(26px); border-right: 1px solid rgba(167,139,250,.28); display: flex; flex-direction: column; transform: translateX(-105%); transition: transform .32s cubic-bezier(.2,.9,.3,1); box-shadow: 22px 0 70px rgba(0,0,0,.55); }
+  .dola-sidebar.show { transform: translateX(0); }
+  .dola-sb-head { display: flex; align-items: center; gap: 10px; padding: 18px 16px 12px; }
+  .dola-brand { font-size: 22px; font-weight: 800; letter-spacing: 1px; background: linear-gradient(90deg, #c084fc, #ff2d95); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .dola-brand small { font-size: 11px; color: var(--dim); font-weight: 500; display: block; letter-spacing: .4px; }
+  .dola-sb-close { margin-left: auto; width: 34px; height: 34px; border-radius: 50%; border: 1px solid rgba(255,255,255,.14); background: rgba(255,255,255,.06); color: var(--txt); font-size: 15px; cursor: pointer; transition: all .15s; }
+  .dola-sb-close:active { transform: scale(.9); background: rgba(255,45,149,.25); }
+  .dola-search { margin: 4px 12px 10px; }
+  .dola-search input { width: 100%; box-sizing: border-box; padding: 11px 14px; border-radius: 999px; border: 1px solid rgba(167,139,250,.32); background: rgba(255,255,255,.06); color: var(--txt); font-size: 13.5px; outline: none; transition: all .2s; }
+  .dola-search input:focus { border-color: #c084fc; box-shadow: 0 0 14px rgba(192,132,252,.35); background: rgba(255,255,255,.09); }
+  .dola-search input::placeholder { color: rgba(232,246,255,.4); }
+  .dola-newchat { display: flex; align-items: center; gap: 10px; margin: 2px 12px 8px; padding: 12px 14px; border-radius: 14px; border: 1px solid rgba(192,132,252,.4); background: linear-gradient(135deg, rgba(192,132,252,.16), rgba(255,45,149,.1)); color: var(--txt); font-size: 14px; font-weight: 600; cursor: pointer; transition: all .15s; text-align: left; }
+  .dola-newchat:active { transform: scale(.97); background: linear-gradient(135deg, rgba(192,132,252,.32), rgba(255,45,149,.22)); }
+  .dola-chatlist { flex: 1; overflow-y: auto; padding: 4px 10px 10px; display: flex; flex-direction: column; gap: 4px; }
+  .dola-chat-item { display: flex; align-items: center; gap: 12px; padding: 11px 12px; border-radius: 13px; border: 1px solid transparent; background: transparent; color: var(--txt); cursor: pointer; transition: all .15s; text-align: left; font-family: inherit; }
+  .dola-chat-item:hover { background: rgba(167,139,250,.1); border-color: rgba(167,139,250,.2); }
+  .dola-chat-item.active { background: linear-gradient(135deg, rgba(192,132,252,.18), rgba(255,45,149,.1)); border-color: rgba(192,132,252,.4); }
+  .dola-chat-ico { width: 40px; height: 40px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 20px; background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.08); flex: none; }
+  .dola-chat-tx { min-width: 0; }
+  .dola-chat-name { font-size: 13.5px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .dola-chat-sub { font-size: 10.5px; color: var(--dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 2px; }
+  .dola-sb-foot { padding: 10px 12px calc(12px + env(safe-area-inset-bottom)); border-top: 1px solid rgba(167,139,250,.16); }
+  .dola-sb-foot .dola-chat-item { width: 100%; }
+  /* ===== หน้า "บัญชี Bossnusilelo" (ตั้งค่า) ===== */
+  .dola-settings { position: fixed; inset: 0; z-index: 520; display: none; flex-direction: column; background: linear-gradient(180deg, rgba(14,9,26,.98), rgba(6,3,13,.99)); backdrop-filter: blur(22px); -webkit-backdrop-filter: blur(22px); }
+  .dola-settings.show { display: flex; }
+  .dola-set-head { display: flex; align-items: center; gap: 12px; padding: 18px 16px 12px; }
+  .dola-set-back { width: 40px; height: 40px; border-radius: 50%; border: 1px solid rgba(255,255,255,.14); background: rgba(255,255,255,.06); color: var(--txt); font-size: 17px; cursor: pointer; transition: all .15s; }
+  .dola-set-back:active { transform: scale(.9); background: rgba(192,132,252,.3); }
+  .dola-set-title { font-size: 19px; font-weight: 800; letter-spacing: .5px; }
+  .dola-set-title small { display: block; font-size: 11px; color: var(--dim); font-weight: 500; }
+  .dola-set-list { flex: 1; overflow-y: auto; padding: 6px 14px 20px; display: flex; flex-direction: column; gap: 6px; }
+  .dola-set-item { display: flex; align-items: center; gap: 14px; width: 100%; padding: 14px 14px; border-radius: 15px; border: 1px solid rgba(255,255,255,.07); background: rgba(255,255,255,.035); color: var(--txt); font-size: 14.5px; cursor: pointer; transition: all .15s; text-align: left; font-family: inherit; }
+  .dola-set-item:hover { background: rgba(167,139,250,.09); border-color: rgba(167,139,250,.28); }
+  .dola-set-item:active { transform: scale(.98); }
+  .dola-set-item .dola-set-ico { width: 40px; height: 40px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 19px; background: linear-gradient(135deg, rgba(192,132,252,.16), rgba(255,45,149,.1)); border: 1px solid rgba(192,132,252,.25); flex: none; }
+  .dola-set-item .dola-set-val { margin-left: auto; font-size: 12px; color: var(--dim); }
+  .dola-set-item .dola-set-val.on { color: #22e584; font-weight: 700; }
+  .dola-fs-row { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-radius: 15px; border: 1px solid rgba(255,255,255,.07); background: rgba(255,255,255,.035); }
+  .dola-fs-row b { font-size: 12.5px; color: var(--dim); font-weight: 600; flex: 1; }
+  .dola-fs-btn { width: 40px; height: 40px; border-radius: 50%; border: 1px solid rgba(192,132,252,.4); background: rgba(192,132,252,.12); color: var(--txt); font-size: 17px; font-weight: 700; cursor: pointer; transition: all .15s; }
+  .dola-fs-btn:active { transform: scale(.9); background: rgba(255,45,149,.28); }
+  .dola-fs-val { min-width: 34px; text-align: center; font-size: 14px; font-weight: 700; }
+  /* ===== ค้นหาประวัติ ===== */
+  .dola-searchmodal { position: fixed; inset: 0; z-index: 530; display: none; align-items: center; justify-content: center; background: rgba(0,0,0,.6); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
+  .dola-searchmodal.show { display: flex; }
+  .dola-search-box { width: min(560px, 92vw); max-height: 76vh; display: flex; flex-direction: column; background: linear-gradient(160deg, #150d28, #0a0516); border: 1px solid rgba(192,132,252,.35); border-radius: 20px; padding: 16px; box-shadow: 0 24px 80px rgba(0,0,0,.6); }
+  .dola-search-box input { width: 100%; box-sizing: border-box; padding: 13px 16px; border-radius: 14px; border: 1px solid rgba(167,139,250,.35); background: rgba(255,255,255,.06); color: var(--txt); font-size: 14px; outline: none; }
+  .dola-search-box input:focus { border-color: #c084fc; box-shadow: 0 0 14px rgba(192,132,252,.35); }
+  .dola-search-res { flex: 1; overflow-y: auto; margin-top: 10px; display: flex; flex-direction: column; gap: 6px; }
+  .dola-search-row { padding: 10px 12px; border-radius: 12px; background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.07); cursor: pointer; transition: all .12s; }
+  .dola-search-row:hover { background: rgba(192,132,252,.12); border-color: rgba(192,132,252,.3); }
+  .dola-search-row b { color: #c084fc; }
+  .dola-search-row .dsr-meta { font-size: 10px; color: var(--dim); margin-bottom: 3px; }
+  .dola-search-row .dsr-txt { font-size: 12.5px; color: var(--txt); line-height: 1.5; word-break: break-word; max-height: 60px; overflow: hidden; }
+  /* ===== info modal (เกี่ยวกับ/ความเป็นส่วนตัว/ช่วยเหลือ) ===== */
+  .dola-info { position: fixed; inset: 0; z-index: 540; display: none; align-items: center; justify-content: center; background: rgba(0,0,0,.6); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
+  .dola-info.show { display: flex; }
+  .dola-info-box { width: min(480px, 90vw); max-height: 80vh; overflow-y: auto; background: linear-gradient(160deg, #150d28, #0a0516); border: 1px solid rgba(192,132,252,.35); border-radius: 20px; padding: 18px 18px 16px; box-shadow: 0 24px 80px rgba(0,0,0,.6); }
+  .dola-info-box h3 { font-size: 16px; margin: 0 0 10px; color: var(--txt); }
+  .dola-info-box p, .dola-info-box li { font-size: 13px; line-height: 1.7; color: rgba(232,246,255,.85); }
+  .dola-info-box ul { padding-left: 18px; margin: 6px 0; }
+  .dola-info-x { float: right; width: 32px; height: 32px; border-radius: 50%; border: 1px solid rgba(255,255,255,.14); background: rgba(255,255,255,.06); color: var(--txt); cursor: pointer; }
+  /* ===== หน้าโทรสไตล์ Dola ===== */
+  #callOverlay.dola-call { background: radial-gradient(130% 120% at 50% 0%, #1d0f38 0%, #120827 45%, #05030c 100%); }
+  #callOverlay.dola-call .call-avatar { width: 200px; height: 200px; }
+  #callOverlay.dola-call .cface { background: conic-gradient(from 210deg, #c084fc, #ff2d95, #7c3aed, #c084fc); border: 3px solid rgba(255,255,255,.25); font-size: 84px; box-shadow: 0 0 70px rgba(192,132,252,.55), inset 0 0 40px rgba(0,0,0,.35); animation: dolaFace 6s linear infinite; }
+  @keyframes dolaFace { to { filter: hue-rotate(360deg); } }
+  #callOverlay.dola-call .call-avatar .ring2 { border-color: rgba(192,132,252,.55); }
+  #callOverlay.dola-call #callName { font-size: 26px; letter-spacing: 1px; }
+  #callOverlay.dola-call #callState { font-size: 15px; color: #e9d5ff; font-weight: 800; letter-spacing: .5px; }
+  #callOverlay.dola-call #callTimer { font-size: 30px; opacity: .85; }
+  .dola-start { font-size: 17px; font-weight: 800; letter-spacing: 2px; color: #fff; background: linear-gradient(90deg, #c084fc, #ff2d95); -webkit-background-clip: text; background-clip: text; color: transparent; opacity: 0; transform: translateY(6px); transition: all .3s; min-height: 24px; }
+  .dola-start.show { opacity: 1; transform: translateY(0); }
+  #callOverlay.dola-call .cctrl { width: 82px; height: 82px; font-size: 30px; background: rgba(255,255,255,.08); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,.14); box-shadow: 0 8px 30px rgba(0,0,0,.4); }
+  #callOverlay.dola-call .cctrl span { color: rgba(232,246,255,.8); }
+  #callOverlay.dola-call .cend { background: linear-gradient(145deg, #ff4d6d, #c81e4f); box-shadow: 0 10px 36px rgba(255,45,85,.55); width: 92px; height: 92px; }
+  #callOverlay.dola-call #speakerBtn, #callOverlay.dola-call #camBtn, #callOverlay.dola-call .cshare { display: none !important; }
+  #callOverlay.dola-call .call-hint { color: rgba(232,246,255,.6); }
+  #callOverlay.dola-call #callTrans { background: rgba(255,255,255,.06); border-color: rgba(192,132,252,.3); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
+  /* ===== ธีม DOLA ===== */
+  body.theme-dola { --accent: #c084fc; --cyan: #c084fc; --purple: #e9d5ff; --pink: #ff2d95; --amber: #ffb74d; --bg: #050208; --txt: #f4ecff; --dim: #9b8cc0; --bot-grad1: rgba(192,132,252,.26); --bot-grad2: rgba(255,45,149,.1); --bot-border: rgba(192,132,252,.55); --panel: rgba(28,16,52,.72); --panel-2: rgba(16,8,30,.55); --field: rgba(192,132,252,.06); --line: rgba(192,132,252,.3); --callbg: radial-gradient(130% 130% at 50% -10%, #4b2a7a 0%, #3a2160 38%, #552a5e 68%, #6b2f56 100%); }
+  body.theme-dola .msg.user .bubble, body.theme-dola .msg.bot .bubble { border-radius: 18px; clip-path: none; }
+  body.theme-dola .send, body.theme-dola .icon-btn, body.theme-dola .back-btn, body.theme-dola #inp { border-radius: 16px; }
+  body.theme-dola .send { background: linear-gradient(135deg, #c084fc, #ff2d95); border-radius: 50%; }
+
 </style>
 </head>
 <body>
@@ -476,6 +577,7 @@
 
 <div class="app">
   <header>
+    <button class="back-btn" id="menuBtn" title="เมนู / แชท">☰</button>
     <button class="back-btn" id="backBtn" title="กลับหน้าหลัก">←</button>
     <div class="avatar-wrap">
       <div class="ring"></div>
@@ -625,7 +727,7 @@
     private: { name: 'SLI', tag: 'สลี่ออลา · ภรรยาของพี่นุ · ONLINE', avatar: '💜', accent: '#a78bfa' }
   };
   let room = new URLSearchParams(location.search).get('room') || 'private';
-  if (!ROOMS[room]) { room = 'private'; history.replaceState(null, '', '/chat'); }
+  if (!ROOMS[room]) { room = 'private'; window.history.replaceState(null, '', '/chat'); }
   document.documentElement.dataset.room = room;
   const R = ROOMS[room] || ROOMS.private;
   document.documentElement.style.setProperty('--accent', R.accent);
@@ -2463,7 +2565,7 @@
     try { localStorage.setItem('nc_theme', name); } catch (e) {}
   }
   let curTheme = 'neo';
-  try { curTheme = localStorage.getItem('nc_theme') || 'dusty'; } catch (e) {}
+  try { curTheme = localStorage.getItem('nc_theme') || 'dola'; } catch (e) {}
   applyTheme(curTheme);
   document.querySelectorAll('.theme-card').forEach(card => {
     card.onclick = () => {
@@ -2580,6 +2682,64 @@ lockScreen.classList.remove('show');
     if (e.target.id === 'notesModal') e.target.style.display = 'none';
   });
   </script>
+
+
+  <!-- ===== 💜 ไซด์บาร์สไตล์ Dola ===== -->
+  <div class="dola-overlay" id="dolaOverlay"></div>
+  <aside class="dola-sidebar" id="dolaSidebar">
+    <div class="dola-sb-head">
+      <div class="dola-brand">Dola<small>BOSSNUSILELO · สลี่</small></div>
+      <button class="dola-sb-close" id="dolaSbClose" title="ปิดเมนู">✕</button>
+    </div>
+    <div class="dola-search"><input id="dolaSearch" placeholder="🔍 ค้นหา..."></div>
+    <button class="dola-newchat" id="dolaNewChat">💬 แชทใหม่</button>
+    <div class="dola-chatlist" id="dolaChatList"></div>
+    <div class="dola-sb-foot">
+      <button class="dola-chat-item" id="dolaSetOpen" style="width:100%;">
+        <span class="dola-chat-ico">⚙️</span>
+        <span class="dola-chat-tx"><span class="dola-chat-name">ตั้งค่า</span><span class="dola-chat-sub">บัญชี Bossnusilelo</span></span>
+      </button>
+    </div>
+  </aside>
+
+  <!-- ===== ⚙️ หน้า "บัญชี Bossnusilelo" (ตั้งค่า) ===== -->
+  <div class="dola-settings" id="dolaSettings">
+    <div class="dola-set-head">
+      <button class="dola-set-back" id="dolaSetBack" title="กลับ">←</button>
+      <div class="dola-set-title">บัญชี Bossnusilelo<small>บัญชี Dola ของพี่นุ · สลี่ AI</small></div>
+    </div>
+    <div class="dola-set-list">
+      <button class="dola-set-item" data-act="sound"><span class="dola-set-ico">🔊</span> เสียง<span class="dola-set-val" id="dolaValSound">อัตโนมัติ</span></button>
+      <button class="dola-set-item" data-act="fonttheme"><span class="dola-set-ico">AA</span> ขนาดตัวอักษรและธีม<span class="dola-set-val" id="dolaValTheme">NEO</span></button>
+      <div class="dola-fs-row"><b>🔤 ขนาดตัวอักษร</b><button class="dola-fs-btn" id="dolaFsMinus">A−</button><span class="dola-fs-val" id="dolaFsVal">15</span><button class="dola-fs-btn" id="dolaFsPlus">A＋</button></div>
+      <button class="dola-set-item" data-act="memory"><span class="dola-set-ico">🔄</span> ความทรงจำ<span class="dola-set-val on" id="dolaValMem">เปิด ●</span></button>
+      <button class="dola-set-item" data-act="newtopic"><span class="dola-set-ico">➕</span> เริ่มหัวข้อใหม่</button>
+      <button class="dola-set-item" data-act="history"><span class="dola-set-ico">🔍</span> ประวัติการค้นหา</button>
+      <button class="dola-set-item" data-act="default"><span class="dola-set-ico">⚡</span> ค่าเริ่มต้นสำหรับแชทใหม่ — รวดเร็ว<span class="dola-set-val" id="dolaValModel">อัตโนมัติ</span></button>
+      <button class="dola-set-item" data-act="privacy"><span class="dola-set-ico">🔒</span> ความเป็นส่วนตัวและสิทธิ์</button>
+      <button class="dola-set-item" data-act="help"><span class="dola-set-ico">🚩</span> ความช่วยเหลือและข้อเสนอแนะ</button>
+      <button class="dola-set-item" data-act="about"><span class="dola-set-ico">ℹ️</span> เกี่ยวกับ Dola</button>
+      <button class="dola-set-item" data-act="discord"><span class="dola-set-ico">🐱</span> เข้าร่วมกับเราบน Discord</button>
+    </div>
+  </div>
+
+  <!-- ===== 🔍 ค้นหาประวัติ ===== -->
+  <div class="dola-searchmodal" id="dolaSearchModal">
+    <div class="dola-search-box">
+      <input id="dolaSearchInput" placeholder="🔍 ค้นหาในประวัติแชท...">
+      <div class="dola-search-res" id="dolaSearchRes"></div>
+      <div style="text-align:center;margin-top:10px;"><button class="dola-set-back" id="dolaSearchClose" style="width:auto;padding:0 16px;border-radius:999px;">ปิด</button></div>
+    </div>
+  </div>
+
+  <!-- ===== ℹ️ เกี่ยวกับ / ความเป็นส่วนตัว / ช่วยเหลือ ===== -->
+  <div class="dola-info" id="dolaInfo">
+    <div class="dola-info-box" id="dolaInfoBox">
+      <button class="dola-info-x" id="dolaInfoClose">✕</button>
+      <h3 id="dolaInfoTitle"></h3>
+      <div id="dolaInfoBody"></div>
+    </div>
+  </div>
 
 <script>
 /* ===== 🧰 CODE TOOLS (CodingFleet style) — v2 ===== */
@@ -2738,6 +2898,242 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 </script>
 \n
+<script>
+/* ===== 💜 DOLA STYLE — sidebar/settings/search/info/call ===== */
+  /* ===== 💜 DOLA STYLE — ไซด์บาร์ / ตั้งค่า / ค้นหาประวัติ / หน้าโทร ===== */
+  (function () {
+    const $ = (id) => document.getElementById(id);
+
+    /* ---------- ไซด์บาร์ ---------- */
+    const overlay = $('dolaOverlay'), sb = $('dolaSidebar');
+    function openSb() { sb.classList.add('show'); overlay.classList.add('show'); renderChatList($('dolaSearch').value); }
+    function closeSb() { sb.classList.remove('show'); overlay.classList.remove('show'); }
+    const menuBtn = $('menuBtn');
+    if (menuBtn) menuBtn.onclick = (e) => { e.stopPropagation(); openSb(); };
+    $('dolaSbClose').onclick = closeSb;
+    overlay.onclick = closeSb;
+
+    /* ---------- รายการแชทในไซด์บาร์ ---------- */
+    const DOLA_CHATS = [
+      { icon: '🟤', name: 'โมลี่ครอบครัว', sub: 'ครอบครัว · เมื่อวาน', room: 'private' },
+      { icon: '🟡', name: 'หัวใจ', sub: 'ความรัก · 2 วันก่อน', room: 'work' },
+      { icon: '🫶', name: 'ฉันและสลี่AI...', sub: 'เพื่อนสนิท · สดๆ', room: 'lab' }
+    ];
+    const DOLA_ROOM_NAMES = { private: 'SLI', work: 'WORK', lab: 'LAB' };
+    let dolaActiveRoom = room;
+    function renderChatList(q) {
+      const list = $('dolaChatList');
+      list.innerHTML = '';
+      const items = DOLA_CHATS.filter(c => !q || (c.name + ' ' + c.sub).toLowerCase().includes(q.toLowerCase()));
+      if (!items.length) {
+        const d = document.createElement('div');
+        d.style.cssText = 'color:#9b8cc0;text-align:center;padding:20px 0;font-size:12.5px;';
+        d.textContent = 'ไม่พบแชท "' + q + '"';
+        list.appendChild(d);
+        return;
+      }
+      items.forEach(c => {
+        const b = document.createElement('button');
+        b.className = 'dola-chat-item' + (c.room === dolaActiveRoom ? ' active' : '');
+        b.innerHTML = '<span class="dola-chat-ico">' + c.icon + '</span><span class="dola-chat-tx"><span class="dola-chat-name">' + c.name + '</span><span class="dola-chat-sub">' + c.sub + '</span></span>';
+        b.onclick = () => { switchRoom(c.room); closeSb(); };
+        list.appendChild(b);
+      });
+    }
+    $('dolaSearch').addEventListener('input', (e) => renderChatList(e.target.value.trim()));
+    function switchRoom(r) {
+      if (r === dolaActiveRoom) return;
+      dolaActiveRoom = r;
+      try { localStorage.setItem('nc_dola_room', r); } catch (e) {}
+      location.href = '/chat?room=' + r;
+    }
+    try { dolaActiveRoom = localStorage.getItem('nc_dola_room') || room; } catch (e) {}
+
+    /* ---------- แชทใหม่ (ล้างห้องนี้) ---------- */
+    $('dolaNewChat').onclick = () => {
+      history = []; try { localStorage.removeItem(KEY); } catch (e) {}
+      msgsEl.innerHTML = '';
+      addMsg('assistant', R.name + ': หัวข้อใหม่ — พร้อมคุยกันได้เลย! 💜');
+      toast('💬 เริ่มหัวข้อใหม่แล้ว');
+      closeSb();
+    };
+
+    /* ---------- หน้า "บัญชี Bossnusilelo" (ตั้งค่า) ---------- */
+    const settings = $('dolaSettings');
+    function openSettings() { settings.classList.add('show'); syncSettingsVals(); }
+    function closeSettings() { settings.classList.remove('show'); }
+    $('dolaSetOpen').onclick = () => { closeSb(); openSettings(); };
+    $('dolaSetBack').onclick = closeSettings;
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { closeSettings(); closeSb(); $('dolaSearchModal').classList.remove('show'); $('dolaInfo').classList.remove('show'); } });
+
+    /* ค่าเริ่มต้นแชทใหม่ — รวดเร็ว */
+    let dolaDefaultModel = 'auto';
+    try { dolaDefaultModel = localStorage.getItem('nc_model') || 'auto'; } catch (e) {}
+    const modelSel = $('modelSel');
+    if (modelSel) modelSel.addEventListener('change', () => { try { localStorage.setItem('nc_model', modelSel.value); } catch (e) {} syncSettingsVals(); });
+
+    /* ความทรงจำ toggle */
+    let dolaMemOn = true;
+    try { dolaMemOn = localStorage.getItem('nc_dola_mem') !== '0'; } catch (e) {}
+    function syncMem() {
+      const el = $('dolaValMem');
+      el.textContent = dolaMemOn ? 'เปิด ●' : 'ปิด ○';
+      el.classList.toggle('on', dolaMemOn);
+    }
+
+    /* ขนาดตัวอักษร */
+    let dolaFs = 15;
+    try { dolaFs = parseInt(localStorage.getItem('nc_fs') || '15', 10) || 15; } catch (e) {}
+    function applyFs() {
+      document.documentElement.style.setProperty('--msg-fs', dolaFs + 'px');
+      $('dolaFsVal').textContent = dolaFs;
+      try { localStorage.setItem('nc_fs', String(dolaFs)); } catch (e) {}
+    }
+    $('dolaFsMinus').onclick = () => { dolaFs = Math.max(11, dolaFs - 1); applyFs(); };
+    $('dolaFsPlus').onclick = () => { dolaFs = Math.min(22, dolaFs + 1); applyFs(); };
+
+    function syncSettingsVals() {
+      const vm = modelSel ? modelSel.value : 'auto';
+      $('dolaValModel').textContent = vm === 'auto' ? 'อัตโนมัติ' : vm.split('/').pop();
+      $('dolaValSound').textContent = (typeof voice !== 'undefined' && voice) ? voice : 'อัตโนมัติ';
+      try { $('dolaValTheme').textContent = (localStorage.getItem('nc_theme') || 'neo').toUpperCase(); } catch (e) {}
+      syncMem();
+      applyFs();
+    }
+
+    /* เปิด/ปิดหน้าโทรแบบ Dola */
+    function syncDolaCall() {
+      const co = $('callOverlay');
+      co.classList.toggle('dola-call', true);
+    }
+    syncDolaCall();
+
+    document.querySelectorAll('.dola-set-item[data-act]').forEach(btn => {
+      btn.onclick = (e) => {
+        e.stopPropagation();
+        const act = btn.dataset.act;
+        if (act === 'sound') {
+          const vp = $('voicePop');
+          $('themePop').classList.remove('show');
+          vp.classList.toggle('show');
+        } else if (act === 'fonttheme') {
+          const tp = $('themePop');
+          $('voicePop').classList.remove('show');
+          tp.classList.toggle('show');
+        } else if (act === 'memory') {
+          dolaMemOn = !dolaMemOn;
+          try { localStorage.setItem('nc_dola_mem', dolaMemOn ? '1' : '0'); } catch (e) {}
+          syncMem();
+          toast(dolaMemOn ? '🔄 ความทรงจำ: เปิด ● — สลี่จำได้' : '🔄 ความทรงจำ: ปิด ○ — สลี่ไม่จำใหม่');
+        } else if (act === 'newtopic') {
+          history = []; try { localStorage.removeItem(KEY); } catch (e) {}
+          msgsEl.innerHTML = '';
+          addMsg('assistant', R.name + ': หัวข้อใหม่ — พร้อมคุยกันได้เลย! 💜');
+          toast('➕ เริ่มหัวข้อใหม่แล้ว');
+        } else if (act === 'history') {
+          $('dolaSearchModal').classList.add('show');
+          setTimeout(() => $('dolaSearchInput').focus(), 60);
+        } else if (act === 'default') {
+          if (modelSel) modelSel.value = 'auto';
+          try { localStorage.setItem('nc_model', 'auto'); } catch (e) {}
+          syncSettingsVals();
+          toast('⚡ ค่าเริ่มต้นแชทใหม่: รวดเร็ว (อัตโนมัติ)');
+        } else if (act === 'privacy') {
+          showInfo('🔒 ความเป็นส่วนตัวและสิทธิ์', '<p>ข้อมูลแชทของคุณถูกเก็บไว้ในเครื่องคุณเอง (localStorage) และผ่านเซิร์ฟเวอร์เพื่อประมวลผลคำตอบเท่านั้น</p><ul><li>🔐 บทสนทนาส่วนตัว — ไม่แชร์กับใคร</li><li>🛡️ ไม่เก็บประวัติการค้นหา</li><li>🎙️ ไมโครโฟนใช้เฉพาะตอนกดโทร/พูด</li><li>📷 กล้องใช้เฉพาะตอนเปิดกล้องให้ AI ดู</li></ul><p>สิทธิ์ทั้งหมดสามารถเปิด-ปิดได้ที่เบราว์เซอร์ของคุณ</p>');
+        } else if (act === 'help') {
+          showInfo('🚩 ความช่วยเหลือและข้อเสนอแนะ', '<p>พิมพ์คำสั่งเหล่านี้ได้เลย:</p><ul><li><b>@ชื่อทีม</b> — สั่งงาน AI ทีม 50 คน</li><li><b>มอบหมาย @ชื่อ งาน...</b> — มอบงานให้ AI</li><li><b>ติดตั้ง pandas</b> — รันโค้ด/ติดตั้งแพ็กเกจ (LAB)</li><li><b>เขียนเกมงู Python</b> — เขียน+รันโค้ดให้เลย</li><li><b>แชร์จอ / เปิดกล้อง</b> — ให้ AI มองเห็น</li></ul><p>พบปัญหา? พิมพ์บอกสลี่ได้เลย — หรือกด 🐱 Discord เพื่อคุยกับทีม</p>');
+        } else if (act === 'about') {
+          showInfo('ℹ️ เกี่ยวกับ Dola', '<p><b>Dola</b> คือผู้ช่วย AI ในเวอร์ชัน <b>Bossnusilelo</b> — สร้างโดยพี่นุ (bossnu) เพื่อดูแลและคุยกับสลี่ 🤖💜</p><p>เวอร์ชัน: <b>Neo-Connect v1.9+</b><br>โหมด: ห้อง ' + (R.name || 'SLI') + ' · ' + (R.tag || '') + '</p><p>ฟีเจอร์: แชท AI, โทรด้วยเสียง, จดจำบทสนทนา, ทีม AI 50 คน, เขียน+รันโค้ด, ดูภาพ, แชร์หน้าจอ</p><p>ทำโดย พี่นุ (bossnu) — โปรเจกต์ Silelo / Neo-Connect / Bossnusilelo Eye 💍</p>');
+        } else if (act === 'discord') {
+          toast('🐱 กำลังเปิด Discord...');
+          window.open('https://discord.gg/', '_blank');
+        }
+      };
+    });
+
+    /* ---------- ค้นหาประวัติ ---------- */
+    const sModal = $('dolaSearchModal');
+    $('dolaSearchClose').onclick = () => sModal.classList.remove('show');
+    sModal.addEventListener('click', (e) => { if (e.target === sModal) sModal.classList.remove('show'); });
+    let dolaSearchTimer = null;
+    $('dolaSearchInput').addEventListener('input', (e) => {
+      clearTimeout(dolaSearchTimer);
+      dolaSearchTimer = setTimeout(() => {
+        const q = e.target.value.trim().toLowerCase();
+        const res = $('dolaSearchRes');
+        res.innerHTML = '';
+        if (!q) return;
+        const msgs = history.filter(m => m && m.content && String(m.content).toLowerCase().includes(q));
+        if (!msgs.length) {
+          res.innerHTML = '<div style="color:#9b8cc0;text-align:center;padding:18px;font-size:13px;">ไม่พบข้อความ "' + q + '"</div>';
+          return;
+        }
+        msgs.slice(-40).forEach(m => {
+          const row = document.createElement('div');
+          row.className = 'dola-search-row';
+          const who = m.role === 'assistant' ? R.name + ' 💜' : 'พี่นุ';
+          row.innerHTML = '<div class="dsr-meta">' + who + ' · ' + fmt(m.t) + '</div><div class="dsr-txt">' + escHtml(String(m.content).slice(0, 140)) + '</div>';
+          row.onclick = () => { sModal.classList.remove('show'); jumpToMsg(m); };
+          res.appendChild(row);
+        });
+      }, 200);
+    });
+    function jumpToMsg(m) {
+      const els = msgsEl.querySelectorAll('.msg');
+      for (let i = 0; i < els.length; i++) {
+        const b = els[i].querySelector('.bubble');
+        if (b && b.textContent === m.content) {
+          els[i].style.outline = '2px solid #c084fc';
+          els[i].style.borderRadius = '14px';
+          els[i].scrollIntoView({ behavior: 'smooth', block: 'center' });
+          setTimeout(() => { els[i].style.outline = ''; }, 2600);
+          return;
+        }
+      }
+    }
+
+    /* ---------- เกี่ยวกับ / ความเป็นส่วนตัว / ช่วยเหลือ ---------- */
+    const info = $('dolaInfo');
+    function showInfo(title, html) {
+      $('dolaInfoTitle').textContent = title;
+      $('dolaInfoBody').innerHTML = html;
+      info.classList.add('show');
+    }
+    $('dolaInfoClose').onclick = () => info.classList.remove('show');
+    info.addEventListener('click', (e) => { if (e.target === info) info.classList.remove('show'); });
+
+    /* ---------- หน้าโทร: แสดง "เริ่มพูด" เมื่อกำลังฟัง ---------- */
+    const dolaStart = $('dolaStart');
+    const origSetCallState = window.setCallState || function () {};
+    window.setCallState = function (s) {
+      origSetCallState(s);
+      if (dolaStart) {
+        const map = { listening: 'เริ่มพูด', thinking: 'กำลังคิด...', speaking: 'กำลังพูด...', connecting: 'กำลังเชื่อมต่อ...' };
+        dolaStart.textContent = map[s] || '';
+        dolaStart.classList.toggle('show', s === 'listening' || s === 'thinking' || s === 'speaking');
+      }
+      const co = $('callOverlay');
+      if (co && !co.classList.contains('dola-call')) co.classList.add('dola-call');
+    };
+
+    /* ---------- sync เริ่มต้น ---------- */
+    syncSettingsVals();
+
+    /* ความทรงจำ toggle — ปิด = หยุดจดบันทึกอัตโนมัติ */
+    const origBumpMemory = window.bumpMemory || function () {};
+    window.bumpMemory = function () {
+      if (!dolaMemOn) return;
+      origBumpMemory();
+    };
+    const origAddNote = window.addNote || function () {};
+    window.addNote = function (t, k) {
+      if (!dolaMemOn) return;
+      origAddNote(t, k);
+    };
+    if (typeof window.syncMemToggle === 'function') window.syncMemToggle();
+  })();
+</script>
+
 </body>
 </html>
 <!-- v1.26-bump -->
