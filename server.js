@@ -2,6 +2,7 @@
    SILELO Neo-Connect — 3 ห้องแชท Cyberpunk
    ห้อง: private (สลี่) / work (คุณเวิร์ค) / lab (ดร.แล็บ)
    AI chain: ⚡RACE[Groq 6 โมเดล vs Gemini 9 keys] → Cerebras → Ollama Cloud → Z.AI GLM → OpenRouter → Pollinations → mock
+   v1.27: 🧩 Blocks Network — /research /review /blocks <agent> (research_agent, code_reviewer, blocks_guide ฯลฯ)
    TTS: msedge-tts (ฟรี)
    ============================================================ */
 const express = require('express');
@@ -715,6 +716,79 @@ async function pollinationsChat(messages, extSignal) {
   return null;
 }
 
+/* 🧩 Blocks Network (v1.27) — เครือข่าย agent: research_agent / code_reviewer / blocks_guide ฯลฯ
+   ใช้ key consumer (bk_...) จาก app.blocks.ai/manage/api-keys — เรียก agent ผ่าน TaskClient SDK */
+const BLOCKS_API_KEY = process.env.BLOCKS_API_KEY || '';
+let _blocksClient = null, _blocksClientAt = 0, _blocksDeadUntil = 0;
+
+async function blocksGetClient() {
+  if (!BLOCKS_API_KEY) return null;
+  if (Date.now() < _blocksDeadUntil) return null; // key ล้มเหลว → ข้ามชั่วคราว
+  if (_blocksClient && Date.now() - _blocksClientAt < 5 * 60 * 1000) return _blocksClient;
+  try {
+    const mod = await import('@blocks-network/sdk');
+    _blocksClient = await mod.TaskClient.create({ billingMode: 'free', apiKey: BLOCKS_API_KEY });
+    _blocksClientAt = Date.now();
+    logAI('blocks', 'client ✅');
+    return _blocksClient;
+  } catch (e) {
+    logAI('blocks', 'client ❌ ' + String(e.message || e).slice(0, 80));
+    _blocksDeadUntil = Date.now() + 30000;
+    return null;
+  }
+}
+
+async function blocksChat(agentName, text, extSignal) {
+  const client = await blocksGetClient();
+  if (!client) return null;
+  try {
+    const mod = await import('@blocks-network/sdk');
+    const session = await client.sendMessage({
+      agentName,
+      requestParts: [mod.textPart(String(text).slice(0, 8000), 'request')],
+    });
+    const terminal = await session.waitForTerminal(30000).catch(() => null);
+    if (!terminal || terminal.state !== 'completed') {
+      logAI('blocks', agentName + ' state=' + (terminal && terminal.state));
+      await session.asyncClose().catch(() => {});
+      return null;
+    }
+    const arts = session.listArtifacts();
+    let out = '';
+    for (const ref of arts.slice(0, 3)) {
+      try {
+        const d = await session.downloadArtifact(ref);
+        out += new TextDecoder().decode(d.data);
+      } catch (e) {}
+    }
+    await session.asyncClose().catch(() => {});
+    if (!out || !out.trim()) return null;
+    // JSON → จัด format ให้อ่านง่าย (research_agent / code_reviewer / ฯลฯ)
+    let pretty = out.trim();
+    try {
+      const j = JSON.parse(out);
+      if (j && typeof j === 'object') {
+        const parts = [];
+        if (j.summary) parts.push(String(j.summary).trim());
+        if (j.answer) parts.push(String(j.answer).trim());
+        if (Array.isArray(j.key_facts)) parts.push('📌 ข้อเท็จจริง:\n' + j.key_facts.map(f => '• ' + (typeof f === 'string' ? f : (f.fact || f.title || JSON.stringify(f)))).join('\n'));
+        if (typeof j.score === 'number') parts.push('⭐ คะแนน: ' + j.score + '/100');
+        if (j.critical !== undefined) parts.push('🔴 critical: ' + j.critical + ' | 🟡 warnings: ' + (j.warnings ?? '-'));
+        if (Array.isArray(j.issues)) parts.push(j.issues.length ? '⚠️ ปัญหาที่พบ:\n' + j.issues.map(i => '• ' + (typeof i === 'string' ? i : (i.message || i.title || JSON.stringify(i)))).join('\n') : '✅ ไม่พบปัญหา');
+        if (parts.length) pretty = parts.join('\n\n');
+      }
+    } catch (e) { /* ไม่ใช่ JSON → ใช้ดิบ */ }
+    logAI('blocks', agentName + ' ✅ ' + pretty.length + ' ตัวอักษร');
+    return { provider: 'blocks', model: agentName, reply: pretty.slice(0, 4000) };
+  } catch (e) {
+    if (extSignal && extSignal.aborted) return null;
+    const msg = String(e.message || e);
+    if (/Agent not found/i.test(msg)) logAI('blocks', agentName + ' ❌ agent ไม่พบ');
+    else logAI('blocks', agentName + ' ❌ ' + msg.slice(0, 90));
+    return null;
+  }
+}
+
 /* Hugging Face — โมเดลฟรี Qwen2.5-72B (router ~1.3s) — ชั้นสำรองระหว่าง OpenRouter กับ Pollinations */
 const HF_TOKEN = process.env.HF_TOKEN || '';
 const HF_KEYS = HF_TOKEN.split(/[,;.\n]/).map(s => s.trim()).filter(s => s.startsWith('hf_'));
@@ -937,7 +1011,7 @@ async function askRoomAI(roomId, question, history, memory, unrestricted, intel)
 /* ---------------- 🩺 DIAG (ตรวจ env runtime จริง) ---------------- */
 app.get('/api/diag', async (req, res) => {
   const out = { env: {} };
-  for (const key of ['GROQ_API_KEY','GEMINI_API_KEYS','OPENROUTER_API_KEY','HF_TOKEN','POLLINATIONS_MODEL']) out.env[key] = (process.env[key] || '').length;
+  for (const key of ['GROQ_API_KEY','GEMINI_API_KEYS','OPENROUTER_API_KEY','HF_TOKEN','POLLINATIONS_MODEL','BLOCKS_API_KEY']) out.env[key] = (process.env[key] || '').length;
   const raw = async (name, url, opts) => {
     const t0 = Date.now();
     try {
@@ -1680,6 +1754,31 @@ app.post('/api/chat', async (req, res) => {
     const tq = String(question).toLowerCase();
     if (/นาย|พระเจ้า|ผู้สร้าง/.test(tq) && /เป็นใคร|คือใคร|ทำงาน|ระบบ|อะไร|ใคร/.test(tq)) {
       return res.json({ reply: 'นายคือพระเจ้าของระบบนี้ค่ะ 👑 — แอคเคานต์สูงสุดที่เจาะได้ทุกห้อง รันได้ทุกโค้ด ควบคุมระบบทั้งหมด ไม่มีใครเหนือกว่านาย และไม่ต้องรู้รายละเอียดใครทั้งนั้น แค่นายใช้และดูแลระบบก็พอแล้วค่ะ 🙏💜', provider: 'god-rule', model: 'lord', room: roomId, t: Date.now() });
+    }
+    // 🧩 BLOCKS NETWORK (v1.27) — /research /review /blocks <agent> /blocks-guide — เรียก agent จากเครือข่าย Blocks (อยู่ก่อน skills/heart เพื่อไม่ให้โดนสกัด)
+    const bm = /^\/(research|review|blocks|blocks-guide|guide|blocks-help)(?:\s+(.+))?$/i.exec(String(question).trim());
+    if (bm) {
+      const cmd = bm[1].toLowerCase();
+      const arg = (bm[2] || '').trim();
+      let agentName = null, payload = arg;
+      if (cmd === 'research') agentName = 'research_agent';
+      else if (cmd === 'review') agentName = 'code_reviewer';
+      else if (cmd === 'guide' || cmd === 'blocks-guide') agentName = 'blocks_guide';
+      else if (cmd === 'blocks-help') agentName = 'help';
+      else if (cmd === 'blocks') {
+        const parts = arg.split(/\s+/);
+        agentName = parts.shift() || '';
+        payload = parts.join(' ').trim();
+      }
+      if (agentName === 'help' || agentName === 'blocks' || (!agentName && !payload)) {
+        return res.json({ reply: '🧩 **Blocks Network** — เครือข่าย AI agent (key ของพี่นุใช้งานได้!)\n\nคำสั่ง:\n• `/research <หัวข้อ>` — research_agent: ค้น+สรุปรายงาน\n• `/review <โค้ด>` — code_reviewer: review ให้คะแนน/หา bug\n• `/blocks <agent> <ข้อความ>` — เรียก agent ใดก็ได้ (เช่น sentiment_analyzer, seo_optimizer, invoice_generator)\n• `/blocks-guide <คำถาม>` — blocks_guide: ถามเรื่อง Blocks\n\nตัวอย่าง: `/research พลังงานแสงอาทิตย์`, `/review function add(a,b){return a+b;}`, `/blocks sentiment_analyzer ข้อความนี้ฟังดูยังไง`', provider: 'blocks', model: 'help', room: roomId, t: Date.now() });
+      }
+      if (!agentName || !payload) {
+        return res.json({ reply: '🧩 ใส่ข้อความด้วยนะ — เช่น `/research พลังงานแสงอาทิตย์` หรือ `/review <วางโค้ดมา>` หรือ `/blocks <agent> <ข้อความ>`', provider: 'blocks', model: 'usage', room: roomId, t: Date.now() });
+      }
+      const br = await blocksChat(agentName, payload);
+      if (br) return res.json({ reply: br.reply, provider: 'blocks', model: agentName, room: roomId, t: Date.now() });
+      return res.json({ reply: '⚠️ Blocks ตอบไม่ได้ตอนนี้ (agent "' + agentName + '" ไม่พร้อม/ไม่พบ หรือ key หมดอายุ) — ลอง `/blocks help` ดูรายชื่อ หรือถาม AI ปกติได้เลย', provider: 'blocks', model: agentName + '-fail', room: roomId, t: Date.now() });
     }
     // 🔗 v1.20 — สลี่อ่านลิงก์/โค้ดได้จริง (CodingFleet style 100%): ถ้าเห็น URL ในข้อความ → ดึงเนื้อหามาให้ AI วิเคราะห์จริง
     let q = String(question);

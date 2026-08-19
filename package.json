@@ -8,6 +8,7 @@
     "postinstall": "node scripts/trim_ort.js"
   },
   "dependencies": {
+    "@blocks-network/sdk": "^1.0.13",
     "dotenv": "^17.4.2",
     "express": "^4.19.2",
     "jimp": "^1.6.1",
