@@ -15,3 +15,7 @@ build/
 *.log
 *.py
 .vercel
+
+# local GGUF llama.cpp hub (ไม่ deploy)
+hub/
+setup_cpu.sh
