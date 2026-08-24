@@ -1076,6 +1076,37 @@ body.theme-dola #inp { border-radius: 16px; }
   .ap-arrow { display: none; }
 }
 
+/* ===== 👁🗂 v1.34 Dev Panel (Live Preview + IDE) ===== */
+#devPanel { position: fixed; left: 10px; right: 10px; bottom: 10px; height: 46vh; z-index: 900; background: rgba(8,12,26,.97); border: 1px solid rgba(167,139,250,.35); border-radius: 14px; display: flex; flex-direction: column; box-shadow: 0 -8px 40px rgba(0,0,0,.5); overflow: hidden; }
+#devPanel .dev-head { display: flex; align-items: center; gap: 6px; padding: 7px 10px; background: rgba(20,26,48,.95); border-bottom: 1px solid rgba(167,139,250,.25); }
+#devPanel .dev-tab { background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.12); color: #cfd2e8; padding: 6px 12px; border-radius: 8px; cursor: pointer; font-size: 12px; font-weight: 700; }
+#devPanel .dev-tab.active { background: linear-gradient(135deg,#7c3aed,#4f46e5); border-color: transparent; color: #fff; }
+#devPanel .dev-url { flex: 1; text-align: center; color: #8b8fa8; font-size: 11px; font-family: ui-monospace, monospace; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#devPanel .dev-btn { background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.14); color: #e6e6f0; border-radius: 8px; padding: 5px 10px; cursor: pointer; font-size: 12px; }
+#devPanel .dev-btn:hover { background: rgba(255,255,255,.16); }
+#devBody { flex: 1; display: flex; min-height: 0; }
+#devPreviewBox { flex: 1; min-width: 0; display: flex; }
+#devFrame { width: 100%; height: 100%; border: 0; background: #fff; }
+#devIdeBox { flex: 1; display: flex; min-width: 0; }
+.ide-side { width: 230px; min-width: 150px; border-right: 1px solid rgba(255,255,255,.1); display: flex; flex-direction: column; background: rgba(12,16,32,.6); }
+.ide-title { padding: 7px 10px; font-size: 11px; font-weight: 700; color: #9ca3c9; letter-spacing: .5px; border-bottom: 1px solid rgba(255,255,255,.07); }
+#ideTree { flex: 1; overflow: auto; padding: 6px; font-size: 12px; }
+.ide-node { padding: 3px 6px; cursor: pointer; border-radius: 5px; color: #d7d9ec; display: flex; gap: 5px; align-items: center; white-space: nowrap; }
+.ide-node:hover { background: rgba(255,255,255,.07); }
+.ide-node.dir { color: #7dd3fc; font-weight: 600; }
+.ide-node .sz { color: #8b8fa8; font-size: 10px; margin-left: auto; padding-left: 8px; }
+.ide-empty { color: #565a75; font-size: 11px; padding: 10px; }
+.ide-ghimport { padding: 6px; border-top: 1px solid rgba(255,255,255,.08); }
+.ide-ghimport button { width: 100%; background: rgba(56,139,253,.14); border: 1px solid rgba(56,139,253,.4); color: #8ec1ff; border-radius: 8px; padding: 7px; font-size: 11px; cursor: pointer; }
+.ide-main { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+#ideEditor { flex: 1; width: 100%; background: #0a0e1e; color: #e2e6f5; border: 0; outline: none; resize: none; padding: 10px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; line-height: 1.55; tab-size: 2; }
+.ide-actions { display: flex; gap: 6px; padding: 6px 10px; border-top: 1px solid rgba(255,255,255,.08); align-items: center; }
+.ide-status { margin-left: auto; color: #63d79a; font-size: 11px; }
+.ide-term { flex: 0 0 118px; background: #05070f; color: #9fe8b8; font-family: ui-monospace, monospace; font-size: 11px; overflow: auto; padding: 8px; white-space: pre-wrap; border-top: 1px solid rgba(255,255,255,.08); }
+.ide-term .dim { color: #8b8fa8; }
+.ide-termbar { display: flex; border-top: 1px solid rgba(255,255,255,.08); }
+.ide-termbar input { flex: 1; background: #0a0e1e; color: #e2e6f5; border: 0; outline: none; padding: 7px 10px; font-family: ui-monospace, monospace; font-size: 12px; }
+@media (max-width: 640px) { .ide-side { width: 120px; } #devPanel { left: 6px; right: 6px; height: 50vh; } }
 </style>
 </head>
 <body>
@@ -1106,6 +1137,8 @@ body.theme-dola #inp { border-radius: 16px; }
       <button class="icon-btn" id="ruleBtn" title="โหมดไร้กฎ — ไม่มีข้อจำกัด">⚡</button>
       <button class="icon-btn" id="superBtn" title="⚡ SUPER MODE — Super CodingFleet: AI operator ระดับสูง ทำงานจริง ตรวจจริง">🚀</button>
       <button class="icon-btn coder-btn" id="coderBtn" title="🤖 โหมดเขียนโค้ด — สลี่เขียน+รันให้อัตโนมัติ">🤖</button>
+      <button class="icon-btn" id="previewBtn" title="👁 Live Preview — ดูเว็บจาก workspace แบบ Bolt">👁</button>
+      <button class="icon-btn" id="ideBtn" title="🗂 IDE — File Explorer + Editor + Terminal">🗂</button>
       <button class="icon-btn" id="themeBtn" title="เปลี่ยนธีม">🎨</button>
       <button class="icon-btn" id="puterBtn" title="🐋 DeepSeek ฟรีไม่จำกัด (Puter) — แตะเพื่อเชื่อม/สลับ">🐋</button>
       <button class="icon-btn" id="teamBtn" title="🧑💼 ทีมงาน AI 50 คน — พี่นุเป็นผู้จัดการ">🧑💼</button>
@@ -1155,6 +1188,39 @@ body.theme-dola #inp { border-radius: 16px; }
 </div>
 
 <!-- 🔒 หน้าจอล็อก -->
+<!-- 👁🗂 v1.34 Dev Panel: Live Preview + IDE -->
+<div id="devPanel" style="display:none">
+  <div class="dev-head">
+    <button class="dev-tab active" id="devPreviewTab" title="ดูเว็บจาก workspace">👁 Preview</button>
+    <button class="dev-tab" id="devIdeTab" title="File Explorer + Editor + Terminal">🗂 IDE</button>
+    <span class="dev-url" id="devUrl">/preview/</span>
+    <button class="dev-btn" id="devRefresh" title="รีเฟรช">🔄</button>
+    <button class="dev-btn" id="devClose" title="ปิด">✕</button>
+  </div>
+  <div id="devBody">
+    <div id="devPreviewBox"><iframe id="devFrame" src="/preview/"></iframe></div>
+    <div id="devIdeBox" style="display:none">
+      <div class="ide-side">
+        <div class="ide-title">📁 ไฟล์ (workspace)</div>
+        <div id="ideTree"><div class="ide-empty">โหลด...</div></div>
+        <div class="ide-ghimport"><button id="ideGhImport" title="โคลน repo จาก GitHub ลง workspace">🐙 /ghimport &lt;owner/repo&gt;</button></div>
+      </div>
+      <div class="ide-main">
+        <div class="ide-title" id="ideFileTitle">— เลือกไฟล์จากซ้าย หรือพิมพ์ /web ให้ AI สร้าง —</div>
+        <textarea id="ideEditor" spellcheck="false" placeholder="เลือกไฟล์จากซ้ายเพื่อแก้ไข..."></textarea>
+        <div class="ide-actions">
+          <button class="dev-btn" id="ideSave">💾 บันทึก</button>
+          <button class="dev-btn" id="ideNew">➕ ไฟล์ใหม่</button>
+          <button class="dev-btn" id="ideRun">▶ รัน</button>
+          <span class="ide-status" id="ideStatus"></span>
+        </div>
+        <div class="ide-term" id="ideTerm"><div class="ide-empty">Terminal — พิมพ์คำสั่งด้านล่าง (เช่น node app.js, python3 x.py, ls)</div></div>
+        <div class="ide-termbar"><input id="ideCmd" placeholder="พิมพ์คำสั่ง แล้วกด Enter..."><button class="dev-btn" id="ideCmdGo">⏎</button></div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div class="lock" id="lockScreen" style="display:none!important">
   <div class="lock-box">
     <div class="lock-ico">🔒</div>
@@ -1872,7 +1938,9 @@ body.theme-dola #inp { border-radius: 16px; }
           signal: AbortSignal.timeout(55000)
         });
         const j = await r.json();
-        if (j.reply) { addMsg('assistant', j.reply, Date.now(), null, (j.verified !== undefined && j.superRun) ? { verified: j.verified, superRun: j.superRun } : null); notifyMsg(j.reply); scheduleReminder(j.reply); toast('⚡ ' + (j.provider === 'mock' ? 'BACKUP MODE' : j.provider.toUpperCase() + ' · ' + j.model)); speak(j.reply); }
+        if (j.reply) { addMsg('assistant', j.reply, Date.now(), null, (j.verified !== undefined && j.superRun) ? { verified: j.verified, superRun: j.superRun } : null); notifyMsg(j.reply); scheduleReminder(j.reply); toast('⚡ ' + (j.provider === 'mock' ? 'BACKUP MODE' : j.provider.toUpperCase() + ' · ' + j.model)); speak(j.reply);
+          if (j.provider === 'web' || j.provider === 'preview' || j.provider === 'ide') { if (typeof openDev === 'function') openDev(j.provider === 'web' ? 'preview' : (j.provider === 'preview' ? 'preview' : 'ide')); }
+        }
         else toast('⚠️ ' + (j.error || 'NO REPLY'));
       }
     } catch (e) { toast('⚠️ SERVER UNREACHABLE'); }
@@ -3839,6 +3907,161 @@ document.addEventListener('DOMContentLoaded', () => {
     };
     if (typeof window.syncMemToggle === 'function') window.syncMemToggle();
   })();
+
+/* ===== 👁🗂 v1.34 Live Preview + IDE ===== */
+let devMode = 'preview';
+let ideFile = null;
+let ideDirty = false;
+const devPanel = document.getElementById('devPanel');
+const devFrame = document.getElementById('devFrame');
+function openDev(mode) {
+  devPanel.style.display = 'flex';
+  devMode = mode || devMode;
+  const isPrev = devMode === 'preview';
+  document.getElementById('devPreviewBox').style.display = isPrev ? 'flex' : 'none';
+  document.getElementById('devIdeBox').style.display = isPrev ? 'none' : 'flex';
+  document.getElementById('devPreviewTab').classList.toggle('active', isPrev);
+  document.getElementById('devIdeTab').classList.toggle('active', !isPrev);
+  document.getElementById('devUrl').textContent = isPrev ? '/preview/' : 'workspace IDE';
+  if (isPrev) refreshPreview(); else loadTree();
+}
+function closeDev() { devPanel.style.display = 'none'; }
+function refreshPreview() {
+  const u = '/preview/' + (devFrame.dataset.path || '');
+  devFrame.src = u;
+  document.getElementById('devUrl').textContent = u;
+}
+document.getElementById('previewBtn').addEventListener('click', () => openDev('preview'));
+document.getElementById('ideBtn').addEventListener('click', () => openDev('ide'));
+document.getElementById('devPreviewTab').addEventListener('click', () => openDev('preview'));
+document.getElementById('devIdeTab').addEventListener('click', () => openDev('ide'));
+document.getElementById('devRefresh').addEventListener('click', () => { if (devMode === 'preview') refreshPreview(); else loadTree(); });
+document.getElementById('devClose').addEventListener('click', closeDev);
+// ---- File Explorer ----
+async function loadTree() {
+  const box = document.getElementById('ideTree');
+  try {
+    const r = await fetch('/api/sandbox/tree');
+    const j = await r.json();
+    if (!j.ok) { box.innerHTML = '<div class="ide-empty">⚠️ ' + (j.error || 'sandbox ไม่พร้อม') + '</div>'; return; }
+    if (!j.tree.length) { box.innerHTML = '<div class="ide-empty">ว่าง — พิมพ์ /web <ชื่องาน> ให้ AI สร้างเว็บ หรือ /ghimport <owner/repo></div>'; return; }
+    box.innerHTML = '';
+    function renderNode(n, depth) {
+      const d = document.createElement('div');
+      d.className = 'ide-node' + (n.dir ? ' dir' : '');
+      d.style.paddingLeft = (6 + depth * 14) + 'px';
+      d.textContent = (n.dir ? '📂 ' : '📄 ') + n.name;
+      if (!n.dir && n.size !== null) { const s = document.createElement('span'); s.className = 'sz'; s.textContent = n.size > 1024 ? (n.size / 1024).toFixed(1) + 'K' : n.size + 'B'; d.appendChild(s); }
+      if (n.dir) {
+        d.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const kids = d.nextSibling;
+          if (kids && kids.classList && kids.classList.contains('ide-children')) kids.style.display = kids.style.display === 'none' ? '' : 'none';
+        });
+      } else {
+        d.addEventListener('click', () => openFile(n.path));
+      }
+      return d;
+    }
+    function renderList(nodes, depth, parent) {
+      for (const n of nodes) {
+        parent.appendChild(renderNode(n, depth));
+        if (n.dir && n.children) {
+          const wrap = document.createElement('div');
+          wrap.className = 'ide-children';
+          renderList(n.children, depth + 1, wrap);
+          parent.appendChild(wrap);
+        }
+      }
+    }
+    renderList(j.tree, 0, box);
+  } catch (e) { box.innerHTML = '<div class="ide-empty">❌ ' + e.message + '</div>'; }
+}
+async function openFile(p) {
+  ideFile = p;
+  document.getElementById('ideFileTitle').textContent = '📄 ' + p;
+  const ed = document.getElementById('ideEditor');
+  ed.value = 'กำลังโหลด...';
+  ed.disabled = true;
+  try {
+    const r = await fetch('/api/sandbox/read?path=' + encodeURIComponent(p));
+    const j = await r.json();
+    if (!j.ok) { ed.value = '⚠️ ' + (j.error || 'อ่านไม่ได้'); return; }
+    if (j.dir) { ed.value = '📂 โฟลเดอร์ — เลือกไฟล์จากซ้าย'; return; }
+    ed.value = j.content;
+    ideDirty = false;
+    document.getElementById('ideStatus').textContent = '';
+  } catch (e) { ed.value = '❌ ' + e.message; }
+  finally { ed.disabled = false; }
+}
+async function saveFile() {
+  if (!ideFile) { toast('เลือกไฟล์ก่อนครับ'); return; }
+  const content = document.getElementById('ideEditor').value;
+  const st = document.getElementById('ideStatus');
+  st.textContent = 'กำลังบันทึก...';
+  try {
+    const r = await fetch('/api/sandbox/write', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ file: ideFile, content }) });
+    const j = await r.json();
+    st.textContent = j.ok ? '✅ บันทึกแล้ว (' + j.bytes + 'B)' : '⚠️ ' + (j.error || '');
+    if (j.ok) { ideDirty = false; if (/\.html?$/.test(ideFile)) { devFrame.dataset.path = ideFile; refreshPreview(); } }
+  } catch (e) { st.textContent = '❌ ' + e.message; }
+}
+document.getElementById('ideSave').addEventListener('click', saveFile);
+document.getElementById('ideNew').addEventListener('click', async () => {
+  const name = prompt('ชื่อไฟล์ใหม่ (เช่น app.js, style.css):', 'newfile.txt');
+  if (!name || !name.trim()) return;
+  const p = name.trim().replace(/^\/+/, '');
+  try {
+    const r = await fetch('/api/sandbox/write', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ file: p, content: '' }) });
+    const j = await r.json();
+    if (j.ok) { openFile(p); loadTree(); } else toast('⚠️ ' + (j.error || ''));
+  } catch (e) { toast('❌ ' + e.message); }
+});
+document.getElementById('ideGhImport').addEventListener('click', () => {
+  const repo = prompt('🐙 โคลน repo จาก GitHub ลง workspace\n\nพิมพ์ owner/repo เช่น: phanuphanthcanthrsngsaeng6-hue/silelo-neo-connect', '');
+  if (!repo || !repo.trim()) return;
+  runTerm('git clone --depth 1 https://github.com/' + repo.trim() + '.git . 2>&1 | tail -5; ls');
+});
+// ---- Terminal ----
+async function runTerm(cmd) {
+  const term = document.getElementById('ideTerm');
+  const empty = term.querySelector('.ide-empty');
+  if (empty) empty.remove();
+  term.innerHTML += '\n$ ' + cmd + '\n';
+  term.scrollTop = term.scrollHeight;
+  try {
+    const r = await fetch('/api/sandbox/exec', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ cmd }) });
+    const j = await r.json();
+    if (j.ok) {
+      if (j.stdout) term.innerHTML += j.stdout.replace(/</g, '&lt;') + '\n';
+      if (j.stderr) term.innerHTML += '<span style="color:#f87171">' + j.stderr.replace(/</g, '&lt;') + '</span>\n';
+      if (!j.stdout && !j.stderr) term.innerHTML += '(ไม่มี output · exit ' + j.code + ')\n';
+      term.innerHTML += '<span class="dim">exit ' + j.code + ' · ' + j.timeMs + 'ms</span>\n';
+    } else {
+      term.innerHTML += '<span style="color:#f87171">⚠️ ' + (j.error || 'error') + '</span>\n';
+    }
+  } catch (e) { term.innerHTML += '<span style="color:#f87171">❌ ' + e.message + '</span>\n'; }
+  term.scrollTop = term.scrollHeight;
+  loadTree();
+}
+function runIdeCmd() {
+  const inp = document.getElementById('ideCmd');
+  const c = inp.value.trim();
+  if (!c) return;
+  inp.value = '';
+  runTerm(c);
+}
+document.getElementById('ideCmdGo').addEventListener('click', runIdeCmd);
+document.getElementById('ideCmd').addEventListener('keydown', (e) => { if (e.key === 'Enter') runIdeCmd(); });
+document.getElementById('ideRun').addEventListener('click', () => {
+  if (!ideFile) { toast('เลือกไฟล์ก่อนครับ'); return; }
+  if (/\\.(py)$/.test(ideFile)) runTerm('python3 ' + ideFile);
+  else if (/\\.(js|mjs)$/.test(ideFile)) runTerm('node ' + ideFile);
+  else if (/\\.(sh)$/.test(ideFile)) runTerm('bash ' + ideFile);
+  else if (/\\.(html?)$/.test(ideFile)) { devFrame.dataset.path = ideFile; refreshPreview(); }
+  else toast('ไฟล์ประเภทนี้รันไม่ได้ — ใช้ Terminal เองได้ครับ');
+});
+
 </script>
 
 </body>

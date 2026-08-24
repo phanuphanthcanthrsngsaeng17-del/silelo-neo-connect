@@ -2,7 +2,8 @@
    SILELO Neo-Connect — 3 ห้องแชท Cyberpunk
    ห้อง: private (สลี่) / work (คุณเวิร์ค) / lab (ดร.แล็บ)
    AI chain: ⚡RACE[Groq 6 โมเดล vs Gemini 9 keys] → Cerebras → Ollama Cloud → Z.AI GLM → OpenRouter → Pollinations → mock
-   v1.33: ⚡ Parallel Agents (/agents) — AI 5 ตัวทำงานพร้อมกัน | 🗄️ DB Sandbox (/db) — SQLite จริง | 🐙 GitHub Tool (/gh) — repo/user/search | 📤 Export แชท (JSON+TXT)
+   v1.34: 👁 Live Preview (/web AI สร้างเว็บ + /preview iframe) | 🗂 IDE ในเบราว์เซอร์ (File Explorer + Editor + Terminal)
+ — AI 5 ตัวทำงานพร้อมกัน | 🗄️ DB Sandbox (/db) — SQLite จริง | 🐙 GitHub Tool (/gh) — repo/user/search | 📤 Export แชท (JSON+TXT)
    v1.32: 🎙️ TTS อัปเกรด — 11 เสียง หลายภาษา + ปรับความเร็ว 0.5x-2.0x | 👑 แบรนด์ CFBossnusilelo | ปุ่มตั้งค่าครบทุกปุ่ม | หน้าเบาลง (ตัดฟอนต์ + lazy puter.js)
    v1.27: 🧩 Blocks Network — /research /review /blocks <agent> (research_agent, code_reviewer, blocks_guide ฯลฯ)
    TTS: msedge-tts (ฟรี)
@@ -2053,6 +2054,25 @@ app.post('/api/chat', async (req, res) => {
       if (!items.length) return chatJson(res, { reply: '🐙 ไม่เจอ repo ที่ค้นหา', provider: 'gh', model: 'search', room: roomId, t: Date.now() });
       return chatJson(res, { reply: '🐙 **ผลค้นหา:**\n\n' + items.map((it, i) => (i + 1) + '. **' + it.full_name + '** ⭐' + (it.stargazers_count || 0) + '\n   ' + String(it.description || '').slice(0, 120) + '\n   🔗 ' + (it.html_url || '')).join('\n'), provider: 'gh', model: 'search', room: roomId, t: Date.now() });
     }
+    // 🌐 v1.34 LIVE PREVIEW — /web <ชื่องาน> = AI สร้างเว็บจริงลง workspace + เปิด preview ได้ทันที
+    const wm = /^\/web(?:\s+([\s\S]+))?$/.exec(String(question).trim());
+    if (wm) {
+      const task = (wm[1] || '').trim();
+      if (!task) {
+        return chatJson(res, { reply: '🌐 **LIVE PREVIEW (Bolt-style)** — ให้ AI สร้างเว็บจริงลง workspace แล้วเปิดดูได้ทันที\n\nพิมพ์: `/web <ชื่องาน>` เช่น\n• `/web เว็บขายรองเท้า หน้าจอสวย ๆ`\n• `/web ปฏิทินโต้ตอบได้`\n• `/web หน้าโปรไฟล์พี่นุ`\n\nสร้างเสร็จแล้วกดปุ่ม 👁 **Live Preview** (มุมขวาบน) เพื่อดูผลจริง หรือพิมพ์ `/preview`', provider: 'web', model: 'help', room: roomId, t: Date.now() });
+      }
+      const wb = await buildWebApp(task);
+      if (!wb || !wb.html) return chatJson(res, { reply: '🌐 สร้างเว็บไม่สำเร็จ (AI ไม่ตอบโค้ด) — ลองอีกครั้งนะครับ', provider: 'web', model: 'fail', room: roomId, t: Date.now() });
+      return chatJson(res, { reply: '🌐 **สร้างเว็บเสร็จแล้ว!** (' + wb.provider + ' · ' + wb.model + ' · ' + wb.ms + 'ms)\n\n' + String(wb.summary || '').slice(0, 400) + '\n\n**👁 กดปุ่ม Live Preview (มุมขวาบน) เพื่อดูผลจริง** หรือพิมพ์ `/preview`', provider: 'web', model: wb.model, room: roomId, t: Date.now() });
+    }
+    // 👁 /preview — เปิด Live Preview
+    if (/^\/preview$/i.test(String(question).trim())) {
+      return chatJson(res, { reply: '👁 **Live Preview เปิดแล้ว** — ดูเว็บจาก workspace ได้เลย (ถ้ายังว่าง ให้พิมพ์ `/web <ชื่องาน>` ให้ AI สร้างก่อน)', provider: 'preview', model: 'live', room: roomId, t: Date.now() });
+    }
+    // 🗂 /ide — เปิด IDE (File Explorer + Editor + Terminal)
+    if (/^\/ide$/i.test(String(question).trim())) {
+      return chatJson(res, { reply: '🗂 **IDE เปิดแล้ว** — แก้ไฟล์ใน workspace ได้เลย (ถ้าว่าง ให้พิมพ์ `/web <ชื่องาน>` หรือ `/ghimport <owner/repo>`)', provider: 'ide', model: 'open', room: roomId, t: Date.now() });
+    }
     // 🧩 BLOCKS NETWORK (v1.27) — /research /review /blocks <agent> /blocks-guide — เรียก agent จากเครือข่าย Blocks (อยู่ก่อน skills/heart เพื่อไม่ให้โดนสกัด)
     const bm = /^\/(research|review|blocks|blocks-guide|guide|blocks-help)(?:\s+(.+))?$/i.exec(String(question).trim());
     if (bm) {
@@ -2800,6 +2820,96 @@ app.get('/api/env-status', (req, res) => {
   }
   res.json({ ok: true, keys: ENV.status(), at: new Date().toISOString() });
 });
+
+/* ============ 🌐 LIVE PREVIEW + IDE (v1.34) — serve เว็บจาก workspace ============ */
+const MIME = { '.html': 'text/html; charset=utf-8', '.htm': 'text/html; charset=utf-8', '.css': 'text/css; charset=utf-8', '.js': 'application/javascript; charset=utf-8', '.mjs': 'application/javascript; charset=utf-8', '.json': 'application/json; charset=utf-8', '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.gif': 'image/gif', '.svg': 'image/svg+xml', '.webp': 'image/webp', '.ico': 'image/x-icon', '.txt': 'text/plain; charset=utf-8', '.md': 'text/markdown; charset=utf-8', '.wasm': 'application/wasm', '.woff': 'font/woff', '.woff2': 'font/woff2', '.ttf': 'font/ttf', '.mp3': 'audio/mpeg', '.wav': 'audio/wav', '.ogg': 'audio/ogg', '.mp4': 'video/mp4', '.webm': 'video/webm', '.pdf': 'application/pdf', '.zip': 'application/zip' };
+app.get('/preview/*', (req, res) => {
+  if (!sandboxReady) return res.status(503).send('Sandbox ยังไม่พร้อม (ต้อง self-host: Render/Railway)');
+  try {
+    const fs = require('fs'), path = require('path');
+    const base = path.resolve(WORKSPACE);
+    let p = path.resolve(base, '.' + decodeURIComponent(req.params[0] || '/'));
+    if (!p.startsWith(base)) return res.status(400).send('⛔ นอก workspace');
+    let s;
+    try { s = fs.statSync(p); } catch (e) {
+      const alt = path.join(p, 'index.html');
+      try { s = fs.statSync(alt); p = alt; } catch (e2) { return res.status(404).send('⚠️ ไม่พบไฟล์ — พิมพ์ `/web <ชื่องาน>` ให้ AI สร้างเว็บก่อน'); }
+    }
+    if (s.isDirectory()) {
+      const idx = path.join(p, 'index.html');
+      try { s = fs.statSync(idx); p = idx; } catch (e2) {
+        const files = fs.readdirSync(p).filter(f => !f.startsWith('.'));
+        return res.status(200).type('text/html; charset=utf-8').send('<!doctype html><meta charset="utf-8"><title>📁 workspace</title><body style="font-family:sans-serif;background:#0b1020;color:#e6e6f0;padding:24px"><h2>📁 ' + (p === base ? '/' : p.replace(base, '')) + '</h2>' + files.map(f => { const fp = path.join(p, f); const isD = fs.statSync(fp).isDirectory(); return '<div style="padding:6px 0"><a style="color:' + (isD ? '#7dd3fc' : '#c4b5fd') + ';text-decoration:none" href="/preview/' + path.relative(base, fp).split(path.sep).map(encodeURIComponent).join('/') + '">' + (isD ? '📂 ' : '📄 ') + f + '</a></div>'; }).join('') + '</body>');
+      }
+    }
+    const ext = path.extname(p).toLowerCase();
+    res.setHeader('Cache-Control', 'no-store');
+    res.type(MIME[ext] || 'application/octet-stream');
+    fs.createReadStream(p).pipe(res);
+  } catch (e) { res.status(500).send('Preview error: ' + e.message); }
+});
+app.get('/api/sandbox/tree', (req, res) => {
+  if (!sandboxReady) return res.status(503).json({ ok: false, error: 'Sandbox ไม่พร้อม' });
+  try {
+    const fs = require('fs'), path = require('path');
+    const base = path.resolve(WORKSPACE);
+    const limit = { files: 0 };
+    function walk(dir, depth) {
+      if (depth > 5 || limit.files > 300) return [];
+      const out = [];
+      let entries;
+      try { entries = fs.readdirSync(dir, { withFileTypes: true }); } catch (e) { return out; }
+      entries.sort((a, b) => (b.isDirectory() - a.isDirectory()) || a.name.localeCompare(b.name));
+      for (const e of entries) {
+        if (e.name.startsWith('.') || e.name === 'node_modules') continue;
+        const full = path.join(dir, e.name);
+        const rel = path.relative(base, full).split(path.sep).join('/');
+        if (e.isDirectory()) { out.push({ name: e.name, path: rel, dir: true, children: walk(full, depth + 1) }); }
+        else { limit.files++; let size = 0; try { size = fs.statSync(full).size; } catch (err) {} out.push({ name: e.name, path: rel, dir: false, size }); }
+      }
+      return out;
+    }
+    res.json({ ok: true, root: '/', tree: walk(base, 0) });
+  } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+async function buildWebApp(task) {
+  const sys = 'คุณคือ Web Builder ระดับสูง สร้างเว็บไซต์ HTML ไฟล์เดียว (self-contained: CSS+JS ในไฟล์เดียว ไม่มี external lib ยกเว้น CDN ที่จำเป็น) สวยงาม ทันสมัย โต้ตอบได้ ตอบเฉพาะโค้ด HTML เต็มไฟล์ภายในเครื่องหมาย ```html ... ``` เท่านั้น ห้ามพูดอะไรนอกเหนือจากโค้ด';
+  const msgs = [{ role: 'system', content: sys }, { role: 'user', content: 'สร้างเว็บ: ' + String(task).slice(0, 2000) }];
+  const t0 = Date.now();
+  const calls = [
+    { name: 'groq', fn: () => groqChat(msgs) },
+    { name: 'cerebras', fn: () => cerebrasChat(msgs) },
+    { name: 'gemini', fn: () => geminiChat(msgs) },
+    { name: 'openrouter', fn: () => openrouterChat(msgs) },
+    { name: 'ollama', fn: () => ollamaChat(msgs) }
+  ];
+  const results = await Promise.allSettled(calls.map(c => c.fn()));
+  let best = null;
+  calls.forEach((c, i) => {
+    const r = results[i];
+    if (r.status !== 'fulfilled' || !r.value || !r.value.reply) return;
+    const m = /```(?:html)?\s*([\s\S]*?)```/i.exec(r.value.reply);
+    const html = (m ? m[1] : r.value.reply).trim();
+    if (!html || !/<html|<!doctype/i.test(html)) return;
+    if (!best || String(html).length > String(best.html).length) best = { provider: r.value.provider, model: r.value.model, html, ms: Date.now() - t0 };
+  });
+  if (!best) {
+    // fallback: สร้างหน้าเว็บพื้นฐาน (กัน fail เปล่าเมื่อทุก provider ไม่ว่าง)
+    const esc = String(task).replace(/</g, '&lt;').replace(/"/g, '&quot;');
+    best = {
+      provider: 'template', model: 'fallback', ms: Date.now() - t0,
+      html: '<!doctype html><html lang="th"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>🌐 ' + esc.slice(0, 60) + '</title><style>body{font-family:system-ui,sans-serif;background:linear-gradient(135deg,#0f172a,#1e1b4b);color:#e2e8f0;min-height:100vh;display:flex;align-items:center;justify-content:center;margin:0;text-align:center;padding:24px}.card{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:20px;padding:40px;max-width:520px;backdrop-filter:blur(8px)}h1{font-size:22px;margin:0 0 12px}.dot{width:10px;height:10px;background:#22d3ee;border-radius:50%;display:inline-block;animation:p 1s infinite alternate}@keyframes p{from{opacity:.3}to{opacity:1}}</style></head><body><div class="card"><span class="dot"></span><h1>AI ยังไม่ว่างตอนนี้ (ทุก provider ติดขัด)</h1><p>ต้องการ: <b>' + esc.slice(0, 200) + '</b></p><p style="color:#94a3b8;font-size:13px">ลองพิมพ์ /web อีกครั้งในอีกสักครู่ — ระบบจะใช้ AI ตัวที่ดีที่สุดสร้างเว็บให้</p></div></body></html>'
+    };
+  }
+  try {
+    const fs = require('fs'), path = require('path');
+    fs.mkdirSync(WORKSPACE, { recursive: true });
+    fs.writeFileSync(path.join(WORKSPACE, 'index.html'), best.html);
+  } catch (e) { return null; }
+  const titleM = /<title[^>]*>([^<]*)<\/title>/i.exec(best.html);
+  best.summary = '✅ เขียน `index.html` ลง workspace แล้ว (' + best.html.length + ' ตัวอักษร)' + (titleM && titleM[1] ? ' — หัวข้อ: "' + titleM[1].trim() + '"' : '');
+  return best;
+}
 
 // Vercel-ready: export app สำหรับ serverless, listen เฉพาะตอนรันตรง (local/Railway)
 if (require.main === module) {
