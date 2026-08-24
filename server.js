@@ -2888,8 +2888,14 @@ async function buildWebApp(task) {
   calls.forEach((c, i) => {
     const r = results[i];
     if (r.status !== 'fulfilled' || !r.value || !r.value.reply) return;
+    let html = null;
     const m = /```(?:html)?\s*([\s\S]*?)```/i.exec(r.value.reply);
-    const html = (m ? m[1] : r.value.reply).trim();
+    if (m) html = m[1];
+    else {
+      const m2 = /```(?:html)?\s*([\s\S]*)$/i.exec(r.value.reply);
+      html = m2 ? m2[1] : r.value.reply;
+    }
+    html = String(html).replace(/^```(?:html)?\s*/i, '').replace(/```\s*$/, '').trim();
     if (!html || !/<html|<!doctype/i.test(html)) return;
     if (!best || String(html).length > String(best.html).length) best = { provider: r.value.provider, model: r.value.model, html, ms: Date.now() - t0 };
   });
