@@ -65,7 +65,7 @@ const PROJECT_KNOWLEDGE = `[ฐานความรู้โปรเจกต�
 - สมอง: fallback chain ฟรี 100% — RACE: Groq 6 โมเดล (gpt-oss-120b → llama-3.3-70b-versatile → qwen3.6-27b → gpt-oss-20b → groq/compound-mini → llama-3.1-8b-instant) 🆚 Gemini 9 keys ใครตอบก่อนชนะ → OpenRouter :free → Pollinations → mock — branding = "gpt-oss-120b (Groq)"
 - LINE Bot: SaliOlila (LINE ID @325yzpie) — webhook https://silelo.onrender.com/webhook — ตอบเป็นเสียง: msedge-tts th-TH-PremwadeeNeural → mp3 ลง /tmp → ส่ง audio message (ตัด ~250 ตัวอักษร/45 วิ)
 📦 โปรเจกต์ 2: SILELO NEO-CONNECT (เว็บนี้ ที่พี่นุกำลังใช้อยู่)
-- GitHub: phanuphanthcanthrsngsaeng6-hue/silelo-neo-connect — Deploy: Vercel https://neo-connect-ten.vercel.app
+- GitHub: phanuphanthcanthrsngsaeng6-hue/silelo-neo-connect — Deploy: Render https://silelo-neo-connect.onrender.com
 - 3 ห้อง: SLI 💜 (ผู้ช่วยส่วนตัว/เพื่อน), WORK 💼 (ทำงาน), LAB 🔬 (ทดลอง/รันโค้ด)
 - สมอง: Gemini Flash (gemini-3.6-flash) → RACE (Groq 6 🆚 OpenRouter nemotron-3-ultra-550b + gemma-4-26b) → Pollinations → mock — ฟรี 100%
 - ฟีเจอร์: /api/draw วาดรูป (Pollinations Flux), /api/vision ดูรูป (ตาในบ้าน bossnusilelo ก่อน → Gemini Vision), แชร์หน้าจอ/กล้องสดในโหมดโทร (Gemini Vision + TTS), ความทรงจำ localStorage nc_mem + /api/summarize อัตโนมัติทุก 6 ข้อความ, เสียง 4 แบบ (auto=Google TTS / premwadee / niwat / achara = msedge-tts), โหมดไร้กฎ ⚡, รหัสล็อก = gamma
@@ -154,7 +154,7 @@ function httpGetStatus(url, timeoutMs) {
 }
 async function checkServices() {
   const urls = [
-    ['Neo-Connect (เว็บนี้)', 'https://neo-connect-ten.vercel.app'],
+    ['Neo-Connect (Render)', 'https://silelo-neo-connect.onrender.com'],
     ['Silelo (Render)', 'https://silelo.onrender.com']
   ];
   const results = [];
@@ -1377,7 +1377,7 @@ const AUTH_WHITELIST = (process.env.AUTH_WHITELIST || '').split(',').map(s => s.
 const OWNER_EMAILS = ['phanuphanthcanthrsngsaeng17@gmail.com', 'phanuphanthcanthrsngsaeng6@gmail.com', 'bossnu@gmail.com'];
 const OWNER_LINE_IDS = ['U4529156e4ce2270579f3b26afb463cdb'];
 const OWNER_FB_IDS = [];
-const APP_URL = process.env.APP_URL || 'https://neo-connect-ten.vercel.app';
+const APP_URL = process.env.APP_URL || 'https://silelo-neo-connect.onrender.com';
 
 function signToken(payload) {
   const b = Buffer.from(JSON.stringify(payload)).toString('base64url');
