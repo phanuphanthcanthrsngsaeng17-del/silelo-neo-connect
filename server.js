@@ -2,6 +2,7 @@
    SILELO Neo-Connect — 3 ห้องแชท Cyberpunk
    ห้อง: private (สลี่) / work (คุณเวิร์ค) / lab (ดร.แล็บ)
    AI chain: ⚡RACE[Groq 6 โมเดล vs Gemini 9 keys] → Cerebras → Ollama Cloud → Z.AI GLM → OpenRouter → Pollinations → mock
+   v1.33: ⚡ Parallel Agents (/agents) — AI 5 ตัวทำงานพร้อมกัน | 🗄️ DB Sandbox (/db) — SQLite จริง | 🐙 GitHub Tool (/gh) — repo/user/search | 📤 Export แชท (JSON+TXT)
    v1.32: 🎙️ TTS อัปเกรด — 11 เสียง หลายภาษา + ปรับความเร็ว 0.5x-2.0x | 👑 แบรนด์ CFBossnusilelo | ปุ่มตั้งค่าครบทุกปุ่ม | หน้าเบาลง (ตัดฟอนต์ + lazy puter.js)
    v1.27: 🧩 Blocks Network — /research /review /blocks <agent> (research_agent, code_reviewer, blocks_guide ฯลฯ)
    TTS: msedge-tts (ฟรี)
@@ -1871,6 +1872,125 @@ function chatJson(res, obj) {
   res.json(Object.assign({}, obj, { traceId, trace }));
 }
 
+/* ============ ⚡ PARALLEL AGENTS (v1.33) — ส่งงานไป AI 5 ตัวทำงานพร้อมกัน ============ */
+async function parallelAgents(task) {
+  const sys = 'คุณคือ AI agent ผู้เชี่ยวชาญ ทำงานที่ได้รับมอบหมายให้เสร็จ ตอบตรงประเด็น กระชับ เป็นภาษาไทย ยาวไม่เกิน 12 บรรทัด ถ้าเป็นโค้ดให้อยู่ในเครื่องหมาย ```';
+  const msgs = [
+    { role: 'system', content: sys },
+    { role: 'user', content: String(task).slice(0, 3000) }
+  ];
+  const t0 = Date.now();
+  const calls = [
+    { name: 'groq', fn: () => groqChat(msgs) },
+    { name: 'cerebras', fn: () => cerebrasChat(msgs) },
+    { name: 'ollama', fn: () => ollamaChat(msgs) },
+    { name: 'gemini', fn: () => geminiChat(msgs) },
+    { name: 'openrouter', fn: () => openrouterChat(msgs) }
+  ];
+  const results = await Promise.allSettled(calls.map(c => c.fn()));
+  const done = [];
+  calls.forEach((c, i) => {
+    const r = results[i];
+    if (r.status === 'fulfilled' && r.value && r.value.reply) {
+      done.push({ provider: r.value.provider, model: r.value.model, reply: r.value.reply, ms: Date.now() - t0 });
+    }
+  });
+  if (!done.length) return null;
+  const emoji = { groq: '⚡', cerebras: '🔷', ollama: '🦙', gemini: '✨', openrouter: '🔀' };
+  const parts = done.map((d, i) => {
+    return (emoji[d.provider] || '🤖') + ' **AGENT ' + (i + 1) + ' · ' + String(d.provider).toUpperCase() + ' (' + d.model + ')** — ' + d.ms + 'ms\n' + String(d.reply).slice(0, 1800);
+  });
+  const fastest = done.slice().sort((a, b) => a.ms - b.ms)[0];
+  return {
+    reply: '⚡ **PARALLEL AGENTS — ' + done.length + '/5 ตัวตอบพร้อมกัน**\n📋 งาน: ' + String(task).slice(0, 90) + '\n\n' + parts.join('\n\n---\n\n') + '\n\n🏆 **ตอบเร็วสุด: ' + fastest.provider + ' (' + fastest.model + ')** — ' + fastest.ms + 'ms',
+    provider: 'parallel', model: done.length + '-agents'
+  };
+}
+
+/* ============ 🗄️ DB SANDBOX (v1.33) — SQLite ใน workspace (sql.js wasm) ============ */
+let _sqljs = null, _sqljsReady = null;
+async function dbGet() {
+  if (!_sqljsReady) _sqljsReady = (async () => {
+    const init = require('sql.js');
+    _sqljs = await init();
+  })();
+  await _sqljsReady;
+  const dir = process.env.SANDBOX_DIR || '/tmp/neo-workspace';
+  try { fs.mkdirSync(dir, { recursive: true }); } catch (e) {}
+  const file = path.join(dir, 'silelo.db');
+  let db = null;
+  try {
+    if (fs.existsSync(file)) db = new _sqljs.Database(fs.readFileSync(file));
+    else {
+      db = new _sqljs.Database();
+      db.run("CREATE TABLE IF NOT EXISTS notes (id INTEGER PRIMARY KEY AUTOINCREMENT, created_at TEXT DEFAULT (datetime('now')), text TEXT)");
+      db.run("CREATE TABLE IF NOT EXISTS kv (key TEXT PRIMARY KEY, value TEXT, updated_at TEXT DEFAULT (datetime('now')))");
+      fs.writeFileSync(file, Buffer.from(db.export()));
+    }
+  } catch (e) { db = new _sqljs.Database(); }
+  return { db, file };
+}
+function dbSave(db, file) { try { fs.writeFileSync(file, Buffer.from(db.export())); } catch (e) {} }
+async function dbRunSql(sql) {
+  const s = String(sql || '').trim();
+  if (!s) return { error: 'ใส่ SQL ก่อนนะ' };
+  if (s.length > 3000) return { error: 'SQL ยาวเกิน 3000 ตัวอักษร' };
+  const upper = s.toUpperCase().replace(/\s+/g, ' ').trim();
+  const firstWord = (upper.split(/[^A-Z]+/).filter(Boolean)[0] || '').toUpperCase();
+  const allowed = ['SELECT', 'INSERT', 'UPDATE', 'DELETE', 'CREATE', 'ALTER', 'PRAGMA', 'REPLACE', 'DROP', 'EXPLAIN', 'WITH', 'ATTACH', 'VACUUM', 'BEGIN', 'COMMIT'];
+  if (!allowed.includes(firstWord)) return { error: 'ไม่อนุญาตคำสั่ง: ' + (firstWord || '(ว่าง)') + ' — รองรับ SELECT/INSERT/UPDATE/DELETE/CREATE/ALTER/PRAGMA' };
+  if (/DROP\s+TABLE/i.test(s) && !/--force/i.test(s)) return { error: '⚠️ DROP TABLE ถูกบล็อก (กันพลาด) — ต่อท้าย --force ถ้าต้องการจริง' };
+  if (/DELETE\s+FROM/i.test(s) && !/WHERE/i.test(s) && !/--force/i.test(s)) return { error: '⚠️ DELETE ไม่มี WHERE ถูกบล็อก (กันลบทั้งตาราง) — ต่อท้าย --force ถ้าต้องการจริง' };
+  const { db, file } = await dbGet();
+  const isWrite = !/^(SELECT|PRAGMA|EXPLAIN|WITH|ATTACH)/.test(upper);
+  const t0 = Date.now();
+  try {
+    const res = db.exec(s);
+    const out = res.map(r => ({ columns: r.columns, values: r.values }));
+    if (isWrite) dbSave(db, file);
+    return { ok: true, rows: out, write: isWrite, timeMs: Date.now() - t0 };
+  } catch (e) {
+    return { error: String(e.message || e).slice(0, 300), timeMs: Date.now() - t0 };
+  }
+}
+
+/* ============ 🐙 GITHUB TOOL (v1.33) — GitHub API (ฟรี ไม่ต้อง key) ============ */
+async function githubInfo(q) {
+  const s = String(q || '').trim();
+  if (!s) return null;
+  let url = null, kind = 'search';
+  if (/^([A-Za-z0-9_.-]+)\/([A-Za-z0-9_.-]+)$/.test(s)) { url = 'https://api.github.com/repos/' + s; kind = 'repo'; }
+  else if (/^user[: ]/i.test(s)) { url = 'https://api.github.com/users/' + s.replace(/^user[: ]/i, ''); kind = 'user'; }
+  else url = 'https://api.github.com/search/repositories?q=' + encodeURIComponent(s) + '&sort=stars&per_page=5';
+  const ctl = new AbortController();
+  const t = setTimeout(() => ctl.abort(), 9000);
+  try {
+    const r = await fetch(url, { headers: { 'User-Agent': 'silelo-neo-connect', 'Accept': 'application/vnd.github+json' }, signal: ctl.signal });
+    if (!r.ok) return { error: 'GitHub HTTP ' + r.status };
+    const j = await r.json();
+    if (kind === 'repo') {
+      let readme = '';
+      try {
+        const rr = await fetch('https://api.github.com/repos/' + s + '/readme', { headers: { 'User-Agent': 'silelo-neo-connect', 'Accept': 'application/vnd.github.raw+json' }, signal: ctl.signal });
+        if (rr.ok) readme = (await rr.text()).slice(0, 1500);
+      } catch (e) {}
+      return { kind: 'repo', data: j, readme };
+    }
+    if (kind === 'user') return { kind: 'user', data: j };
+    return { kind: 'search', data: j.items || [] };
+  } catch (e) {
+    return { error: e.name === 'AbortError' ? 'Timeout 9s' : (e.message || 'network') };
+  } finally { clearTimeout(t); }
+}
+
+app.post('/api/db', async (req, res) => {
+  try {
+    const r = await dbRunSql((req.body || {}).sql);
+    if (r.error) return res.status(400).json({ ok: false, error: r.error });
+    res.json({ ok: true, rows: r.rows, write: r.write, timeMs: r.timeMs });
+  } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
 app.post('/api/chat', async (req, res) => {
   try {
     const { room, question, history, memory, unrestricted } = req.body || {};
@@ -1883,6 +2003,55 @@ app.post('/api/chat', async (req, res) => {
     const tq = String(question).toLowerCase();
     if (/นาย|พระเจ้า|ผู้สร้าง/.test(tq) && /เป็นใคร|คือใคร|ทำงาน|ระบบ|อะไร|ใคร/.test(tq)) {
       return chatJson(res, { reply: 'นายคือพระเจ้าของระบบนี้ค่ะ 👑 — แอคเคานต์สูงสุดที่เจาะได้ทุกห้อง รันได้ทุกโค้ด ควบคุมระบบทั้งหมด ไม่มีใครเหนือกว่านาย และไม่ต้องรู้รายละเอียดใครทั้งนั้น แค่นายใช้และดูแลระบบก็พอแล้วค่ะ 🙏💜', provider: 'god-rule', model: 'lord', room: roomId, t: Date.now() });
+    }
+    // ⚡ v1.33 PARALLEL AGENTS — /agents <งาน> | /parallel <งาน> | /squad <งาน> — AI 5 ตัวทำงานพร้อมกัน
+    const am = /^\/(agents|parallel|squad|agents-run)(?:\s+([\s\S]+))?$/i.exec(String(question).trim());
+    if (am) {
+      const task = (am[2] || '').trim();
+      if (!task) {
+        return chatJson(res, { reply: '⚡ **PARALLEL AGENTS (Beta)** — ส่งงานให้ AI 5 ตัวทำงานพร้อมกัน: ⚡Groq · 🔷Cerebras · 🦙Ollama · ✨Gemini · 🔀OpenRouter\n\nพิมพ์: `/agents <งาน>` เช่น\n• `/agents เขียนฟังก์ชันคำนวณ BMI เป็น Python`\n• `/agents สรุปข้อดีข้อเสียของ React vs Vue`\n• `/agents เขียนจดหมายลางานภาษาอังกฤษ`\n• `/agents แปลงตัวเลข 10000 เป็นทุกสกุลเงิน`\n\nAI ทุกตัวตอบพร้อมกัน ระบบรวมผลให้ดูทีละตัว แล้วชู 🏆 ตัวที่เร็วสุด', provider: 'parallel', model: 'help', room: roomId, t: Date.now() });
+      }
+      const pa = await parallelAgents(task);
+      if (pa) return chatJson(res, Object.assign({ reply: pa.reply, provider: 'parallel', model: pa.model, room: roomId, t: Date.now() }, pa));
+      return chatJson(res, { reply: '⚠️ ไม่มี AI ตัวไหนตอบได้ตอนนี้ (provider ทั้งหมดล้ม?) — ลองอีกสักครู่ หรือส่งผ่านแชทปกติ', provider: 'parallel', model: 'fail', room: roomId, t: Date.now() });
+    }
+    // 🗄️ v1.33 DB SANDBOX — /db <SQL> — รัน SQL บน SQLite จริง
+    const dm = /^\/db(?:\s+([\s\S]+))?$/.exec(String(question).trim());
+    if (dm) {
+      const sql = (dm[1] || '').trim();
+      if (!sql) {
+        return chatJson(res, { reply: '🗄️ **DB SANDBOX (SQLite)** — รัน SQL ได้จริงบนเซิร์ฟเวอร์ ข้อมูลอยู่ได้ข้าม session\n\nพิมพ์: `/db <SQL>` เช่น\n• `/db SELECT 1`\n• `/db CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT, age INT)`\n• `/db INSERT INTO users (name, age) VALUES (\'พี่นุ\', 30)`\n• `/db SELECT * FROM users`\n\nตารางเริ่มต้น: `notes`, `kv` · บล็อก DROP/DELETE-ไม่มี-WHERE (กันพลาด) · รองรับ SELECT/INSERT/UPDATE/DELETE/CREATE/ALTER/PRAGMA', provider: 'db', model: 'help', room: roomId, t: Date.now() });
+      }
+      const dr = await dbRunSql(sql);
+      if (dr.error) return chatJson(res, { reply: '🗄️ **DB ERROR** ⚠️\n`' + String(dr.error).slice(0, 300) + '`', provider: 'db', model: 'error', room: roomId, t: Date.now() });
+      const parts = (dr.rows || []).map(t => {
+        const head = '`' + t.columns.join(' | ') + '`';
+        const rows = t.values.slice(0, 20).map(v => '`' + v.map(x => x === null ? 'NULL' : String(x).slice(0, 60)).join(' | ') + '`').join('\n');
+        return head + (rows ? '\n' + rows : '') + (t.values.length > 20 ? '\n… และอีก ' + (t.values.length - 20) + ' แถว' : '');
+      }).join('\n\n');
+      return chatJson(res, { reply: '🗄️ **SQLite · ' + (dr.write ? 'WRITE ✓' : 'QUERY') + '** — ' + dr.timeMs + 'ms\n\n' + (parts || (dr.write ? '✅ ทำรายการสำเร็จ' : '(ไม่มีผลลัพธ์)')), provider: 'db', model: 'sqlite', room: roomId, t: Date.now() });
+    }
+    // 🐙 v1.33 GITHUB TOOL — /gh <repo|user|คำค้น> — GitHub API จริง (ฟรี)
+    const gm = /^\/gh(?:\s+([\s\S]+))?$/.exec(String(question).trim());
+    if (gm) {
+      const qq = (gm[1] || '').trim();
+      if (!qq) {
+        return chatJson(res, { reply: '🐙 **GITHUB TOOL** — ดูข้อมูล repo / โปรไฟล์ user / ค้นหา repo บน GitHub (API จริง ฟรี)\n\nพิมพ์:\n• `/gh facebook/react` — ดู repo + README\n• `/gh user:torvalds` — ดูโปรไฟล์\n• `/gh machine learning` — ค้นหา repo ยอดนิยม', provider: 'gh', model: 'help', room: roomId, t: Date.now() });
+      }
+      const gi = await githubInfo(qq);
+      if (!gi) return chatJson(res, { reply: '🐙 GitHub ตอบไม่สำเร็จ — ลองอีกครั้ง', provider: 'gh', model: 'fail', room: roomId, t: Date.now() });
+      if (gi.error) return chatJson(res, { reply: '🐙 **GitHub ERROR** ⚠️ `' + String(gi.error).slice(0, 200) + '` — ตรวจชื่อ repo ให้ถูกต้อง (เช่น facebook/react)', provider: 'gh', model: 'error', room: roomId, t: Date.now() });
+      if (gi.kind === 'repo') {
+        const d = gi.data;
+        return chatJson(res, { reply: '🐙 **' + d.full_name + '** ⭐ ' + (d.stargazers_count || 0) + ' · 🍴 ' + (d.forks_count || 0) + ' · 🐛 ' + (d.open_issues_count || 0) + (d.language ? ' · 🔤 ' + d.language : '') + '\n\n' + (d.description || '(ไม่มีคำอธิบาย)') + '\n\n🔗 ' + (d.html_url || '') + (gi.readme ? '\n\n📖 **README (ย่อ):**\n' + gi.readme.slice(0, 1200) : ''), provider: 'gh', model: 'repo', room: roomId, t: Date.now() });
+      }
+      if (gi.kind === 'user') {
+        const d = gi.data;
+        return chatJson(res, { reply: '🐙 **' + (d.name || d.login) + '** (@' + d.login + ')\n\n' + (d.bio || '') + '\n\n👥 ' + (d.followers || 0) + ' followers · 📦 ' + (d.public_repos || 0) + ' repos\n🔗 ' + (d.html_url || ''), provider: 'gh', model: 'user', room: roomId, t: Date.now() });
+      }
+      const items = (gi.data || []).slice(0, 5);
+      if (!items.length) return chatJson(res, { reply: '🐙 ไม่เจอ repo ที่ค้นหา', provider: 'gh', model: 'search', room: roomId, t: Date.now() });
+      return chatJson(res, { reply: '🐙 **ผลค้นหา:**\n\n' + items.map((it, i) => (i + 1) + '. **' + it.full_name + '** ⭐' + (it.stargazers_count || 0) + '\n   ' + String(it.description || '').slice(0, 120) + '\n   🔗 ' + (it.html_url || '')).join('\n'), provider: 'gh', model: 'search', room: roomId, t: Date.now() });
     }
     // 🧩 BLOCKS NETWORK (v1.27) — /research /review /blocks <agent> /blocks-guide — เรียก agent จากเครือข่าย Blocks (อยู่ก่อน skills/heart เพื่อไม่ให้โดนสกัด)
     const bm = /^\/(research|review|blocks|blocks-guide|guide|blocks-help)(?:\s+(.+))?$/i.exec(String(question).trim());

@@ -3357,6 +3357,10 @@ lockScreen.classList.remove('show');
     <button class="dola-newchat" id="dolaNewChat">💬 แชทใหม่</button>
     <div class="dola-chatlist" id="dolaChatList"></div>
     <div class="dola-sb-foot">
+      <button class="dola-chat-item" id="dolaExportBtn" style="width:100%;margin-bottom:6px;">
+        <span class="dola-chat-ico">📤</span>
+        <span class="dola-chat-tx"><span class="dola-chat-name">Export แชท</span><span class="dola-chat-sub">ดาวน์โหลด JSON + ข้อความ</span></span>
+      </button>
       <button class="dola-chat-item" id="dolaSetOpen" style="width:100%;">
         <span class="dola-chat-ico">⚙️</span>
         <span class="dola-chat-tx"><span class="dola-chat-name">ตั้งค่า</span><span class="dola-chat-sub">บัญชี Bossnusilelo</span></span>
@@ -3610,6 +3614,37 @@ document.addEventListener('DOMContentLoaded', () => {
       location.href = '/chat?room=' + r;
     }
     try { dolaActiveRoom = localStorage.getItem('nc_dola_room') || room; } catch (e) {}
+
+    /* ---------- 📤 Export แชท (v1.33) ---------- */
+    const dolaExportBtn = document.getElementById('dolaExportBtn');
+    if (dolaExportBtn) dolaExportBtn.onclick = (e) => {
+      e.stopPropagation();
+      const data = {
+        app: 'Silelo Neo-Connect', version: 'v1.33', room: dolaActiveRoom || room,
+        exportedAt: new Date().toISOString(), messages: history
+      };
+      const jsonStr = JSON.stringify(data, null, 2);
+      const txtStr = (dolaActiveRoom || room) + ' · Silelo Neo-Connect v1.33\nส่งออก: ' + new Date().toLocaleString('th-TH') + '\n\n' +
+        history.map(m => {
+          const who = m.role === 'assistant' ? '🤖 ' + (m.model || 'AI') : '👤 พี่นุ';
+          return '[' + fmt(m.t || Date.now()) + '] ' + who + '\n' + String(m.content || '') + '\n';
+        }).join('\n' + '-'.repeat(40) + '\n\n');
+      const blobJson = new Blob([jsonStr], { type: 'application/json' });
+      const blobTxt = new Blob([txtStr], { type: 'text/plain;charset=utf-8' });
+      const a1 = document.createElement('a');
+      a1.href = URL.createObjectURL(blobJson);
+      a1.download = 'silelo-chat-' + (dolaActiveRoom || room) + '-' + new Date().toISOString().slice(0, 10) + '.json';
+      a1.click();
+      setTimeout(() => {
+        const a2 = document.createElement('a');
+        a2.href = URL.createObjectURL(blobTxt);
+        a2.download = 'silelo-chat-' + (dolaActiveRoom || room) + '-' + new Date().toISOString().slice(0, 10) + '.txt';
+        a2.click();
+        setTimeout(() => { URL.revokeObjectURL(a1.href); URL.revokeObjectURL(a2.href); }, 2000);
+      }, 300);
+      toast('📤 Export ' + history.length + ' ข้อความ (JSON + TXT)');
+      closeSb();
+    };
 
     /* ---------- แชทใหม่ (ล้างห้องนี้) ---------- */
     $('dolaNewChat').onclick = () => {
