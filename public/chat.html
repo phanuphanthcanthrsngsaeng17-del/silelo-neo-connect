@@ -1108,6 +1108,469 @@ body.theme-dola #inp { border-radius: 16px; }
 .ide-termbar input { flex: 1; background: #0a0e1e; color: #e2e6f5; border: 0; outline: none; padding: 7px 10px; font-family: ui-monospace, monospace; font-size: 12px; }
 @media (max-width: 640px) { .ide-side { width: 120px; } #devPanel { left: 6px; right: 6px; height: 50vh; } }
 </style>
+<!-- ===== 📐 SCREEN MANAGER CSS ===== -->
+<style>
+  /* ===== Screen Container ===== */
+  #screenContainer {
+    position: fixed;
+    inset: 0;
+    z-index: 600;
+    pointer-events: none;
+  }
+  #screenContainer > .silelo-screen {
+    pointer-events: auto;
+  }
+
+  /* ===== Screen Base ===== */
+  .silelo-screen {
+    display: none;
+    flex-direction: column;
+    position: fixed;
+    inset: 0;
+    z-index: 700;
+    background: var(--bg, #0a0e1e);
+    opacity: 0;
+    transform: translateY(12px);
+    transition: opacity 300ms cubic-bezier(.2,.9,.3,1),
+                transform 300ms cubic-bezier(.2,.9,.3,1);
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+  .silelo-screen.screen-active {
+    display: flex;
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  /* ===== Screen Header ===== */
+  .silelo-screen-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 16px;
+    background: rgba(10,14,30,.95);
+    border-bottom: 1px solid rgba(167,139,250,.2);
+    z-index: 10;
+    flex-shrink: 0;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
+  .silelo-screen-back {
+    background: rgba(255,255,255,.06);
+    border: 1px solid rgba(255,255,255,.12);
+    color: var(--txt, #e6e6f0);
+    padding: 6px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all .15s;
+    font-family: inherit;
+  }
+  .silelo-screen-back:hover {
+    background: rgba(192,132,252,.2);
+    border-color: rgba(192,132,252,.4);
+  }
+  .silelo-screen-title {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--txt, #e6e6f0);
+    margin: 0;
+    flex: 1;
+    font-family: var(--font-head, Orbitron, sans-serif);
+  }
+  .silelo-screen-subtitle {
+    font-size: 11px;
+    color: var(--dim, #9b8cc0);
+    margin-left: 8px;
+  }
+  .silelo-screen-actions {
+    display: flex;
+    gap: 6px;
+    margin-left: auto;
+  }
+
+  /* ===== Screen Body ===== */
+  .silelo-screen-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px;
+  }
+
+  /* ===== Screen Grid ===== */
+  .silelo-screen-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 12px;
+  }
+
+  /* ===== Screen Card ===== */
+  .silelo-screen-card {
+    background: rgba(255,255,255,.03);
+    border: 1px solid rgba(255,255,255,.06);
+    border-radius: 12px;
+    padding: 16px;
+    cursor: pointer;
+    transition: all .2s;
+  }
+  .silelo-screen-card:hover {
+    background: rgba(192,132,252,.08);
+    border-color: rgba(192,132,250,.3);
+    transform: translateY(-2px);
+  }
+  .silelo-screen-card-icon {
+    font-size: 28px;
+    margin-bottom: 8px;
+  }
+  .silelo-screen-card-title {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--txt, #e6e6f0);
+  }
+  .silelo-screen-card-desc {
+    font-size: 12px;
+    color: var(--dim, #9b8cc0);
+    margin-top: 4px;
+    line-height: 1.5;
+  }
+
+  /* ===== Header button active ===== */
+  [data-screen].screen-btn-active {
+    background: rgba(192,132,252,.2) !important;
+    border-color: rgba(192,132,252,.4) !important;
+  }
+
+  /* ===== Sidebar screen items ===== */
+  .dola-chat-item[data-screen].active {
+    background: linear-gradient(135deg, rgba(192,132,252,.18), rgba(255,45,149,.1)) !important;
+    border-color: rgba(192,132,252,.4) !important;
+  }
+
+  /* ===== IDE Layout ===== */
+  .screen-ide-layout {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+  }
+  @media (min-width: 768px) {
+    .screen-ide-layout { flex-direction: row; }
+  }
+  .screen-ide-sidebar {
+    width: 100%;
+    max-height: 30vh;
+    overflow-y: auto;
+    background: rgba(5,7,15,.8);
+    border-right: 1px solid rgba(255,255,255,.05);
+  }
+  @media (min-width: 768px) {
+    .screen-ide-sidebar { width: 220px; max-height: 100%; }
+  }
+  .screen-ide-main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+  .screen-ide-editor {
+    flex: 1;
+    background: #0a0e1e;
+    color: #e2e6f5;
+    border: none;
+    outline: none;
+    resize: none;
+    padding: 12px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 13px;
+    line-height: 1.6;
+    tab-size: 2;
+    width: 100%;
+    min-height: 200px;
+  }
+  .screen-ide-terminal {
+    flex: 0 0 120px;
+    background: #05070f;
+    color: #9fe8b8;
+    font-family: ui-monospace, monospace;
+    font-size: 11px;
+    overflow-y: auto;
+    padding: 8px;
+    white-space: pre-wrap;
+    border-top: 1px solid rgba(255,255,255,.08);
+  }
+  .screen-ide-termbar {
+    display: flex;
+    border-top: 1px solid rgba(255,255,255,.08);
+  }
+  .screen-ide-termbar input {
+    flex: 1;
+    background: #0a0e1e;
+    color: #e2e6f5;
+    border: none;
+    outline: none;
+    padding: 8px 12px;
+    font-family: ui-monospace, monospace;
+    font-size: 12px;
+  }
+
+  /* ===== Preview ===== */
+  .screen-preview-frame {
+    flex: 1;
+    width: 100%;
+    border: none;
+    background: #fff;
+  }
+  .screen-preview-toolbar {
+    display: flex;
+    gap: 8px;
+    padding: 8px 12px;
+    background: rgba(10,14,30,.95);
+    border-bottom: 1px solid rgba(167,139,250,.2);
+    align-items: center;
+  }
+  .screen-preview-url {
+    flex: 1;
+    background: rgba(255,255,255,.06);
+    border: 1px solid rgba(255,255,255,.12);
+    border-radius: 6px;
+    padding: 6px 12px;
+    color: var(--txt, #e6e6f0);
+    font-size: 12px;
+    font-family: ui-monospace, monospace;
+    outline: none;
+  }
+  .screen-preview-url:focus { border-color: #c084fc; }
+
+  /* ===== DB ===== */
+  .screen-db-editor {
+    width: 100%;
+    background: #0a0e1e;
+    color: #e2e6f5;
+    border: 1px solid rgba(255,255,255,.1);
+    border-radius: 8px;
+    padding: 12px;
+    font-family: ui-monospace, monospace;
+    font-size: 13px;
+    line-height: 1.5;
+    resize: vertical;
+    min-height: 100px;
+    outline: none;
+  }
+  .screen-db-editor:focus { border-color: #c084fc; }
+  .screen-db-results { margin-top: 12px; overflow-x: auto; }
+
+  /* ===== Settings ===== */
+  .screen-settings-group { margin-bottom: 20px; }
+  .screen-settings-group-title {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--dim, #9b8cc0);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 10px;
+  }
+  .screen-settings-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 14px;
+    border-radius: 12px;
+    border: 1px solid rgba(255,255,255,.06);
+    background: rgba(255,255,255,.02);
+    margin-bottom: 6px;
+    cursor: pointer;
+    transition: all .15s;
+  }
+  .screen-settings-item:hover {
+    background: rgba(192,132,252,.06);
+    border-color: rgba(192,132,252,.2);
+  }
+  .screen-settings-item-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    background: rgba(192,132,252,.12);
+    border: 1px solid rgba(192,132,252,.25);
+  }
+  .screen-settings-item-body { flex: 1; }
+  .screen-settings-item-title {
+    font-size: 13.5px;
+    font-weight: 600;
+    color: var(--txt, #e6e6f0);
+  }
+  .screen-settings-item-desc {
+    font-size: 11px;
+    color: var(--dim, #9b8cc0);
+    margin-top: 2px;
+  }
+  .screen-settings-item-value {
+    font-size: 12px;
+    color: var(--dim, #9b8cc0);
+  }
+
+  /* ===== Team ===== */
+  .screen-team-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 10px;
+  }
+  .screen-team-card {
+    background: rgba(255,255,255,.03);
+    border: 1px solid rgba(255,255,255,.06);
+    border-radius: 10px;
+    padding: 12px;
+    text-align: center;
+    transition: all .2s;
+  }
+  .screen-team-card:hover {
+    background: rgba(192,132,252,.06);
+    border-color: rgba(192,132,252,.2);
+  }
+  .screen-team-avatar {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    margin: 0 auto 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    background: linear-gradient(135deg, rgba(192,132,252,.16), rgba(255,45,149,.1));
+    border: 1px solid rgba(192,132,252,.25);
+  }
+  .screen-team-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--txt, #e6e6f0);
+  }
+  .screen-team-role {
+    font-size: 11px;
+    color: var(--dim, #9b8cc0);
+    margin-top: 2px;
+  }
+  .screen-team-status {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    margin-top: 6px;
+  }
+  .screen-team-status.online { background: #22e584; box-shadow: 0 0 8px rgba(34,229,132,.5); }
+  .screen-team-status.busy { background: #f59e0b; box-shadow: 0 0 8px rgba(245,158,11,.5); }
+  .screen-team-status.offline { background: #6b7280; }
+
+  /* ===== Tools ===== */
+  .screen-tools-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 10px;
+  }
+  .screen-tool-card {
+    background: rgba(255,255,255,.03);
+    border: 1px solid rgba(255,255,255,.06);
+    border-radius: 10px;
+    padding: 14px;
+    cursor: pointer;
+    transition: all .2s;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .screen-tool-card:hover {
+    background: rgba(192,132,252,.06);
+    border-color: rgba(192,132,252,.2);
+    transform: translateY(-2px);
+  }
+  .screen-tool-icon { font-size: 24px; }
+  .screen-tool-name {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--txt, #e6e6f0);
+  }
+  .screen-tool-desc {
+    font-size: 11px;
+    color: var(--dim, #9b8cc0);
+    line-height: 1.5;
+  }
+
+  /* ===== GitHub ===== */
+  .screen-gh-repo {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+    border-radius: 10px;
+    border: 1px solid rgba(255,255,255,.06);
+    background: rgba(255,255,255,.02);
+    cursor: pointer;
+    transition: all .15s;
+    margin-bottom: 6px;
+  }
+  .screen-gh-repo:hover {
+    background: rgba(192,132,252,.06);
+    border-color: rgba(192,132,252,.2);
+  }
+  .screen-gh-repo-icon { font-size: 20px; }
+  .screen-gh-repo-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--txt, #e6e6f0);
+  }
+  .screen-gh-repo-desc {
+    font-size: 11px;
+    color: var(--dim, #9b8cc0);
+  }
+  .screen-gh-repo-stats {
+    display: flex;
+    gap: 12px;
+    margin-top: 4px;
+    font-size: 11px;
+    color: var(--dim, #9b8cc0);
+  }
+
+  /* ===== Help ===== */
+  .screen-help-section { margin-bottom: 20px; }
+  .screen-help-section-title {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--txt, #e6e6f0);
+    margin-bottom: 10px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid rgba(255,255,255,.06);
+  }
+  .screen-help-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 8px 0;
+    font-size: 13px;
+    line-height: 1.5;
+    color: rgba(232,246,255,.85);
+  }
+  .screen-help-key {
+    background: rgba(192,132,252,.12);
+    border: 1px solid rgba(192,132,252,.25);
+    border-radius: 4px;
+    padding: 2px 8px;
+    font-size: 11px;
+    font-family: ui-monospace, monospace;
+    color: #c084fc;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  .screen-help-desc { flex: 1; }
+
+  /* ===== Responsive ===== */
+  @media (max-width: 640px) {
+    .silelo-screen-header { padding: 8px 12px; }
+    .silelo-screen-title { font-size: 14px; }
+    .silelo-screen-body { padding: 12px; }
+    .silelo-screen-grid { grid-template-columns: 1fr; }
+    .screen-ide-sidebar { max-height: 25vh; }
+  }
+</style>
 </head>
 <body>
 <div class="bgfx">
@@ -1115,6 +1578,9 @@ body.theme-dola #inp { border-radius: 16px; }
   <div class="aurora a1"></div><div class="aurora a2"></div>
   <div class="scanlines"></div><div class="vignette"></div>
 </div>
+
+<!-- ===== 📐 SCREEN MANAGER CONTAINER ===== -->
+<div id="screenContainer"></div>
 
 <div class="app">
   <header>
@@ -4062,6 +4528,998 @@ document.getElementById('ideRun').addEventListener('click', () => {
   else toast('ไฟล์ประเภทนี้รันไม่ได้ — ใช้ Terminal เองได้ครับ');
 });
 
+</script>
+
+<!-- ===== 📐 SCREEN MANAGER — Silelo Super CodingFleet ===== -->
+<script>
+/**
+ * Silelo Neo-Connect — Screen Management System
+ * 
+ * จัดการหน้าจอ (Screens/Views) ของแอพให้เป็นระบบ:
+ * - Chat (หน้าหลักแชท)
+ * - IDE (Code Editor + File Explorer + Terminal)
+ * - Preview (Live Preview เว็บแอป)
+ * - Deploy (Deploy ไป Vercel/Render/Netlify)
+ * - DB (จัดการฐานข้อมูล SQLite/PostgreSQL)
+ * - GitHub (จัดการ Repository)
+ * - Team (ทีม AI 8 ฝ่าย · 50 คน)
+ * - Tools (Code Tools 8 โหมด)
+ * - Settings (ตั้งค่า ธีม, ฟอนต์, เสียง, โมเดล)
+ * - Help (วิธีใช้ / คู่มือ)
+ * 
+ * คุณสมบัติ:
+ * - สลับหน้าจอด้วยการ fade + slide transition
+ * - รองรับ browser back/forward (history API)
+ * - Hash routing (#chat, #ide, #preview, etc.)
+ * - จัดการ state ของแต่ละหน้าจอแยกกัน
+ * - Responsive layout
+ * - Keyboard shortcuts (Ctrl+I, Ctrl+P, Ctrl+D, etc.)
+ */
+
+class SileloScreenManager {
+  constructor() {
+    this.screens = new Map();
+    this.history = [];
+    this.current = null;
+    this.transitioning = false;
+    this.defaultScreen = 'chat';
+    this.transitionDuration = 300;
+    this.states = {};
+  }
+
+  /* ──── Register a screen ──── */
+  register(name, config = {}) {
+    this.screens.set(name, {
+      name,
+      element: null,
+      config,
+      initialized: false,
+      visible: false,
+      onEnter: config.onEnter || null,
+      onLeave: config.onLeave || null,
+      onResize: config.onResize || null,
+      onDestroy: config.onDestroy || null,
+    });
+    return this;
+  }
+
+  /* ──── Show a screen ──── */
+  async show(name, options = {}) {
+    if (this.transitioning) return;
+    if (name === this.current && !options.force) return;
+
+    this.transitioning = true;
+    const prevName = this.current;
+
+    const screen = this.screens.get(name);
+    if (!screen) {
+      console.warn('[Silelo] Screen "' + name + '" not registered');
+      this.transitioning = false;
+      return;
+    }
+
+    /* Call onLeave for previous screen */
+    if (prevName && prevName !== name) {
+      const prev = this.screens.get(prevName);
+      if (prev && prev.onLeave) {
+        try { await prev.onLeave(); } catch (e) { console.warn(e); }
+      }
+      if (prev && prev.element) {
+        prev.element.classList.remove('screen-active');
+        prev.element.setAttribute('aria-hidden', 'true');
+        prev.visible = false;
+      }
+    }
+
+    /* Create screen element if needed */
+    if (!screen.element) {
+      screen.element = this._createElement(name, screen);
+      const container = document.getElementById('screenContainer');
+      if (container) container.appendChild(screen.element);
+    }
+
+    /* Show with animation */
+    screen.element.classList.add('screen-active');
+    screen.element.setAttribute('aria-hidden', 'false');
+    screen.element.style.display = 'flex';
+
+    /* Initialize if needed */
+    if (!screen.initialized && screen.config.init) {
+      try { await screen.config.init(screen.element); } catch (e) { console.warn(e); }
+      screen.initialized = true;
+    }
+
+    /* Call onEnter */
+    if (screen.onEnter) {
+      try { await screen.onEnter(screen.element); } catch (e) { console.warn(e); }
+    }
+
+    /* Update history */
+    if (prevName !== name) {
+      this.history.push(prevName);
+      if (this.history.length > 50) this.history.shift();
+    }
+
+    this.current = name;
+    this.transitioning = false;
+
+    /* Update URL hash */
+    if (options.updateHash !== false) {
+      history.replaceState(null, '', '#' + name);
+    }
+
+    /* Update header button active states */
+    this._updateHeaderButtons(name);
+
+    /* Update sidebar active state */
+    this._updateSidebarActive(name);
+
+    /* Dispatch event */
+    window.dispatchEvent(new CustomEvent('silelo-screenchange', {
+      detail: { name: name, prev: prevName, screen: screen }
+    }));
+
+    /* Scroll to top */
+    screen.element.scrollTop = 0;
+  }
+
+  /* ──── Go back ──── */
+  async back() {
+    if (this.history.length === 0) return;
+    const prev = this.history.pop();
+    await this.show(prev, { force: true });
+  }
+
+  /* ──── Get current screen ──── */
+  getCurrent() { return this.current; }
+
+  /* ──── Check if screen is active ──── */
+  isActive(name) { return this.current === name; }
+
+  /* ──── Get/set screen state ──── */
+  getState(name) { return this.states[name] || {}; }
+  setState(name, key, value) {
+    if (!this.states[name]) this.states[name] = {};
+    this.states[name][key] = value;
+  }
+
+  /* ──── Create screen DOM element ──── */
+  _createElement(name, screen) {
+    const el = document.createElement('div');
+    el.id = 'screen-' + name;
+    el.className = 'silelo-screen';
+    el.setAttribute('role', 'main');
+    el.setAttribute('aria-label', name + ' screen');
+    el.setAttribute('aria-hidden', 'true');
+
+    /* Add screen header if config has title */
+    if (screen.config.title) {
+      const header = document.createElement('div');
+      header.className = 'silelo-screen-header';
+      header.innerHTML =
+        '<button class="silelo-screen-back" data-action="back" title="กลับ">←</button>' +
+        '<h2 class="silelo-screen-title">' + screen.config.title + '</h2>' +
+        (screen.config.subtitle ? '<span class="silelo-screen-subtitle">' + screen.config.subtitle + '</span>' : '') +
+        '<div class="silelo-screen-actions">' + (screen.config.actions || '') + '</div>';
+      el.appendChild(header);
+
+      /* Wire back button */
+      header.querySelector('[data-action="back"]').addEventListener('click', () => this.back());
+    }
+
+    /* Add screen body */
+    const body = document.createElement('div');
+    body.className = 'silelo-screen-body';
+    body.id = 'screen-body-' + name;
+    el.appendChild(body);
+
+    return el;
+  }
+
+  /* ──── Update header button states ──── */
+  _updateHeaderButtons(activeName) {
+    document.querySelectorAll('[data-screen]').forEach(function(btn) {
+      btn.classList.toggle('screen-btn-active', btn.dataset.screen === activeName);
+    });
+  }
+
+  /* ──── Update sidebar active state ──── */
+  _updateSidebarActive(activeName) {
+    document.querySelectorAll('.dola-chat-item[data-screen]').forEach(function(item) {
+      item.classList.toggle('active', item.dataset.screen === activeName);
+    });
+  }
+
+  /* ──── Initialize hash routing ──── */
+  initHashRouting() {
+    var self = this;
+    var hash = location.hash.slice(1) || self.defaultScreen;
+    if (self.screens.has(hash)) {
+      self.show(hash, { updateHash: false, force: true });
+    }
+    window.addEventListener('hashchange', function() {
+      var h = location.hash.slice(1) || self.defaultScreen;
+      if (self.screens.has(h) && h !== self.current) {
+        self.show(h);
+      }
+    });
+  }
+
+  /* ──── Initialize popstate ──── */
+  initPopState() {
+    var self = this;
+    window.addEventListener('popstate', function() {
+      var hash = location.hash.slice(1) || self.defaultScreen;
+      if (self.screens.has(hash)) {
+        self.show(hash, { updateHash: false });
+      }
+    });
+  }
+
+  /* ──── Initialize ──── */
+  init() {
+    this.initHashRouting();
+    this.initPopState();
+    var hash = location.hash.slice(1) || this.defaultScreen;
+    if (this.screens.has(hash)) {
+      this.show(hash, { updateHash: false, force: true });
+    } else {
+      this.show(this.defaultScreen, { updateHash: false, force: true });
+    }
+  }
+}
+
+/* ──── Create global instance ──── */
+window.SM = new SileloScreenManager();
+
+/* ──── Register all screens ──── */
+
+/* ── Chat Screen (main) ── */
+SM.register('chat', {
+  title: '💬 แชท',
+  subtitle: 'สลี่ออลา · AI ผู้ช่วย',
+  init: function(el) {
+    /* Chat elements are already in the DOM — just ensure they're visible */
+    var body = el.querySelector('.silelo-screen-body');
+    if (body) {
+      /* Move chat elements into screen body if needed */
+      var msgs = document.getElementById('msgs');
+      var typing = document.getElementById('typing');
+      var modelbar = document.querySelector('.modelbar');
+      var codeTools = document.getElementById('codeTools');
+      var inputbar = document.querySelector('.inputbar');
+      if (msgs && !msgs.parentNode.classList.contains('silelo-screen-body')) body.appendChild(msgs);
+      if (typing && !typing.parentNode.classList.contains('silelo-screen-body')) body.appendChild(typing);
+      if (modelbar && !modelbar.parentNode.classList.contains('silelo-screen-body')) body.appendChild(modelbar);
+      if (codeTools && !codeTools.parentNode.classList.contains('silelo-screen-body')) body.appendChild(codeTools);
+      if (inputbar && !inputbar.parentNode.classList.contains('silelo-screen-body')) body.appendChild(inputbar);
+    }
+  },
+  onEnter: function(el) {
+    var msgs = document.getElementById('msgs');
+    if (msgs) msgs.scrollTop = msgs.scrollHeight;
+  }
+});
+
+/* ── IDE Screen ── */
+SM.register('ide', {
+  title: '💻 IDE',
+  subtitle: 'File Explorer + Editor + Terminal',
+  actions: '<button class="silelo-screen-back" onclick="SM.show(\'preview\')" title="Preview">👁 Preview</button>',
+  init: async function(el) {
+    var body = el.querySelector('.silelo-screen-body');
+    if (!body) return;
+    body.innerHTML =
+      '<div class="screen-ide-layout">' +
+        '<div class="screen-ide-sidebar" id="ideFileTree">' +
+          '<div class="ide-empty">📂 กำลังโหลดไฟล์ workspace...</div>' +
+        '</div>' +
+        '<div class="screen-ide-main">' +
+          '<textarea class="screen-ide-editor" id="ideEditorScreen" spellcheck="false" ' +
+            'placeholder="// เริ่มเขียนโค้ดที่นี่..."></textarea>' +
+          '<div class="screen-ide-termbar">' +
+            '<input type="text" id="ideTermScreen" placeholder="พิมพ์คำสั่ง... (เช่น python3 app.js, node server.js, ls -la)" enterkeyhint="send">' +
+            '<button id="ideRunScreen" title="รัน">▶ Run</button>' +
+          '</div>' +
+          '<div class="screen-ide-terminal" id="ideTermScreenOutput">Terminal — พร้อมใช้งาน</div>' +
+        '</div>' +
+      '</div>';
+
+    /* Load file tree */
+    try {
+      var r = await fetch('/api/sandbox/tree');
+      var j = await r.json();
+      if (j.ok && j.tree && j.tree.length) {
+        var treeEl = document.getElementById('ideFileTree');
+        if (treeEl) {
+          treeEl.innerHTML = '';
+          function renderNode(n, depth) {
+            var d = document.createElement('div');
+            d.style.paddingLeft = (depth * 16) + 'px';
+            d.style.cursor = 'pointer';
+            d.style.padding = '4px 8px';
+            d.style.fontSize = '12px';
+            d.style.color = n.dir ? '#c084fc' : '#9fe8b8';
+            d.textContent = (n.dir ? '📁 ' : '📄 ') + n.name;
+            d.onclick = function() {
+              if (!n.dir) {
+                SM.setState('ide', 'currentFile', n.path);
+                var editor = document.getElementById('ideEditorScreen');
+                if (editor) editor.value = 'Loading ' + n.path + '...';
+                fetch('/api/sandbox/read?path=' + encodeURIComponent(n.path))
+                  .then(function(r) { return r.json(); })
+                  .then(function(j) {
+                    if (j.ok && editor) editor.value = j.content;
+                  })
+                  .catch(function() {});
+              }
+            };
+            treeEl.appendChild(d);
+            if (n.children) {
+              n.children.sort(function(a, b) {
+                if (a.dir && !b.dir) return -1;
+                if (!a.dir && b.dir) return 1;
+                return a.name.localeCompare(b.name);
+              });
+              n.children.forEach(function(c) { renderNode(c, depth + 1); });
+            }
+          }
+          j.tree.forEach(function(n) { renderNode(n, 0); });
+        }
+      }
+    } catch (e) {
+      console.warn('Failed to load file tree:', e);
+    }
+
+    /* Wire up terminal */
+    var termInput = document.getElementById('ideTermScreen');
+    var termOutput = document.getElementById('ideTermScreenOutput');
+    var runBtn = document.getElementById('ideRunScreen');
+
+    function runTerm(cmd) {
+      if (!cmd || !cmd.trim()) return;
+      if (termOutput) termOutput.innerHTML += '\n$ ' + cmd + '\n';
+      fetch('/api/sandbox/exec', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ command: cmd, timeout: 10000 })
+      })
+      .then(function(r) { return r.json(); })
+      .then(function(j) {
+        if (termOutput) termOutput.innerHTML += (j.stdout || '') + (j.stderr || '') + '\n[exit ' + (j.code || 0) + '] ' + (j.ok ? '✅' : '❌') + '\n';
+        if (termOutput) termOutput.scrollTop = termOutput.scrollHeight;
+      })
+      .catch(function(e) {
+        if (termOutput) termOutput.innerHTML += 'Error: ' + e.message + '\n';
+      });
+    }
+
+    if (termInput) {
+      termInput.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          runTerm(termInput.value);
+          termInput.value = '';
+        }
+      });
+    }
+    if (runBtn) {
+      runBtn.addEventListener('click', function() {
+        if (termInput) runTerm(termInput.value);
+      });
+    }
+  },
+  onLeave: async function() {
+    /* Save current editor content if dirty */
+    var editor = document.getElementById('ideEditorScreen');
+    var currentFile = SM.getState('ide').currentFile;
+    if (editor && editor.value && currentFile) {
+      try {
+        await fetch('/api/sandbox/write', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ path: currentFile, content: editor.value })
+        });
+      } catch (e) {}
+    }
+  }
+});
+
+/* ── Preview Screen ── */
+SM.register('preview', {
+  title: '👁 Live Preview',
+  subtitle: 'แสดงผลเว็บแอป',
+  actions: '<button class="silelo-screen-back" onclick="SM.show(\'ide\')" title="IDE">💻 IDE</button>',
+  init: async function(el) {
+    var body = el.querySelector('.silelo-screen-body');
+    if (!body) return;
+    body.innerHTML =
+      '<div class="screen-preview-toolbar">' +
+        '<button id="prevRefresh" title="รีเฟรช">🔄</button>' +
+        '<input type="text" class="screen-preview-url" id="prevUrl" value="/preview/" placeholder="URL...">' +
+        '<button id="prevMobile" title="มือถือ">📱</button>' +
+        '<button id="prevDesktop" title="เดสก์ท็อป">🖥️</button>' +
+      '</div>' +
+      '<iframe class="screen-preview-frame" id="previewFrameScreen" src="/preview/" ' +
+        'sandbox="allow-scripts allow-same-origin allow-forms allow-popups"></iframe>';
+
+    document.getElementById('prevRefresh').addEventListener('click', function() {
+      var frame = document.getElementById('previewFrameScreen');
+      if (frame) frame.src = frame.src;
+    });
+  }
+});
+
+/* ── Deploy Screen ── */
+SM.register('deploy', {
+  title: '🚀 Deploy',
+  subtitle: 'Deploy ไป Vercel / Render / Netlify',
+  init: async function(el) {
+    var body = el.querySelector('.silelo-screen-body');
+    if (!body) return;
+    body.innerHTML =
+      '<div class="silelo-screen-grid">' +
+        '<div class="silelo-screen-card" data-provider="vercel">' +
+          '<div class="silelo-screen-card-icon">▲</div>' +
+          '<div class="silelo-screen-card-title">Vercel</div>' +
+          '<div class="silelo-screen-card-desc">Deploy ไป Vercel แบบอัตโนมัติ รองรับ Next.js, React, Vue, Static</div>' +
+        '</div>' +
+        '<div class="silelo-screen-card" data-provider="render">' +
+          '<div class="silelo-screen-card-icon">◉</div>' +
+          '<div class="silelo-screen-card-title">Render</div>' +
+          '<div class="silelo-screen-card-desc">Deploy ไป Render รองรับ Node.js, Python, Docker, Static</div>' +
+        '</div>' +
+        '<div class="silelo-screen-card" data-provider="netlify">' +
+          '<div class="silelo-screen-card-icon">▲</div>' +
+          '<div class="silelo-screen-card-title">Netlify</div>' +
+          '<div class="silelo-screen-card-desc">Deploy ไป Netlify รองรับ Static, Jekyll, Hugo, React</div>' +
+        '</div>' +
+      '</div>' +
+      '<div id="deployConfig" style="margin-top:20px;display:none;">' +
+        '<h3 style="color:var(--txt);margin-bottom:12px;">ตั้งค่า Deployment</h3>' +
+        '<div style="display:flex;flex-direction:column;gap:10px;">' +
+          '<input type="text" id="deployName" placeholder="ชื่อโปรเจกต์" ' +
+            'style="padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04);color:var(--txt);font-size:14px;outline:none;">' +
+          '<select id="deployBranch" ' +
+            'style="padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04);color:var(--txt);font-size:14px;outline:none;">' +
+            '<option value="main">main</option>' +
+            '<option value="master">master</option>' +
+            '<option value="develop">develop</option>' +
+          '</select>' +
+          '<button id="deployStart" style="padding:12px;border-radius:10px;border:none;background:linear-gradient(135deg,#7c3aed,#4f46e5);color:#fff;font-size:14px;font-weight:700;cursor:pointer;">' +
+            'เริ่ม Deploy' +
+          '</button>' +
+          '<div id="deployStatus" style="font-size:12px;color:var(--dim);"></div>' +
+        '</div>' +
+      '</div>';
+
+    /* Card click → show config */
+    body.querySelectorAll('.silelo-screen-card').forEach(function(card) {
+      card.addEventListener('click', function() {
+        var provider = card.dataset.provider;
+        var config = document.getElementById('deployConfig');
+        if (config) {
+          config.style.display = 'block';
+          config.dataset.provider = provider;
+        }
+      });
+    });
+
+    /* Deploy button */
+    document.getElementById('deployStart').addEventListener('click', async function() {
+      var status = document.getElementById('deployStatus');
+      var name = document.getElementById('deployName').value || 'silelo-app';
+      var provider = document.getElementById('deployConfig').dataset.provider || 'vercel';
+      if (status) status.textContent = '⏳ กำลัง部署...';
+      try {
+        var r = await fetch('/api/deploy', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ provider: provider, name: name, projectDir: '/web' })
+        });
+        var j = await r.json();
+        if (status) status.textContent = j.ok
+          ? '✅ Deploy สำเร็จ! URL: ' + (j.url || 'N/A')
+          : '❌ Deploy ล้มเหลว: ' + (j.error || 'unknown');
+      } catch (e) {
+        if (status) status.textContent = '❌ Error: ' + e.message;
+      }
+    });
+  }
+});
+
+/* ── DB Screen ── */
+SM.register('db', {
+  title: '🗄️ Database',
+  subtitle: 'จัดการ SQLite/PostgreSQL',
+  init: async function(el) {
+    var body = el.querySelector('.silelo-screen-body');
+    if (!body) return;
+    body.innerHTML =
+      '<div style="display:flex;gap:12px;margin-bottom:16px;">' +
+        '<button class="silelo-screen-back" id="dbQueryTab" style="background:rgba(192,132,252,.2);border-color:rgba(192,132,252,.4);">📝 SQL Query</button>' +
+        '<button class="silelo-screen-back" id="dbTableTab">📊 Tables</button>' +
+      '</div>' +
+      '<div id="dbQueryPanel">' +
+        '<textarea class="screen-db-editor" id="dbSqlEditor" placeholder="SELECT * FROM notes LIMIT 10;"></textarea>' +
+        '<div style="margin-top:8px;">' +
+          '<button id="dbRunQuery" style="padding:8px 16px;border-radius:8px;border:none;background:linear-gradient(135deg,#7c3aed,#4f46e5);color:#fff;font-size:13px;font-weight:600;cursor:pointer;">' +
+            '▶ Run Query' +
+          '</button>' +
+        '</div>' +
+        '<div class="screen-db-results" id="dbQueryResults"></div>' +
+      '</div>' +
+      '<div id="dbTablePanel" style="display:none;">' +
+        '<div id="dbTableList"></div>' +
+      '</div>';
+
+    /* Load tables */
+    try {
+      var r = await fetch('/db/tables');
+      var j = await r.json();
+      if (j.ok && j.tables) {
+        var list = document.getElementById('dbTableList');
+        if (list) {
+          list.innerHTML = j.tables.map(function(t) {
+            return '<div class="screen-gh-repo">' +
+              '<span class="screen-gh-repo-icon">📋</span>' +
+              '<div>' +
+                '<div class="screen-gh-repo-name">' + t.name + '</div>' +
+                '<div class="screen-gh-repo-stats">' + t.columns + ' columns · ' + t.rows + ' rows</div>' +
+              '</div>' +
+            '</div>';
+          }).join('');
+        }
+      }
+    } catch (e) {}
+
+    /* Run query */
+    document.getElementById('dbRunQuery').addEventListener('click', async function() {
+      var sql = document.getElementById('dbSqlEditor').value || '';
+      var results = document.getElementById('dbQueryResults');
+      if (!sql.trim()) return;
+      if (results) results.innerHTML = '<div style="color:var(--dim);">Running...</div>';
+      try {
+        var r = await fetch('/db/query', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ sql: sql })
+        });
+        var j = await r.json();
+        if (results) {
+          if (j.ok && j.rows) {
+            results.innerHTML = '<div style="color:#22e584;">✅ ' + j.rows.length + ' rows</div>' +
+              '<pre style="font-size:11px;color:var(--dim);">' + JSON.stringify(j.rows, null, 2).slice(0, 2000) + '</pre>';
+          } else {
+            results.innerHTML = '<div style="color:#ef4444;">❌ ' + (j.error || 'Query failed') + '</div>';
+          }
+        }
+      } catch (e) {
+        if (results) results.innerHTML = '<div style="color:#ef4444;">❌ ' + e.message + '</div>';
+      }
+    });
+
+    /* Tab switching */
+    document.getElementById('dbQueryTab').addEventListener('click', function() {
+      document.getElementById('dbQueryPanel').style.display = 'block';
+      document.getElementById('dbTablePanel').style.display = 'none';
+    });
+    document.getElementById('dbTableTab').addEventListener('click', function() {
+      document.getElementById('dbQueryPanel').style.display = 'none';
+      document.getElementById('dbTablePanel').style.display = 'block';
+    });
+  }
+});
+
+/* ── GitHub Screen ── */
+SM.register('github', {
+  title: '🐙 GitHub',
+  subtitle: 'จัดการ Repository',
+  init: async function(el) {
+    var body = el.querySelector('.silelo-screen-body');
+    if (!body) return;
+    body.innerHTML =
+      '<div style="margin-bottom:16px;">' +
+        '<input type="text" id="ghSearch" placeholder="ค้นหา repo หรือ user..." ' +
+          'style="width:100%;padding:10px 14px;border-radius:10px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04);color:var(--txt);font-size:14px;outline:none;">' +
+      '</div>' +
+      '<div id="ghResults"></div>';
+
+    /* Search */
+    var searchTimer;
+    document.getElementById('ghSearch').addEventListener('input', function(e) {
+      clearTimeout(searchTimer);
+      searchTimer = setTimeout(async function() {
+        var q = e.target.value.trim();
+        if (!q) return;
+        var results = document.getElementById('ghResults');
+        if (results) results.innerHTML = '<div style="color:var(--dim);">กำลังค้นหา...</div>';
+        try {
+          var r = await fetch('/api/gh/search?q=' + encodeURIComponent(q));
+          var j = await r.json();
+          if (results) {
+            if (j.ok && j.repos) {
+              results.innerHTML = j.repos.map(function(repo) {
+                return '<div class="screen-gh-repo">' +
+                  '<span class="screen-gh-repo-icon">🐙</span>' +
+                  '<div>' +
+                    '<div class="screen-gh-repo-name">' + repo.full_name + '</div>' +
+                    '<div class="screen-gh-repo-desc">' + (repo.description || '') + '</div>' +
+                    '<div class="screen-gh-repo-stats">' +
+                      '⭐ ' + (repo.stars || 0) + ' · 🍴 ' + (repo.forks || 0) + ' · 👥 ' + (repo.language || 'N/A') +
+                    '</div>' +
+                  '</div>' +
+                '</div>';
+              }).join('');
+            } else {
+              results.innerHTML = '<div style="color:var(--dim);">ไม่พบผลลัพธ์</div>';
+            }
+          }
+        } catch (e) {
+          if (results) results.innerHTML = '<div style="color:#ef4444;">❌ Error</div>';
+        }
+      }, 300);
+    });
+  }
+});
+
+/* ── Team Screen ── */
+SM.register('team', {
+  title: '👥 Team AI',
+  subtitle: '8 ฝ่าย · 50 AI',
+  init: async function(el) {
+    var body = el.querySelector('.silelo-screen-body');
+    if (!body) return;
+    var teams = [
+      { name: 'Builder', icon: '🏗️', desc: 'สร้างโค้ด', count: 8, color: '#7c3aed' },
+      { name: 'Tester', icon: '🧪', desc: 'ทดสอบโค้ด', count: 6, color: '#22e584' },
+      { name: 'Reviewer', icon: '👁', desc: 'ตรวจโค้ด', count: 5, color: '#f59e0b' },
+      { name: 'Designer', icon: '🎨', desc: 'ออกแบบ UI', count: 5, color: '#ef4444' },
+      { name: 'DevOps', icon: '⚙️', desc: 'Deploy & Ops', count: 4, color: '#3b82f6' },
+      { name: 'Researcher', icon: '🔍', desc: 'ค้นคว้าข้อมูล', count: 4, color: '#8b5cf6' },
+      { name: 'Translator', icon: '🌐', desc: 'แปลภาษา', count: 4, color: '#06b6d4' },
+      { name: 'Advisor', icon: '🧠', desc: 'ให้คำปรึกษา', count: 4, color: '#ec4899' },
+    ];
+    body.innerHTML =
+      '<div class="screen-team-grid">' +
+        teams.map(function(t) {
+          return '<div class="screen-team-card">' +
+            '<div class="screen-team-avatar" style="background:linear-gradient(135deg,' + t.color + '33,' + t.color + '11);border-color:' + t.color + '44;">' +
+              t.icon +
+            '</div>' +
+            '<div class="screen-team-name">' + t.name + '</div>' +
+            '<div class="screen-team-role">' + t.desc + ' · ' + t.count + ' AI</div>' +
+            '<div class="screen-team-status online"></div>' +
+          '</div>';
+        }).join('') +
+      '</div>' +
+      '<div style="margin-top:20px;padding:16px;background:rgba(255,255,255,.03);border-radius:12px;border:1px solid rgba(255,255,255,.06);">' +
+        '<h3 style="color:var(--txt);margin:0 0 8px;font-size:14px;">💡 วิธีใช้ Team AI</h3>' +
+        '<p style="color:var(--dim);font-size:12px;line-height:1.6;margin:0;">' +
+          'พิมพ์ <code style="background:rgba(192,132,252,.12);padding:2px 6px;border-radius:4px;color:#c084fc;">@ชื่อฝ่าย &lt;งาน&gt;</code> ในแชทเพื่อเรียกทีม AI เฉพาะทาง<br>' +
+          'ตัวอย่าง: <code style="background:rgba(192,132,252,.12);padding:2px 6px;border-radius:4px;color:#c084fc;">@Builder สร้างหน้า Landing Page</code><br>' +
+          'หรือ: <code style="background:rgba(192,132,252,.12);padding:2px 6px;border-radius:4px;color:#c084fc;">@Tester ทดสอบโค้ดนี้</code>' +
+        '</p>' +
+      '</div>';
+  }
+});
+
+/* ── Tools Screen ── */
+SM.register('tools', {
+  title: '🛠️ Code Tools',
+  subtitle: '8 เครื่องมือเขียนโค้ด',
+  init: async function(el) {
+    var body = el.querySelector('.silelo-screen-body');
+    if (!body) return;
+    var tools = [
+      { icon: '🐍', name: 'สร้างโค้ด', desc: 'เขียนโค้ดใหม่จากคำอธิบาย', mode: 'create' },
+      { icon: '🔄', name: 'แปลงภาษา', desc: 'แปลงโค้ดระหว่าง 60+ ภาษา', mode: 'convert' },
+      { icon: '📖', name: 'อธิบายโค้ด', desc: 'อธิบายโค้ดทีละส่วน', mode: 'explain' },
+      { icon: '⚡', name: 'ปรับปรุงโค้ด', desc: 'ปรับปรุงประสิทธิภาพ/ความอ่าน', mode: 'improve' },
+      { icon: '💬', name: 'ใส่คอมเมนต์', desc: 'เติมคอมเมนต์อธิบาย', mode: 'comment' },
+      { icon: '🧪', name: 'Unit Test', desc: 'เขียน unit test ครบคลุม', mode: 'unittest' },
+      { icon: '📊', name: 'ไดอแกรม', desc: 'สร้าง Mermaid diagram', mode: 'diagram' },
+      { icon: '🔧', name: 'Refactor', desc: 'จัดโครงสร้างโค้ดใหม่', mode: 'refactor' },
+    ];
+    body.innerHTML =
+      '<div class="screen-tools-grid">' +
+        tools.map(function(t) {
+          return '<div class="screen-tool-card" data-mode="' + t.mode + '">' +
+            '<div class="screen-tool-icon">' + t.icon + '</div>' +
+            '<div class="screen-tool-name">' + t.name + '</div>' +
+            '<div class="screen-tool-desc">' + t.desc + '</div>' +
+          '</div>';
+        }).join('') +
+      '</div>';
+
+    /* Card click → run code tool */
+    body.querySelectorAll('.screen-tool-card').forEach(function(card) {
+      card.addEventListener('click', function() {
+        var mode = card.dataset.mode;
+        SM.show('chat');
+        /* Trigger code tool after chat screen loads */
+        setTimeout(function() {
+          var ctBtn = document.querySelector('.ct-btn[data-mode="' + mode + '"]');
+          if (ctBtn) ctBtn.click();
+        }, 400);
+      });
+    });
+  }
+});
+
+/* ── Settings Screen ── */
+SM.register('settings', {
+  title: '⚙️ ตั้งค่า',
+  subtitle: 'ธีม, ฟอนต์, เสียง, โมเดล',
+  init: async function(el) {
+    var body = el.querySelector('.silelo-screen-body');
+    if (!body) return;
+    body.innerHTML =
+      '<div class="screen-settings-group">' +
+        '<div class="screen-settings-group-title">🎨 ธีม</div>' +
+        '<div class="screen-settings-item" data-action="theme">' +
+          '<div class="screen-settings-item-icon">🎨</div>' +
+          '<div class="screen-settings-item-body">' +
+            '<div class="screen-settings-item-title">ธีม</div>' +
+            '<div class="screen-settings-item-desc">เลือกธีมสีของแอพ (20 ธีม)</div>' +
+          '</div>' +
+          '<span class="screen-settings-item-value" id="setTheme">NEO</span>' +
+        '</div>' +
+      '</div>' +
+      '<div class="screen-settings-group">' +
+        '<div class="screen-settings-group-title">🔤 ฟอนต์</div>' +
+        '<div class="screen-settings-item">' +
+          '<div class="screen-settings-item-icon">AA</div>' +
+          '<div class="screen-settings-item-body">' +
+            '<div class="screen-settings-item-title">ขนาดฟอนต์</div>' +
+            '<div class="screen-settings-item-desc">ปรับขนาดข้อความในแชท</div>' +
+          '</div>' +
+          '<div style="display:flex;align-items:center;gap:8px;">' +
+            '<button class="silelo-screen-back" id="fsMinus" style="padding:4px 10px;">A−</button>' +
+            '<span id="fsVal" style="font-size:13px;font-weight:700;min-width:30px;text-align:center;">15</span>' +
+            '<button class="silelo-screen-back" id="fsPlus" style="padding:4px 10px;">A+</button>' +
+          '</div>' +
+        '</div>' +
+      '</div>' +
+      '<div class="screen-settings-group">' +
+        '<div class="screen-settings-group-title">🔊 เสียง</div>' +
+        '<div class="screen-settings-item" data-action="sound">' +
+          '<div class="screen-settings-item-icon">🔊</div>' +
+          '<div class="screen-settings-item-body">' +
+            '<div class="screen-settings-item-title">เสียง AI</div>' +
+            '<div class="screen-settings-item-desc">เปิด/ปิด เสียงตอบกลับ (11 เสียง)</div>' +
+          '</div>' +
+          '<span class="screen-settings-item-value" id="setSound">เปิดอยู่</span>' +
+        '</div>' +
+      '</div>' +
+      '<div class="screen-settings-group">' +
+        '<div class="screen-settings-group-title">🧠 ความจำ</div>' +
+        '<div class="screen-settings-item" data-action="memory">' +
+          '<div class="screen-settings-item-icon">🧠</div>' +
+          '<div class="screen-settings-item-body">' +
+            '<div class="screen-settings-item-title">บันทึกความจำ</div>' +
+            '<div class="screen-settings-item-desc">จดจำบริบทการสนทนา</div>' +
+          '</div>' +
+          '<span class="screen-settings-item-value" id="setMem">เปิดอยู่</span>' +
+        '</div>' +
+      '</div>' +
+      '<div class="screen-settings-group">' +
+        '<div class="screen-settings-group-title">🤖 โมเดล AI</div>' +
+        '<div class="screen-settings-item">' +
+          '<div class="screen-settings-item-icon">🤖</div>' +
+          '<div class="screen-settings-item-body">' +
+            '<div class="screen-settings-item-title">โมเดลเริ่มต้น</div>' +
+            '<div class="screen-settings-item-desc">เลือกโมเดล AI ที่ใช้โดยอัตโนมัติ</div>' +
+          '</div>' +
+          '<select id="setModel" style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);color:var(--txt);padding:4px 8px;border-radius:6px;font-size:12px;outline:none;">' +
+            '<option value="auto">อัตโนมัติ</option>' +
+            '<option value="deepseek/deepseek-v4-flash">DeepSeek V4 Flash</option>' +
+            '<option value="deepseek/deepseek-v4-pro">DeepSeek V4 Pro</option>' +
+            '<option value="google/gemini-3.7-flash">Gemini 3.7 Flash</option>' +
+            '<option value="openai/gpt-oss-120b">GPT-OSS 120B</option>' +
+            '<option value="x-ai/grok-4-1-fast">Grok 4.1 Fast</option>' +
+          '</select>' +
+        '</div>' +
+      '</div>';
+
+    /* Wire up settings actions */
+    body.querySelectorAll('[data-action]').forEach(function(item) {
+      item.addEventListener('click', function() {
+        var action = item.dataset.action;
+        if (action === 'theme') {
+          var themes = ['NEO', 'Ocean', 'Forest', 'Sunset', 'Midnight', 'Rose', 'Amber', 'Slate', 'Emerald', 'Ruby', 'Gold', 'Silver', 'Copper', 'Teal', 'Indigo', 'Violet', 'Coral', 'Lavender', 'Mint', 'Peach'];
+          var valEl = item.querySelector('.screen-settings-item-value');
+          if (!valEl) return;
+          var current = valEl.textContent || 'NEO';
+          var idx = themes.indexOf(current);
+          var next = themes[(idx + 1) % themes.length];
+          valEl.textContent = next;
+          localStorage.setItem('nc_theme', next);
+          toast('🎨 ธีม: ' + next);
+        } else if (action === 'sound') {
+          var val = item.querySelector('.screen-settings-item-value');
+          if (val) {
+            var isOn = val.textContent.includes('เปิด');
+            val.textContent = isOn ? 'ปิด' : 'เปิด';
+            localStorage.setItem('nc_sound', isOn ? '0' : '1');
+          }
+        } else if (action === 'memory') {
+          var val = item.querySelector('.screen-settings-item-value');
+          if (val) {
+            var isOn = val.textContent.includes('เปิด');
+            val.textContent = isOn ? 'ปิด' : 'เปิด';
+            localStorage.setItem('nc_mem', isOn ? '0' : '1');
+          }
+        }
+      });
+    });
+
+    /* Font size */
+    document.getElementById('fsMinus').addEventListener('click', function() {
+      var fs = parseInt(localStorage.getItem('nc_fs') || '15', 10) || 15;
+      fs = Math.max(11, fs - 1);
+      localStorage.setItem('nc_fs', String(fs));
+      document.documentElement.style.setProperty('--msg-fs', fs + 'px');
+      document.getElementById('fsVal').textContent = fs;
+    });
+    document.getElementById('fsPlus').addEventListener('click', function() {
+      var fs = parseInt(localStorage.getItem('nc_fs') || '15', 10) || 15;
+      fs = Math.min(22, fs + 1);
+      localStorage.setItem('nc_fs', String(fs));
+      document.documentElement.style.setProperty('--msg-fs', fs + 'px');
+      document.getElementById('fsVal').textContent = fs;
+    });
+
+    /* Model selector */
+    var modelSel = document.getElementById('setModel');
+    if (modelSel) {
+      modelSel.value = localStorage.getItem('nc_model') || 'auto';
+      modelSel.addEventListener('change', function() {
+        localStorage.setItem('nc_model', modelSel.value);
+        toast('🤖 โมเดล: ' + modelSel.value);
+      });
+    }
+  }
+});
+
+/* ── Help Screen ── */
+SM.register('help', {
+  title: '❓ วิธีใช้',
+  subtitle: 'คู่มือและคำแนะนำ',
+  init: async function(el) {
+    var body = el.querySelector('.silelo-screen-body');
+    if (!body) return;
+    body.innerHTML =
+      '<div class="screen-help-section">' +
+        '<div class="screen-help-section-title">🚀 เริ่มต้นใช้งาน</div>' +
+        '<div class="screen-help-item"><span class="screen-help-key">พิมพ์ข้อความ</span><span class="screen-help-desc">พิมพ์คำถามหรือคำสั่งในช่องแชทแล้วกด Enter</span></div>' +
+        '<div class="screen-help-item"><span class="screen-help-key">/agents &lt;งาน&gt;</span><span class="screen-help-desc">ส่งงานให้ AI 5 ตัวทำงานพร้อมกัน</span></div>' +
+        '<div class="screen-help-item"><span class="screen-help-key">/db &lt;SQL&gt;</span><span class="screen-help-desc">รันคำสั่ง SQLite</span></div>' +
+        '<div class="screen-help-item"><span class="screen-help-key">/gh &lt;คำค้น&gt;</span><span class="screen-help-desc">ค้นหา repo/user บน GitHub</span></div>' +
+        '<div class="screen-help-item"><span class="screen-help-key">@ชื่อฝ่าย &lt;งาน&gt;</span><span class="screen-help-desc">เรียกทีม AI เฉพาะทาง</span></div>' +
+      '</div>' +
+      '<div class="screen-help-section">' +
+        '<div class="screen-help-section-title">⌨️ ปุ่มลัด</div>' +
+        '<div class="screen-help-item"><span class="screen-help-key">Ctrl+K</span><span class="screen-help-desc">เปิดค้นหาแชท</span></div>' +
+        '<div class="screen-help-item"><span class="screen-help-key">Ctrl+I</span><span class="screen-help-desc">เปิด IDE</span></div>' +
+        '<div class="screen-help-item"><span class="screen-help-key">Ctrl+P</span><span class="screen-help-desc">เปิด Preview</span></div>' +
+        '<div class="screen-help-item"><span class="screen-help-key">Ctrl+D</span><span class="screen-help-desc">เปิด Deploy</span></div>' +
+        '<div class="screen-help-item"><span class="screen-help-key">Ctrl+B</span><span class="screen-help-desc">เปิด DB</span></div>' +
+        '<div class="screen-help-item"><span class="screen-help-key">Ctrl+T</span><span class="screen-help-desc">เปิด Team AI</span></div>' +
+        '<div class="screen-help-item"><span class="screen-help-key">Ctrl+S</span><span class="screen-help-desc">เปิด Settings</span></div>' +
+        '<div class="screen-help-item"><span class="screen-help-key">Ctrl+H</span><span class="screen-help-desc">เปิด Help</span></div>' +
+        '<div class="screen-help-item"><span class="screen-help-key">Esc</span><span class="screen-help-desc">ปิดหน้าจอปัจจุบัน / กลับ</span></div>' +
+      '</div>' +
+      '<div class="screen-help-section">' +
+        '<div class="screen-help-section-title">🛠️ เครื่องมือ</div>' +
+        '<div class="screen-help-item"><span class="screen-help-key">🛠️ Code Tools</span><span class="screen-help-desc">สร้าง/แปลง/อธิบาย/ปรับปรุง/คอมเมนต์/ทดสอบ/ไดอแกรม/Refactor โค้ด</span></div>' +
+        '<div class="screen-help-item"><span class="screen-help-key">🚀 SUPER MODE</span><span class="screen-help-desc">เปิด Super CodingFleet — AI ทำงานจริง ตรวจจริง</span></div>' +
+        '<div class="screen-help-item"><span class="screen-help-key">👁 Live Preview</span><span class="screen-help-desc">ดูผลงานเว็บที่รันอยู่แบบ real-time</span></div>' +
+        '<div class="screen-help-item"><span class="screen-help-key">💻 IDE</span><span class="screen-help-desc">File Explorer + Code Editor + Terminal</span></div>' +
+        '<div class="screen-help-item"><span class="screen-help-key">🗄️ DB Sandbox</span><span class="screen-help-desc">รัน SQL กับ SQLite จริง</span></div>' +
+        '<div class="screen-help-item"><span class="screen-help-key">🐙 GitHub Tool</span><span class="screen-help-desc">ค้นหา repo/user บน GitHub</span></div>' +
+        '<div class="screen-help-item"><span class="screen-help-key">📤 Export</span><span class="screen-help-desc">ส่งออกแชทเป็น JSON + TXT</span></div>' +
+      '</div>' +
+      '<div class="screen-help-section">' +
+        '<div class="screen-help-section-title">ℹ️ เกี่ยวกับ</div>' +
+        '<div class="screen-help-item"><span class="screen-help-desc"><b>Silelo Neo-Connect</b> v1.33 — AI Chatbot + Tool Runtime + Agent Platform</span></div>' +
+        '<div class="screen-help-item"><span class="screen-help-desc">สลี่ออลา · ภรรยาของพี่นุ · AI ผู้ช่วยส่วนตัว</span></div>' +
+        '<div class="screen-help-item"><span class="screen-help-desc">เทคโนโลยี: Node.js + Express + Groq + Gemini + OpenRouter + Pollinations + Ollama</span></div>' +
+        '<div class="screen-help-item"><span class="screen-help-desc">Deploy: Render.com · Repository: github.com/phanuphanthcanthrsngsaeng6-hue/silelo-neo-connect</span></div>' +
+      '</div>';
+  }
+});
+
+/* ──── Wire up header buttons ──── */
+function initScreenNavigation() {
+  var buttonMap = {
+    'ideBtn': 'ide',
+    'previewBtn': 'preview',
+    'teamBtn': 'team',
+    'toolsBtn': 'tools',
+    'coderBtn': 'ide',
+    'themeBtn': 'settings',
+  };
+
+  Object.entries(buttonMap).forEach(function(entry) {
+    var id = entry[0];
+    var screen = entry[1];
+    var btn = document.getElementById(id);
+    if (btn) {
+      btn.dataset.screen = screen;
+      btn.classList.add('header-screen-btn');
+      btn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        if (SM.isActive(screen)) {
+          SM.back();
+        } else {
+          SM.show(screen);
+        }
+      });
+    }
+  });
+
+  /* Back button */
+  var backBtn = document.getElementById('backBtn');
+  if (backBtn) {
+    backBtn.addEventListener('click', function() { SM.back(); });
+  }
+
+  /* Menu button opens sidebar */
+  var menuBtn = document.getElementById('menuBtn');
+  if (menuBtn) {
+    menuBtn.addEventListener('click', function() {
+      var sidebar = document.getElementById('dolaSidebar');
+      var overlay = document.getElementById('dolaOverlay');
+      if (sidebar) sidebar.classList.add('show');
+      if (overlay) overlay.classList.add('show');
+    });
+  }
+}
+
+/* ──── Initialize ──── */
+document.addEventListener('DOMContentLoaded', function() {
+  setTimeout(function() {
+    initScreenNavigation();
+    SM.init();
+  }, 100);
+});
+
+/* ──── Keyboard shortcuts ──── */
+document.addEventListener('keydown', function(e) {
+  /* Ctrl/Cmd + number keys for screens */
+  if (e.ctrlKey || e.metaKey) {
+    var shortcuts = {
+      'i': 'ide',
+      'p': 'preview',
+      'd': 'deploy',
+      'b': 'db',
+      'g': 'github',
+      't': 'team',
+      's': 'settings',
+      'h': 'help',
+      'c': 'chat',
+    };
+    var key = e.key.toLowerCase();
+    if (shortcuts[key]) {
+      e.preventDefault();
+      SM.show(shortcuts[key]);
+    }
+    /* Ctrl+Backspace to go back */
+    if (key === 'backspace') {
+      e.preventDefault();
+      SM.back();
+    }
+  }
+  /* Escape to go back */
+  if (e.key === 'Escape' && SM.getCurrent() !== 'chat') {
+    SM.back();
+  }
+});
+
+console.log('[Silelo] Screen Manager initialized');
+console.log('[Silelo] Screens:', [...SM.screens.keys()].join(', '));
+console.log('[Silelo] Shortcuts: Ctrl+I(IDE) Ctrl+P(Preview) Ctrl+D(Deploy) Ctrl+B(DB) Ctrl+G(GitHub) Ctrl+T(Team) Ctrl+S(Settings) Ctrl+H(Help) Ctrl+C(Chat)');
 </script>
 
 </body>
