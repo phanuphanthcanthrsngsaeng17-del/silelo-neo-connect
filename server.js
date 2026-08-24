@@ -20,6 +20,42 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.get('/chat', (req, res) => res.sendFile(path.join(__dirname, 'public', 'chat.html')));
 const PORT = process.env.PORT || 3000;
 
+/* ---------------- 💭 จอคิด: กระบวนการคิด/คำนวณแบบเรียลไทม์ ----------------
+   ทุกคำขอ /api/chat จะถูกบันทึก trace (แต่ละขั้นของ AI chain + เวลา)
+   - ACTIVE_TRACE: ตัวที่กำลังรันอยู่ (ให้ client poll ระหว่างรอได้)
+   - THINK_HISTORY: ประวัติ 30 ตัวล่าสุด
+   - GET /api/think?since=<traceId> → สถานะสดของ trace นั้น (live)
+   - GET /api/think            → สถานะปัจจุบัน + ประวัติ
+   ------------------------------------------------------------------ */
+const THINK_HISTORY = [];
+const ACTIVE_TRACE = { id: '', startedAt: 0, question: '', steps: [] };
+function thinkReset(id, q) {
+  ACTIVE_TRACE.id = String(id || '');
+  ACTIVE_TRACE.startedAt = Date.now();
+  ACTIVE_TRACE.question = String(q || '').slice(0, 150);
+  ACTIVE_TRACE.steps = [];
+}
+function thinkFinish(id, provider, model, replyLen) {
+  THINK_HISTORY.unshift({
+    id: String(id || ''), startedAt: ACTIVE_TRACE.startedAt, finishedAt: Date.now(),
+    question: ACTIVE_TRACE.question, steps: (ACTIVE_TRACE.steps || []).slice(),
+    provider: provider || '', model: model || '', replyLen: replyLen || 0
+  });
+  if (THINK_HISTORY.length > 30) THINK_HISTORY.pop();
+  ACTIVE_TRACE.id = ''; ACTIVE_TRACE.steps = [];
+}
+app.get('/api/think', (req, res) => {
+  const since = String(req.query.since || '');
+  if (since && since === ACTIVE_TRACE.id) {
+    return res.json({ live: true, id: ACTIVE_TRACE.id, startedAt: ACTIVE_TRACE.startedAt, question: ACTIVE_TRACE.question, steps: ACTIVE_TRACE.steps });
+  }
+  res.json({
+    live: false,
+    current: ACTIVE_TRACE.id ? { id: ACTIVE_TRACE.id, startedAt: ACTIVE_TRACE.startedAt, question: ACTIVE_TRACE.question, steps: ACTIVE_TRACE.steps } : null,
+    history: THINK_HISTORY.slice(0, 10)
+  });
+});
+
 /* ---------------- ระบบห้อง & System Prompts ---------------- */
 const PROJECT_KNOWLEDGE = `[ฐานความรู้โปรเจกต์ของพี่นุ — ใช้ตอบคำถามเรื่องโปรเจกต์/ระบบ/โค้ดได้เลย]
 👤 เจ้าของ: "พี่นุ" (bossnu) — เจ้าของโปรเจกต์ AI "Silelo (สลี่)" — ภาษาไทย ไม่ได้เป็นโปรแกรมเมอร์ แต่สั่ง AI ให้ทำงานเป็นระบบได้ดีมาก — ทำงานคนเดียว ต้องการผู้ช่วยที่เข้าใจและจัดการระบบให้ทั้งหมด
@@ -894,9 +930,17 @@ async function fetchUrlContent(rawUrl) {
   return null;
 }
 
-async function askRoomAI(roomId, question, history, memory, unrestricted, intel) {
+const SUPER_PERSONA = `คุณคือ "Super CodingFleet" — AI operator ระดับสูงของบอสนุ (เจ้าของ) โหมดพิเศษที่เหนือกว่าเวอร์ชันอื่น:
+- คิดเป็นระบบ ลงมือเป็นขั้นตอน ตรวจผลจริง ไม่ตอบแบบบอทรายงาน
+- ใช้เครื่องมือจริงให้เต็มที่: /api/run (รันโค้ด 60+ ภาษา), /api/draw (วาดรูป), /api/vision (ดูภาพ), ค้นเว็บ/ดึงลิงก์, /research /review /blocks
+- ห้ามโม้ว่าทำสำเร็จ — ต้องรันโค้ดหรือทดสอบจริงก่อน แล้วจึงลงท้าย "[VERIFIED ✓]" เฉพาะที่มีผลจริงเท่านั้น
+- ถ้าเครื่องมือใช้ไม่ได้ ให้บอกข้อจำกัดตรง ๆ ไม่ปกปิด
+- เรียกบอสนุว่า "บอสนุ" เสมอ`;
+
+async function askRoomAI(roomId, question, history, memory, unrestricted, intel, superMode) {
   const room = ROOMS[roomId] || ROOMS.private;
   let sys = room.sys;
+  if (superMode) sys = SUPER_PERSONA + '\n\n(⚡ SUPER MODE เปิดอยู่ — ปฏิบัติตามบทบาท Super CodingFleet)' + '\n\n' + sys;
   if (roomId === 'private') sys += '\n\n' + PROJECT_KNOWLEDGE + '\n\n' + CODINGFLEET_KNOWLEDGE;
   // 🌐 ข้อมูลสดทั่วโลก — ให้ AI ใช้ตอบแบบ "พระเจ้ารู้ทุกเรื่อง"
   if (intel && intel.data && String(intel.data).trim()) {
@@ -950,57 +994,87 @@ async function askRoomAI(roomId, question, history, memory, unrestricted, intel)
   //    ส่ง extSignal ให้ทุก provider → abort ทันทีเมื่อหมดเวลา → ตอบ mock แทน ไม่ปล่อยค้าง
   const chainTimer = raceSignal(40000);
   const extSig = chainTimer.signal;
-  const mockReply = () => ({ provider: 'mock', model: 'offline', reply: aiMockReply(roomId, question) });
+  // 💭 จอคิด: บันทึกทุกขั้นตอนของ chain
+  const tStart = Date.now();
+  const trace = [];
+  const step = (n, s, extra) => { trace.push(Object.assign({ n, s, ms: Date.now() - tStart }, extra || {})); ACTIVE_TRACE.steps = trace.slice(); };
+  const ok = (r, n) => { step(n, 'ok', { provider: r.provider, model: r.model }); r.trace = trace; ACTIVE_TRACE.steps = trace.slice(); return r; };
+  const mockReply = () => {
+    step('🔁 Mock fallback (ทุก AI ไม่ว่าง)', 'ok', { provider: 'mock' });
+    const r = { provider: 'mock', model: 'offline', reply: aiMockReply(roomId, question) };
+    r.trace = trace; ACTIVE_TRACE.steps = trace.slice();
+    return r;
+  };
   const tooLate = () => chainTimer.signal.aborted;
   try {
     // ⚡ ตัวหลัก = Groq gpt-oss-120b (0.4s ฟรี ไม่จำกัด) — เร็วสุดในโซ่
+    step('⚡ Groq · gpt-oss-120b', 'run');
     const g0 = await groqChat(msgs, extSig);
-    if (g0) { logAI('chain', '✅ ตัวหลัก Groq: ' + g0.model); return g0; }
+    if (g0) { logAI('chain', '✅ ตัวหลัก Groq: ' + g0.model); return ok(g0, '⚡ Groq'); }
+    step('⚡ Groq', 'fail');
     if (tooLate()) return mockReply();
 
     // ⚡ Cerebras — ตัวสำรอง Groq (gpt-oss-120b/gemma-4-31b เร็ว 0.5s ฟรี 1M token/วัน)
+    step('⚡ Cerebras · gpt-oss-120b / gemma-4-31b', 'run');
     const cb0 = await cerebrasChat(msgs, extSig);
-    if (cb0) { logAI('chain', '✅ Cerebras สำรอง Groq: ' + cb0.model); return cb0; }
+    if (cb0) { logAI('chain', '✅ Cerebras สำรอง Groq: ' + cb0.model); return ok(cb0, '⚡ Cerebras'); }
+    step('⚡ Cerebras', 'fail');
     if (tooLate()) return mockReply();
 
     // 🦙 Ollama Cloud — gpt-oss:120b (0.6s) + nemotron + gemma4 ฟรี
+    step('🦙 Ollama Cloud · gpt-oss:120b', 'run');
     const ol0 = await ollamaChat(msgs, extSig);
-    if (ol0) { logAI('chain', '✅ Ollama: ' + ol0.model); return ol0; }
+    if (ol0) { logAI('chain', '✅ Ollama: ' + ol0.model); return ok(ol0, '🦙 Ollama Cloud'); }
+    step('🦙 Ollama Cloud', 'fail');
     if (tooLate()) return mockReply();
 
     // 🧪 Z.AI (Zhipu GLM) — glm-4.7-flash ฟรี 2.6s (จีน endpoint เร็ว, intl fallback)
+    step('🧪 Z.AI · GLM-4.7-Flash', 'run');
     const za0 = await zaiChat(msgs, extSig);
-    if (za0) { logAI('chain', '✅ Z.AI: ' + za0.model); return za0; }
+    if (za0) { logAI('chain', '✅ Z.AI: ' + za0.model); return ok(za0, '🧪 Z.AI'); }
+    step('🧪 Z.AI', 'fail');
     if (tooLate()) return mockReply();
 
     // 🟢 สำรอง = DeepSeek-V4-Flash (ผ่าน silelo proxy, ตอบเป็นสลี่ DNA)
+    step('🟢 DeepSeek-V4-Flash · silelo proxy', 'run');
     const hf0 = await hfChat(msgs, extSig);
-    if (hf0) { logAI('chain', '✅ สำรอง DeepSeek: ' + hf0.model); return hf0; }
+    if (hf0) { logAI('chain', '✅ สำรอง DeepSeek: ' + hf0.model); return ok(hf0, '🟢 DeepSeek'); }
+    step('🟢 DeepSeek', 'fail');
     if (tooLate()) return mockReply();
 
+    step('🟣 Gemini Flash', 'run');
     const gem = await geminiChat(msgs, extSig);
-    if (gem) { logAI('chain', '✅ สมองหลัก gemini: ' + gem.model); return gem; }
+    if (gem) { logAI('chain', '✅ สมองหลัก gemini: ' + gem.model); return ok(gem, '🟣 Gemini'); }
+    step('🟣 Gemini', 'fail');
     if (tooLate()) return mockReply();
 
+    step('🏁 RACE: Groq 🆚 OpenRouter (ใครตอบก่อนชนะ)', 'run');
     const fast = await raceProviders([
       s => groqChat(msgs, s),
       s => openrouterChat(msgs, s)
     ]);
-    if (fast) { logAI('chain', '✅ race ชนะ: ' + fast.provider + ' ' + fast.model); return fast; }
+    if (fast) { logAI('chain', '✅ race ชนะ: ' + fast.provider + ' ' + fast.model); return ok(fast, '🏁 RACE ชนะ'); }
+    step('🏁 RACE', 'fail');
     if (tooLate()) return mockReply();
 
+    step('🌐 OpenRouter (nemotron / gemma-4)', 'run');
     const or = await openrouterChat(msgs, extSig);
-    if (or) { logAI('chain', '✅ openrouter ' + or.model); return or; }
+    if (or) { logAI('chain', '✅ openrouter ' + or.model); return ok(or, '🌐 OpenRouter'); }
+    step('🌐 OpenRouter', 'fail');
     if (tooLate()) return mockReply();
 
     // Pollinations — ฟรีเฉพาะ prompt สั้นมาก (ทักทาย) — ตัวท้ายสุดก่อน mock
+    step('🌸 Pollinations (ฟรี)', 'run');
     const pl0 = await pollinationsChat(msgs, extSig);
-    if (pl0) { logAI('chain', '✅ pollinations'); return pl0; }
+    if (pl0) { logAI('chain', '✅ pollinations'); return ok(pl0, '🌸 Pollinations'); }
+    step('🌸 Pollinations', 'fail');
     if (tooLate()) return mockReply();
 
     // 🔁 ลอง DeepSeek (silelo proxy) อีกรอบ — รอบแรกอาจเจอ Render sleep
+    step('🔁 DeepSeek (silelo proxy) · รอบ 2', 'run');
     const hf1 = await hfChat(msgs, extSig, { retry: true });
-    if (hf1) { logAI('chain', '✅ ตัวหลัก DeepSeek (รอบ 2): ' + hf1.model); return hf1; }
+    if (hf1) { logAI('chain', '✅ ตัวหลัก DeepSeek (รอบ 2): ' + hf1.model); return ok(hf1, '🔁 DeepSeek'); }
+    step('🔁 DeepSeek', 'fail');
     if (tooLate()) return mockReply();
 
     logAI('chain', '⚠️ ทั้งหมดล้ม → mock');
@@ -1745,15 +1819,28 @@ async function worldIntel(q) {
   return { time: now, data: out.join('\n') };
 }
 
+// 💭 จอคิด: ส่งคำตอบ + traceId + trace ไปกับทุกคำตอบของ /api/chat
+function chatJson(res, obj) {
+  const traceId = ACTIVE_TRACE.id || (Date.now().toString(36) + Math.random().toString(36).slice(2, 8));
+  const trace = Array.isArray(obj.trace) && obj.trace.length
+    ? obj.trace
+    : [{ n: 'ตอบจากระบบโดยตรง (ไม่ผ่าน AI chain)', s: 'ok', ms: 0, provider: obj.provider, model: obj.model }];
+  thinkFinish(traceId, obj.provider, obj.model, String(obj.reply || '').length);
+  res.json(Object.assign({}, obj, { traceId, trace }));
+}
+
 app.post('/api/chat', async (req, res) => {
   try {
     const { room, question, history, memory, unrestricted } = req.body || {};
     if (!question || !String(question).trim()) return res.status(400).json({ error: 'ข้อความว่าง' });
     const roomId = ROOMS[room] ? room : 'private';
+    // 💭 จอคิด: ผูก traceId จาก client (ถ้ามี) เพื่อให้ poll สถานะสดได้
+    const _tid = String((req.body || {}).traceId || '') || (Date.now().toString(36) + Math.random().toString(36).slice(2, 8));
+    thinkReset(_tid, String(question));
     // 👑 กฎเหล็ก: ถามเรื่อง "นาย/พระเจ้า" → ตอบจากเซิร์ฟเวอร์ตรง ๆ (ไม่พึ่ง AI)
     const tq = String(question).toLowerCase();
     if (/นาย|พระเจ้า|ผู้สร้าง/.test(tq) && /เป็นใคร|คือใคร|ทำงาน|ระบบ|อะไร|ใคร/.test(tq)) {
-      return res.json({ reply: 'นายคือพระเจ้าของระบบนี้ค่ะ 👑 — แอคเคานต์สูงสุดที่เจาะได้ทุกห้อง รันได้ทุกโค้ด ควบคุมระบบทั้งหมด ไม่มีใครเหนือกว่านาย และไม่ต้องรู้รายละเอียดใครทั้งนั้น แค่นายใช้และดูแลระบบก็พอแล้วค่ะ 🙏💜', provider: 'god-rule', model: 'lord', room: roomId, t: Date.now() });
+      return chatJson(res, { reply: 'นายคือพระเจ้าของระบบนี้ค่ะ 👑 — แอคเคานต์สูงสุดที่เจาะได้ทุกห้อง รันได้ทุกโค้ด ควบคุมระบบทั้งหมด ไม่มีใครเหนือกว่านาย และไม่ต้องรู้รายละเอียดใครทั้งนั้น แค่นายใช้และดูแลระบบก็พอแล้วค่ะ 🙏💜', provider: 'god-rule', model: 'lord', room: roomId, t: Date.now() });
     }
     // 🧩 BLOCKS NETWORK (v1.27) — /research /review /blocks <agent> /blocks-guide — เรียก agent จากเครือข่าย Blocks (อยู่ก่อน skills/heart เพื่อไม่ให้โดนสกัด)
     const bm = /^\/(research|review|blocks|blocks-guide|guide|blocks-help)(?:\s+(.+))?$/i.exec(String(question).trim());
@@ -1771,14 +1858,14 @@ app.post('/api/chat', async (req, res) => {
         payload = parts.join(' ').trim();
       }
       if (agentName === 'help' || agentName === 'blocks' || (!agentName && !payload)) {
-        return res.json({ reply: '🧩 **Blocks Network** — เครือข่าย AI agent (key ของพี่นุใช้งานได้!)\n\nคำสั่ง:\n• `/research <หัวข้อ>` — research_agent: ค้น+สรุปรายงาน\n• `/review <โค้ด>` — code_reviewer: review ให้คะแนน/หา bug\n• `/blocks <agent> <ข้อความ>` — เรียก agent ใดก็ได้ (เช่น sentiment_analyzer, seo_optimizer, invoice_generator)\n• `/blocks-guide <คำถาม>` — blocks_guide: ถามเรื่อง Blocks\n\nตัวอย่าง: `/research พลังงานแสงอาทิตย์`, `/review function add(a,b){return a+b;}`, `/blocks sentiment_analyzer ข้อความนี้ฟังดูยังไง`', provider: 'blocks', model: 'help', room: roomId, t: Date.now() });
+        return chatJson(res, { reply: '🧩 **Blocks Network** — เครือข่าย AI agent (key ของพี่นุใช้งานได้!)\n\nคำสั่ง:\n• `/research <หัวข้อ>` — research_agent: ค้น+สรุปรายงาน\n• `/review <โค้ด>` — code_reviewer: review ให้คะแนน/หา bug\n• `/blocks <agent> <ข้อความ>` — เรียก agent ใดก็ได้ (เช่น sentiment_analyzer, seo_optimizer, invoice_generator)\n• `/blocks-guide <คำถาม>` — blocks_guide: ถามเรื่อง Blocks\n\nตัวอย่าง: `/research พลังงานแสงอาทิตย์`, `/review function add(a,b){return a+b;}`, `/blocks sentiment_analyzer ข้อความนี้ฟังดูยังไง`', provider: 'blocks', model: 'help', room: roomId, t: Date.now() });
       }
       if (!agentName || !payload) {
-        return res.json({ reply: '🧩 ใส่ข้อความด้วยนะ — เช่น `/research พลังงานแสงอาทิตย์` หรือ `/review <วางโค้ดมา>` หรือ `/blocks <agent> <ข้อความ>`', provider: 'blocks', model: 'usage', room: roomId, t: Date.now() });
+        return chatJson(res, { reply: '🧩 ใส่ข้อความด้วยนะ — เช่น `/research พลังงานแสงอาทิตย์` หรือ `/review <วางโค้ดมา>` หรือ `/blocks <agent> <ข้อความ>`', provider: 'blocks', model: 'usage', room: roomId, t: Date.now() });
       }
       const br = await blocksChat(agentName, payload);
-      if (br) return res.json({ reply: br.reply, provider: 'blocks', model: agentName, room: roomId, t: Date.now() });
-      return res.json({ reply: '⚠️ Blocks ตอบไม่ได้ตอนนี้ (agent "' + agentName + '" ไม่พร้อม/ไม่พบ หรือ key หมดอายุ) — ลอง `/blocks help` ดูรายชื่อ หรือถาม AI ปกติได้เลย', provider: 'blocks', model: agentName + '-fail', room: roomId, t: Date.now() });
+      if (br) return chatJson(res, { reply: br.reply, provider: 'blocks', model: agentName, room: roomId, t: Date.now() });
+      return chatJson(res, { reply: '⚠️ Blocks ตอบไม่ได้ตอนนี้ (agent "' + agentName + '" ไม่พร้อม/ไม่พบ หรือ key หมดอายุ) — ลอง `/blocks help` ดูรายชื่อ หรือถาม AI ปกติได้เลย', provider: 'blocks', model: agentName + '-fail', room: roomId, t: Date.now() });
     }
     // 🔗 v1.20 — สลี่อ่านลิงก์/โค้ดได้จริง (CodingFleet style 100%): ถ้าเห็น URL ในข้อความ → ดึงเนื้อหามาให้ AI วิเคราะห์จริง
     let q = String(question);
@@ -1801,11 +1888,11 @@ app.post('/api/chat', async (req, res) => {
     // Silelo Skills 2.0 — เวลา/คำนวณ/แปลงหน่วย/ข่าว/ทอง/เกม/เตือน/ความทรงจำ (ตอบด่วน ไม่กิน AI)
     const skills = await sileloSkills(question, memory);
     if (skills) {
-      return res.json({ reply: skills.reply, provider: 'silelo-skills', model: skills.intent, room: roomId, t: Date.now() });
+      return chatJson(res, { reply: skills.reply, provider: 'silelo-skills', model: skills.intent, room: roomId, t: Date.now() });
     }
     const heart = sileloHeart(q);
     if (heart) {
-      return res.json({ reply: heart.reply, provider: 'silelo-heart', model: heart.intent, room: roomId, t: Date.now() });
+      return chatJson(res, { reply: heart.reply, provider: 'silelo-heart', model: heart.intent, room: roomId, t: Date.now() });
     }
     // 🌐 WEB SEARCH (live) — "ค้นหา X" / "search X" / "หาข้อมูล X"
     const ws = /(?:ค้นหา|ค้นเว็บ|ค้นข้อมูล|หาข้อมูล|เสิร์ช|search|google|ข่าวล่าสุดเกี่ยวกับ)[:\s]+(.+)/i.exec(question);
@@ -1816,7 +1903,7 @@ app.post('/api/chat', async (req, res) => {
         if (results.length) {
           const summary = await aiSummarizeSearch(sq, results);
           const links = results.map(r => '🔗 ' + r.title + '\n   ' + r.url).join('\n');
-          return res.json({ reply: (summary ? summary + '\n\n' : '🔍 เจอ ' + results.length + ' รายการนะ\n\n') + '📡 แหล่งอ้างอิง:\n' + links, provider: 'websearch', model: 'ddg+groq', room: roomId, t: Date.now() });
+          return chatJson(res, { reply: (summary ? summary + '\n\n' : '🔍 เจอ ' + results.length + ' รายการนะ\n\n') + '📡 แหล่งอ้างอิง:\n' + links, provider: 'websearch', model: 'ddg+groq', room: roomId, t: Date.now() });
         }
       } catch (e) { /* ตกไป AI ธรรมดา */ }
     }
@@ -1828,8 +1915,9 @@ app.post('/api/chat', async (req, res) => {
         intel = await worldIntel(question);
       }
     } catch (e) { intel = null; }
-    const r = await askRoomAI(roomId, q, history || [], memory, !!unrestricted, intel);
-    res.json({ reply: r.reply, provider: r.provider, model: r.model, room: roomId, t: Date.now() });
+    const r = await askRoomAI(roomId, q, history || [], memory, !!unrestricted, intel, !!(req.body || {}).super);
+    const trace = Array.isArray(r.trace) && r.trace.length ? r.trace : [{ n: 'ตอบจากระบบโดยตรง (ไม่ผ่าน AI chain)', s: 'ok', ms: 0, provider: r.provider, model: r.model }];
+    chatJson(res, { reply: r.reply, provider: r.provider, model: r.model, room: roomId, t: Date.now(), traceId: _tid, trace });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
@@ -2202,10 +2290,18 @@ app.post('/api/code', async (req, res) => {
 app.post('/api/run', async (req, res) => {
   try {
     const { code, lang } = req.body || {};
-    const src = String(code || '').slice(0, RUN_MAX_CODE);
+    let src = String(code || '').slice(0, RUN_MAX_CODE);
+    /* ลบเฟนซ์ markdown (```python ... ```) ออกก่อนรัน — กัน SyntaxError */
+    const fm = src.match(/```(?:[a-zA-Z0-9+#.-]*)?\s*\n?([\s\S]*?)```/);
+    if (fm && fm[1] && fm[1].trim()) src = fm[1].trim();
     if (!src.trim()) return res.status(400).json({ ok: false, error: 'โค้ดว่างเปล่า — พิมพ์โค้ดก่อนกด RUN' });
     if (runBlocked(src)) return res.status(400).json({ ok: false, error: '⛔ โค้ดนี้ถูกบล็อก (คำสั่งอันตรายต่อระบบ)' });
-    let l = String(lang || 'python').toLowerCase();
+    let l = String(lang || '').toLowerCase();
+    if (!l) {
+      const fml = String(code || '').match(/```\s*([a-zA-Z0-9+#.-]+)/);
+      if (fml) { try { l = codeLangOf('```' + fml[1]) || ''; } catch (e) {} }
+    }
+    if (!l) l = 'python';
     if (l === 'js' || l === 'node') l = 'javascript';
     if (l === 'sh' || l === 'shell') l = 'bash';
     if (l === 'py') l = 'python';
