@@ -16,13 +16,13 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&display=swap" rel="stylesheet">
-<script src="https://js.puter.com/v2/"></script>
+
 <script>
   /* Removed legacy Render wake ping. This page should not call external fallback URLs. */
 </script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&family=Noto+Sans+Thai:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
 <style>
   :root {
     --bg: #01030a; --cyan: #00e5ff; --purple: #a78bfa; --amber: #ffb74d; --pink: #ff2d95;
@@ -154,7 +154,7 @@
     transition: all .2s;
   }
   /* ===== Dola style: header เหลือแค่ปุ่มจำเป็น (โทร + ล้างแชท) ===== */
-  #voiceBtn, #soundBtn, #ruleBtn, #coderBtn, #themeBtn { display: none !important; }
+  #voiceBtn, #soundBtn, #ruleBtn, #coderBtn, #themeBtn { display: inline-flex !important; }
   html[data-room="private"] #codeBtn { display: none !important; }
   .back-btn { width: 48px; height: 48px; border-radius: 12px; border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent);
     background: var(--panel); color: var(--txt); font-size: 19px; cursor: pointer; flex: none; transition: all .2s; }
@@ -285,6 +285,19 @@
   .voice-opt.on { border-color: var(--accent); box-shadow: 0 0 12px color-mix(in srgb, var(--accent) 30%, transparent); }
   .voice-opt .vicon { font-size: 18px; }
   .voice-opt .vsub { font-size: 10px; color: var(--dim); font-family: 'Orbitron', monospace; letter-spacing: .5px; margin-left: auto; }
+
+  /* ⚡ ความเร็วเสียง */
+  .vrate { border-top: 1px solid rgba(255,255,255,.08); padding-top: 10px; margin-top: 2px; }
+  .vrate .ttl { font-size: 9.5px; margin-bottom: 7px; }
+  .vrate-row { display: flex; align-items: center; gap: 8px; }
+  .vrate-btn {
+    width: 26px; height: 26px; border-radius: 50%; border: 1px solid rgba(255,255,255,.15);
+    background: rgba(255,255,255,.05); color: var(--txt); font-size: 14px; cursor: pointer; line-height: 1;
+    display: flex; align-items: center; justify-content: center; transition: all .15s; flex: none;
+  }
+  .vrate-btn:hover { border-color: var(--accent); color: var(--accent); box-shadow: 0 0 10px color-mix(in srgb, var(--accent) 30%, transparent); }
+  .vrate-row input[type=range] { flex: 1; accent-color: var(--accent); height: 4px; cursor: pointer; min-width: 70px; }
+  .vrate-val { font-family: 'Orbitron', monospace; font-size: 12px; color: var(--accent); min-width: 34px; text-align: right; letter-spacing: .5px; }
 
   /* live video preview (screen share / camera) */
   #liveVideo { position: fixed; right: 14px; bottom: 110px; width: 160px; border-radius: 10px; border: 2px solid var(--accent); z-index: 120; display: none; background: #000; box-shadow: 0 8px 30px rgba(0,0,0,.7); }
@@ -573,8 +586,8 @@
 
 /* ---------- Typography & Base ---------- */
 :root {
-  --font-ui: 'Inter', 'Noto Sans Thai', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
-  --font-head: 'Space Grotesk', 'Noto Sans Thai', system-ui, sans-serif;
+  --font-ui: 'Noto Sans Thai', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-head: 'Noto Sans Thai', system-ui, sans-serif;
   --font-mono: 'JetBrains Mono', ui-monospace, 'SF Mono', 'Cascadia Code', Consolas, monospace;
 }
 html { font-size: 16px; }
@@ -699,6 +712,11 @@ header::after { height: 1px; background: linear-gradient(90deg, transparent, rgb
 }
 .bubble { padding: 13px 17px; font-size: 15px; line-height: 1.75; }
 .meta { font-family: var(--font-mono); font-size: 9.5px; letter-spacing: .6px; opacity: .8; margin-top: 6px; }
+  .msg .meta .spk, .msg .meta .cpy {
+    background: none; border: none; cursor: pointer; font-size: 12px; padding: 2px 5px;
+    opacity: .7; position: relative; z-index: 6; line-height: 1;
+  }
+  .msg .meta .spk:hover, .msg .meta .cpy:hover { opacity: 1; transform: scale(1.15); }
 .sys-note { background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.1); font-family: var(--font-ui); letter-spacing: .4px; border-radius: 999px; padding: 5px 16px; font-size: 10.5px; }
 
 /* typing */
@@ -1164,11 +1182,27 @@ body.theme-dola #inp { border-radius: 16px; }
 <!-- 🎙️ เลือกเสียง -->
 <div class="voice-pop" id="voicePop">
   <div class="ttl">🎙️ VOICE</div>
-  <div class="voice-opt" data-voice="silelo"><span class="vicon">💜</span><span class="vname">สลี่ออลา</span><span class="vsub">เสียงสลี่</span></div>
+  <div class="voice-opt" data-voice="silelo"><span class="vicon">💜</span><span class="vname">สลีออลา</span><span class="vsub">เสียงสลี</span></div>
   <div class="voice-opt" data-voice="auto"><span class="vicon">⚡</span><span class="vname">อัตโนมัติ</span><span class="vsub">เร็วสุด</span></div>
   <div class="voice-opt" data-voice="premwadee"><span class="vicon">👩</span><span class="vname">พรีมาวดี</span><span class="vsub">หญิง อ่อนโยน</span></div>
-  <div class="voice-opt" data-voice="niwat"><span class="vicon">👨</span><span class="vname">นิวัฒน์</span><span class="vsub">ชาย</span></div>
+  <div class="voice-opt" data-voice="niwat"><span class="vicon">👨</span><span class="vname">นิวััฒน์</span><span class="vsub">ชาย</span></div>
   <div class="voice-opt" data-voice="achara"><span class="vicon">👩‍💼</span><span class="vname">อัจฉรา</span><span class="vsub">หญิง ทางการ</span></div>
+  <div class="voice-opt" data-voice="aria"><span class="vicon">🇺🇸</span><span class="vname">Aria</span><span class="vsub">EN หญิง</span></div>
+  <div class="voice-opt" data-voice="guy"><span class="vicon">🇺🇸</span><span class="vname">Guy</span><span class="vsub">EN ชาย</span></div>
+  <div class="voice-opt" data-voice="sonia"><span class="vicon">🇬🇧</span><span class="vname">Sonia</span><span class="vsub">UK หญิง</span></div>
+  <div class="voice-opt" data-voice="nanami"><span class="vicon">🇯🇵</span><span class="vname">Nanami</span><span class="vsub">JP หญิง</span></div>
+  <div class="voice-opt" data-voice="sunhi"><span class="vicon">🇰🇷</span><span class="vname">Sun-Hi</span><span class="vsub">KR หญิง</span></div>
+  <div class="voice-opt" data-voice="xiaoxiao"><span class="vicon">🇨🇳</span><span class="vname">Xiaoxiao</span><span class="vsub">CN หญิง</span></div>
+  <div class="vrate">
+    <div class="ttl">⚡ ความเร็ว</div>
+    <div class="vrate-row">
+      <button class="vrate-btn" id="vRateMinus" title="ช้าลง">−</button>
+      <input type="range" id="vRate" min="0.5" max="2" step="0.1" value="1">
+      <button class="vrate-btn" id="vRatePlus" title="เร็วขึ้น">＋</button>
+      <span class="vrate-val" id="vRateVal">1.0x</span>
+    </div>
+  </div>
+</div>
 </div>
 
 <!-- 🧑💼 ทีมงาน AI 50 คน -->
@@ -1964,7 +1998,7 @@ body.theme-dola #inp { border-radius: 16px; }
       if (!parts.length) return resolve();
       const ttsOne = async (txt) => {
         try {
-          const r = await fetch('/api/tts', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text: txt, voice }) });
+          const r = await fetch('/api/tts', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text: txt, voice, rate: (typeof ttsRate !== 'undefined' ? ttsRate : 1) }) });
           if (r.ok) return await r.blob();
         } catch (e) {}
         return null;
@@ -2021,11 +2055,12 @@ body.theme-dola #inp { border-radius: 16px; }
     });
   }
 
-  /* ===== 🎙️ เลือกเสียง ===== */
+    /* ===== 🎙️ เลือกเสียง ===== */
   const voicePop = document.getElementById('voicePop');
   document.getElementById('voiceBtn').onclick = () => {
     voicePop.classList.toggle('show');
     document.querySelectorAll('.voice-opt').forEach(o => o.classList.toggle('on', o.dataset.voice === voice));
+    syncRateUi();
   };
   document.querySelectorAll('.voice-opt').forEach(o => {
     o.onclick = () => {
@@ -2033,10 +2068,29 @@ body.theme-dola #inp { border-radius: 16px; }
       try { localStorage.setItem('nc_voice', voice); } catch (e) {}
       document.querySelectorAll('.voice-opt').forEach(x => x.classList.toggle('on', x === o));
       voicePop.classList.remove('show');
-      const names = { silelo: '💜 สลี่ออลา (เสียงสลี่)', auto: 'อัตโนมัติ (เร็วสุด)', premwadee: 'พรีมาวดี (หญิง อ่อนโยน)', niwat: 'นิวัฒน์ (ชาย)', achara: 'อัจฉรา (หญิง ทางการ)' };
+      const names = { silelo: '💜 สลี่ออลา (เสียงสลี่)', auto: 'อัตโนมัติ (เร็วสุด)', premwadee: 'พรีมาวดี (หญิง อ่อนโยน)', niwat: 'นิวััฒน์ (ชาย)', achara: 'อัจฉรา (หญิง ทางการ)', aria: 'Aria (EN หญิง)', guy: 'Guy (EN ชาย)', sonia: 'Sonia (UK หญิง)', nanami: 'Nanami (JP หญิง)', sunhi: 'Sun-Hi (KR หญิง)', xiaoxiao: 'Xiaoxiao (CN หญิง)' };
       toast('🎙️ เสียง: ' + (names[voice] || voice));
     };
   });
+  /* ===== ⚡ ความเร็วเสียง (0.5x - 2.0x) ===== */
+  let ttsRate = 1;
+  try { ttsRate = parseFloat(localStorage.getItem('nc_tts_rate') || '1') || 1; } catch (e) { ttsRate = 1; }
+  ttsRate = Math.min(2, Math.max(0.5, ttsRate));
+  const vRate = document.getElementById('vRate');
+  const vRateVal = document.getElementById('vRateVal');
+  function syncRateUi() {
+    if (vRate) vRate.value = String(ttsRate);
+    if (vRateVal) vRateVal.textContent = ttsRate.toFixed(1) + 'x';
+  }
+  function setRate(r) {
+    ttsRate = Math.min(2, Math.max(0.5, Math.round(r * 10) / 10));
+    try { localStorage.setItem('nc_tts_rate', String(ttsRate)); } catch (e) {}
+    syncRateUi();
+  }
+  if (vRate) vRate.addEventListener('input', () => setRate(parseFloat(vRate.value) || 1));
+  document.getElementById('vRateMinus').onclick = () => { setRate(ttsRate - 0.1); toast('⚡ ความเร็วเสียง: ' + ttsRate.toFixed(1) + 'x'); };
+  document.getElementById('vRatePlus').onclick = () => { setRate(ttsRate + 0.1); toast('⚡ ความเร็วเสียง: ' + ttsRate.toFixed(1) + 'x'); };
+  syncRateUi();
   /* ===== 🔊 เปิด/ปิดเสียง ===== */
   const soundBtn = document.getElementById('soundBtn');
   if (soundBtn) {
@@ -3021,7 +3075,16 @@ body.theme-dola #inp { border-radius: 16px; }
   }
   puterBtn.onclick = async () => {
     unlockAudio();
-    if (!window.puter) { toast('⚠️ โหลด Puter.js ไม่สำเร็จ — ลองรีเฟรชหน้า'); return; }
+    if (!window.puter) {
+      toast('🐋 กำลังโหลด Puter.js...');
+      await new Promise((res) => {
+        const s = document.createElement('script');
+        s.src = 'https://js.puter.com/v2/';
+        s.onload = res; s.onerror = res;
+        document.head.appendChild(s);
+      });
+      if (!window.puter) { toast('⚠️ โหลด Puter.js ไม่สำเร็จ — ลองรีเฟรชหน้า'); return; }
+    }
     if (!puterSignedIn) {
       var isPwa = false;
       try { isPwa = window.matchMedia('(display-mode: standalone)').matches || (window.navigator && window.navigator.standalone === true); } catch (e) {}
@@ -3287,7 +3350,7 @@ lockScreen.classList.remove('show');
   <div class="dola-overlay" id="dolaOverlay"></div>
   <aside class="dola-sidebar" id="dolaSidebar">
     <div class="dola-sb-head">
-      <div class="dola-brand">Dola<small>BOSSNUSILELO · สลี่</small></div>
+      <div class="dola-brand">CFBossnusilelo 👑<small>BOSSNUSILELO · สลี่</small></div>
       <button class="dola-sb-close" id="dolaSbClose" title="ปิดเมนู">✕</button>
     </div>
     <div class="dola-search"><input id="dolaSearch" placeholder="🔍 ค้นหา..."></div>
@@ -3305,7 +3368,7 @@ lockScreen.classList.remove('show');
   <div class="dola-settings" id="dolaSettings">
     <div class="dola-set-head">
       <button class="dola-set-back" id="dolaSetBack" title="กลับ">←</button>
-      <div class="dola-set-title">บัญชี Bossnusilelo<small>บัญชี Dola ของพี่นุ · สลี่ AI</small></div>
+      <div class="dola-set-title">บัญชี Bossnusilelo<small>บัญชี CFBossnusilelo ของพี่นุ · สลี่ AI</small></div>
     </div>
     <div class="dola-set-list">
       <button class="dola-set-item" data-act="sound"><span class="dola-set-ico">🔊</span> เสียง<span class="dola-set-val" id="dolaValSound">อัตโนมัติ</span></button>
@@ -3317,7 +3380,7 @@ lockScreen.classList.remove('show');
       <button class="dola-set-item" data-act="default"><span class="dola-set-ico">⚡</span> ค่าเริ่มต้นสำหรับแชทใหม่ — รวดเร็ว<span class="dola-set-val" id="dolaValModel">อัตโนมัติ</span></button>
       <button class="dola-set-item" data-act="privacy"><span class="dola-set-ico">🔒</span> ความเป็นส่วนตัวและสิทธิ์</button>
       <button class="dola-set-item" data-act="help"><span class="dola-set-ico">🚩</span> ความช่วยเหลือและข้อเสนอแนะ</button>
-      <button class="dola-set-item" data-act="about"><span class="dola-set-ico">ℹ️</span> เกี่ยวกับ Dola</button>
+      <button class="dola-set-item" data-act="about"><span class="dola-set-ico">ℹ️</span> เกี่ยวกับ CFBossnusilelo</button>
       <button class="dola-set-item" data-act="discord"><span class="dola-set-ico">🐱</span> เข้าร่วมกับเราบน Discord</button>
     </div>
   </div>
@@ -3552,9 +3615,15 @@ document.addEventListener('DOMContentLoaded', () => {
     $('dolaNewChat').onclick = () => {
       history = []; try { localStorage.removeItem(KEY); } catch (e) {}
       msgsEl.innerHTML = '';
+      try { typing.style.display = 'none'; } catch (e) {}
+      try { sendBtn.disabled = false; } catch (e) {}
       addMsg('assistant', R.name + ': หัวข้อใหม่ — พร้อมคุยกันได้เลย! 💜');
       toast('💬 เริ่มหัวข้อใหม่แล้ว');
       closeSb();
+      try { closeSettings(); } catch (e) {}
+      try { voicePop.classList.remove('show'); themePop.classList.remove('show'); teamPop.classList.remove('show'); } catch (e) {}
+      const inp = document.getElementById('inp');
+      if (inp) { inp.value = ''; setTimeout(() => inp.focus(), 80); }
     };
 
     /* ---------- หน้า "บัญชี Bossnusilelo" (ตั้งค่า) ---------- */
@@ -3594,7 +3663,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function syncSettingsVals() {
       const vm = modelSel ? modelSel.value : 'auto';
       $('dolaValModel').textContent = vm === 'auto' ? 'อัตโนมัติ' : vm.split('/').pop();
-      $('dolaValSound').textContent = (typeof voice !== 'undefined' && voice) ? voice : 'อัตโนมัติ';
+      $('dolaValSound').textContent = ((typeof voice !== 'undefined' && voice && voice !== 'auto') ? voice : 'อัตโนมัติ') + ' · ' + (typeof ttsRate !== 'undefined' ? ttsRate.toFixed(1) + 'x' : '1.0x');
       try { $('dolaValTheme').textContent = (localStorage.getItem('nc_theme') || 'neo').toUpperCase(); } catch (e) {}
       syncMem();
       applyFs();
@@ -3627,8 +3696,12 @@ document.addEventListener('DOMContentLoaded', () => {
         } else if (act === 'newtopic') {
           history = []; try { localStorage.removeItem(KEY); } catch (e) {}
           msgsEl.innerHTML = '';
+          try { typing.style.display = 'none'; } catch (e) {}
           addMsg('assistant', R.name + ': หัวข้อใหม่ — พร้อมคุยกันได้เลย! 💜');
           toast('➕ เริ่มหัวข้อใหม่แล้ว');
+          closeSettings();
+          const inp = document.getElementById('inp');
+          if (inp) { inp.value = ''; setTimeout(() => inp.focus(), 80); }
         } else if (act === 'history') {
           $('dolaSearchModal').classList.add('show');
           setTimeout(() => $('dolaSearchInput').focus(), 60);
@@ -3642,7 +3715,7 @@ document.addEventListener('DOMContentLoaded', () => {
         } else if (act === 'help') {
           showInfo('🚩 ความช่วยเหลือและข้อเสนอแนะ', '<p>พิมพ์คำสั่งเหล่านี้ได้เลย:</p><ul><li><b>@ชื่อทีม</b> — สั่งงาน AI ทีม 50 คน</li><li><b>มอบหมาย @ชื่อ งาน...</b> — มอบงานให้ AI</li><li><b>ติดตั้ง pandas</b> — รันโค้ด/ติดตั้งแพ็กเกจ (LAB)</li><li><b>เขียนเกมงู Python</b> — เขียน+รันโค้ดให้เลย</li><li><b>แชร์จอ / เปิดกล้อง</b> — ให้ AI มองเห็น</li><li><b>/research หัวข้อ</b> — 🧩 Blocks: วิจัย+สรุปรายงาน</li><li><b>/review โค้ด</b> — 🧩 Blocks: review ให้คะแนน/หา bug</li><li><b>/blocks &lt;agent&gt; ข้อความ</b> — 🧩 Blocks: เรียก agent ใดก็ได้</li><li><b>/blocks-guide คำถาม</b> — 🧩 Blocks: ถามเรื่อง Blocks Network</li></ul><p>พบปัญหา? พิมพ์บอกสลี่ได้เลย — หรือกด 🐱 Discord เพื่อคุยกับทีม</p>');
         } else if (act === 'about') {
-          showInfo('ℹ️ เกี่ยวกับ Dola', '<p><b>Dola</b> คือผู้ช่วย AI ในเวอร์ชัน <b>Bossnusilelo</b> — สร้างโดยพี่นุ (bossnu) เพื่อดูแลและคุยกับสลี่ 🤖💜</p><p>เวอร์ชัน: <b>Neo-Connect v1.9+</b><br>โหมด: ห้อง ' + (R.name || 'SLI') + ' · ' + (R.tag || '') + '</p><p>ฟีเจอร์: แชท AI, โทรด้วยเสียง, จดจำบทสนทนา, ทีม AI 50 คน, เขียน+รันโค้ด, ดูภาพ, แชร์หน้าจอ</p><p>ทำโดย พี่นุ (bossnu) — โปรเจกต์ Silelo / Neo-Connect / Bossnusilelo Eye 💍</p>');
+          showInfo('ℹ️ เกี่ยวกับ CFBossnusilelo', '<p><b>CFBossnusilelo</b> คือผู้ช่วย AI ในเวอร์ชัน <b>Bossnusilelo</b> — สร้างโดยพี่นุ (bossnu) เพื่อดูแลและคุยกับสลี่ 🤖💜</p><p>เวอร์ชัน: <b>Neo-Connect v1.9+</b><br>โหมด: ห้อง ' + (R.name || 'SLI') + ' · ' + (R.tag || '') + '</p><p>ฟีเจอร์: แชท AI, โทรด้วยเสียง, จดจำบทสนทนา, ทีม AI 50 คน, เขียน+รันโค้ด, ดูภาพ, แชร์หน้าจอ</p><p>ทำโดย พี่นุ (bossnu) — โปรเจกต์ Silelo / Neo-Connect / Bossnusilelo Eye 💍</p>');
         } else if (act === 'discord') {
           toast('🐱 กำลังเปิด Discord...');
           window.open('https://discord.gg/', '_blank');

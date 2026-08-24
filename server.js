@@ -2,6 +2,7 @@
    SILELO Neo-Connect — 3 ห้องแชท Cyberpunk
    ห้อง: private (สลี่) / work (คุณเวิร์ค) / lab (ดร.แล็บ)
    AI chain: ⚡RACE[Groq 6 โมเดล vs Gemini 9 keys] → Cerebras → Ollama Cloud → Z.AI GLM → OpenRouter → Pollinations → mock
+   v1.32: 🎙️ TTS อัปเกรด — 11 เสียง หลายภาษา + ปรับความเร็ว 0.5x-2.0x | 👑 แบรนด์ CFBossnusilelo | ปุ่มตั้งค่าครบทุกปุ่ม | หน้าเบาลง (ตัดฟอนต์ + lazy puter.js)
    v1.27: 🧩 Blocks Network — /research /review /blocks <agent> (research_agent, code_reviewer, blocks_guide ฯลฯ)
    TTS: msedge-tts (ฟรี)
    ============================================================ */
@@ -1273,18 +1274,18 @@ async function elevenLabsTtsBuf(safe, voice) {
   return null;
 }
 /* สังเคราะห์เสียง -> Buffer (เช็กแคชก่อน) */
-async function ttsBuffer(text, voice) {
+async function ttsBuffer(text, voice, rate) {
   /* sanitize: อนุญาต \n , ; : ไว้แบ่งจังหวะพูด (กัน HTML/แท็ก) */
-  const safe = String(text).replace(/[^\u0E00-\u0E7Fa-zA-Z0-9 \n.,!?…,;:\u0e2f\u0e46\u0e30\u0e32\u0e34\u0e35\u0e36\u0e37\u0e38\u0e39\u0e40\u0e41\u0e42\u0e43\u0e44\u0e48\u0e49\u0e4a\u0e4b\u0e4c\u0e47\u0e48\u0e49]/g, ' ').replace(/[ \t]+/g, ' ').trim().slice(0, 900);
+  const safe = String(text).replace(/[^\u0E00-\u0E7F\u3040-\u30FF\uAC00-\uD7AF\u4E00-\u9FFFa-zA-Z0-9 \n.,!?…,;:\u0e2f\u0e46\u0e30\u0e32\u0e34\u0e35\u0e36\u0e37\u0e38\u0e39\u0e40\u0e41\u0e42\u0e43\u0e44\u0e48\u0e49\u0e4a\u0e4b\u0e4c\u0e47\u0e48\u0e49]/g, ' ').replace(/[ \t]+/g, ' ').trim().slice(0, 900);
   const utts = splitUtterances(safe);
   if (!utts.length) throw new Error('empty text');
-  const fullKey = (voice || 'silelo') + '|' + safe;
+  const fullKey = (voice || 'silelo') + '|r' + (rate || 1) + '|' + safe;
   const hit = ttsCacheGet(fullKey);
   if (hit) return { buf: hit, cached: true };
   const voiceName = (voice && TTS_VOICES[voice]) ? TTS_VOICES[voice] : null;
   /* สร้างเสียงทีละจังหวะพูด (cache ต่อ chunk) แล้วต่อกันแทรก silence */
   const chunks = [];
-  for (const u of utts) chunks.push(await ttsOneChunk(u.t, voice, voiceName));
+  for (const u of utts) chunks.push(await ttsOneChunk(u.t, voice, voiceName, rate));
   const out = [];
   for (let i = 0; i < chunks.length; i++) {
     out.push(chunks[i]);
@@ -1299,14 +1300,14 @@ async function ttsBuffer(text, voice) {
   return { buf, cached: false };
 }
 /* TTS หนึ่งจังหวะพูด — google → msedge → google retry (cache แยกต่อ chunk) */
-async function ttsOneChunk(txt, voice, voiceName) {
-  const key = (voice || 'silelo') + '|c|' + txt;
+async function ttsOneChunk(txt, voice, voiceName, rate) {
+  const key = (voice || 'silelo') + '|c|r' + (rate || 1) + '|' + txt;
   const hit = ttsCacheGet(key);
   if (hit) return hit;
   /* 🇹🇭 เสียงไทยแท้ 100%: msedge ไทย → Google ไทย → ElevenLabs (เฉพาะข้อความอังกฤษล้วน) → ฉุกเฉิน */
   const isThaiText = /[\u0E00-\u0E7F]/.test(txt);
   let buf = null;
-  buf = await msedgeTtsOnce(txt, voiceName || 'th-TH-PremwadeeNeural');
+  buf = await msedgeTtsOnce(txt, voiceName || 'th-TH-PremwadeeNeural', rate);
   if (!buf) buf = await googleTtsBuf(txt).catch(() => null);
   if (!buf && !isThaiText) buf = await elevenLabsTtsBuf(txt, voice);
   if (!buf) buf = await googleTtsBuf(txt).catch(() => null);
@@ -1316,24 +1317,24 @@ async function ttsOneChunk(txt, voice, voiceName) {
   ttsCacheSet(key, buf);
   return buf;
 }
-async function msedgeTtsOnce(txt, voiceName) {
+async function msedgeTtsOnce(txt, voiceName, rate) {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'nctts-'));
   const out = path.join(dir, 'v.mp3');
   try {
-    await msedgeTtsFile(txt, out, voiceName);
+    await msedgeTtsFile(txt, out, voiceName, rate);
     return fs.readFileSync(out);
   } catch (e) { return null; }
   finally { try { fs.rmSync(dir, { recursive: true, force: true }); } catch (e) {} }
 }
 /* TTS หนึ่งจังหวะพูด — google → msedge → google retry (cache แยกต่อ chunk) */
-async function ttsOneChunk(txt, voice, voiceName) {
-  const key = (voice || 'silelo') + '|c|' + txt;
+async function ttsOneChunk(txt, voice, voiceName, rate) {
+  const key = (voice || 'silelo') + '|c|r' + (rate || 1) + '|' + txt;
   const hit = ttsCacheGet(key);
   if (hit) return hit;
   /* 🇹🇭 เสียงไทยแท้ 100%: msedge ไทย → Google ไทย → ElevenLabs (เฉพาะข้อความอังกฤษล้วน) → ฉุกเฉิน */
   const isThaiText = /[\u0E00-\u0E7F]/.test(txt);
   let buf = null;
-  buf = await msedgeTtsOnce(txt, voiceName || 'th-TH-PremwadeeNeural');
+  buf = await msedgeTtsOnce(txt, voiceName || 'th-TH-PremwadeeNeural', rate);
   if (!buf) buf = await googleTtsBuf(txt).catch(() => null);
   if (!buf && !isThaiText) buf = await elevenLabsTtsBuf(txt, voice);
   if (!buf) buf = await googleTtsBuf(txt).catch(() => null);
@@ -1343,26 +1344,36 @@ async function ttsOneChunk(txt, voice, voiceName) {
   ttsCacheSet(key, buf);
   return buf;
 }
-async function msedgeTtsOnce(txt, voiceName) {
+async function msedgeTtsOnce(txt, voiceName, rate) {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'nctts-'));
   const out = path.join(dir, 'v.mp3');
   try {
-    await msedgeTtsFile(txt, out, voiceName);
+    await msedgeTtsFile(txt, out, voiceName, rate);
     return fs.readFileSync(out);
   } catch (e) { return null; }
   finally { try { fs.rmSync(dir, { recursive: true, force: true }); } catch (e) {} }
 }
-/* เสียงไทย msedge-tts — เลือกได้หลายเสียง */
+/* เสียง msedge-tts — เลือกได้หลายเสียง หลายภาษา (rate ปรับได้ 0.5x-2.0x) */
 const TTS_VOICES = {
   silelo: 'th-TH-PremwadeeNeural',
   premwadee: 'th-TH-PremwadeeNeural',
   niwat: 'th-TH-NiwatNeural',
-  achara: 'th-TH-AcharaNeural'
+  achara: 'th-TH-AcharaNeural',
+  aria: 'en-US-AriaNeural',
+  guy: 'en-US-GuyNeural',
+  sonia: 'en-GB-SoniaNeural',
+  ryan: 'en-GB-RyanNeural',
+  nanami: 'ja-JP-NanamiNeural',
+  keita: 'ja-JP-KeitaNeural',
+  sunhi: 'ko-KR-SunHiNeural',
+  injoon: 'ko-KR-InJoonNeural',
+  xiaoxiao: 'zh-CN-XiaoxiaoNeural'
 };
-async function msedgeTtsFile(safe, out, voiceName) {
+async function msedgeTtsFile(safe, out, voiceName, rate) {
   const { MsEdgeTTS, OUTPUT_FORMAT } = require('msedge-tts');
   const tts = new MsEdgeTTS();
-  await tts.setMetadata(voiceName || 'th-TH-PremwadeeNeural', OUTPUT_FORMAT.AUDIO_24KHZ_48KBITRATE_MONO_MP3, 0.95);
+  const r = Math.min(2, Math.max(0.5, parseFloat(rate) || 1));
+  await tts.setMetadata(voiceName || 'th-TH-PremwadeeNeural', OUTPUT_FORMAT.AUDIO_24KHZ_48KBITRATE_MONO_MP3, r);
   const p = await tts.toFile(out, safe);
   await tts.close().catch(() => {});
   return p;
@@ -1975,9 +1986,9 @@ app.post('/api/fix', async (req, res) => {
 // TTS — ข้อความ → เสียง mp3 (เลือกเสียงได้)
 app.post('/api/tts', async (req, res) => {
   try {
-    const { text, voice } = req.body || {};
+    const { text, voice, rate } = req.body || {};
     if (!text || !String(text).trim()) return res.status(400).json({ error: 'no text' });
-    const { buf, cached } = await ttsBuffer(String(text), voice);
+    const { buf, cached } = await ttsBuffer(String(text), voice, rate);
     res.set('Content-Type', 'audio/mpeg');
     res.set('X-TTS-Cache', cached ? 'hit' : 'miss');
     res.set('Cache-Control', 'no-store');
