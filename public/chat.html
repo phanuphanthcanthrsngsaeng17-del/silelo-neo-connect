@@ -1626,10 +1626,10 @@ body.theme-dola #inp { border-radius: 16px; }
       const sb = document.createElement('div');
       if (m.verified) {
         sb.className = 'super-badge ok';
-        sb.innerHTML = '⚡ SUPER · <b>VERIFIED ✓</b> <span>exit ' + m.superRun.exitCode + ' · ' + escHtml(m.superRun.lang) + ' · ' + escHtml(m.superRun.engine) + ' · ' + m.superRun.timeMs + 'ms</span>';
+        sb.innerHTML = '⚡ SUPER · <b>VERIFIED ✓</b> <span>' + (m.superRun.blockCount > 1 ? m.superRun.blockCount + ' blocks · ' : '') + 'exit ' + m.superRun.exitCode + ' · ' + escHtml(m.superRun.lang) + ' · ' + escHtml(m.superRun.engine) + ' · ' + m.superRun.timeMs + 'ms</span>';
       } else {
         sb.className = 'super-badge fail';
-        sb.innerHTML = '⚡ SUPER · <b>RUN ERROR ⚠️</b> <span>exit ' + m.superRun.exitCode + ' · ' + escHtml(m.superRun.lang) + ' · ' + escHtml(m.superRun.engine) + ' · ' + m.superRun.timeMs + 'ms</span>';
+        sb.innerHTML = '⚡ SUPER · <b>RUN ERROR ⚠️</b> <span>' + (m.superRun.blockCount > 1 ? m.superRun.blockCount + ' blocks · ' : '') + 'exit ' + m.superRun.exitCode + ' · ' + escHtml(m.superRun.lang) + ' · ' + escHtml(m.superRun.engine) + ' · ' + m.superRun.timeMs + 'ms</span>';
       }
       div.querySelector('.bubble').appendChild(sb);
     }

@@ -1008,21 +1008,24 @@ async function askRoomAI(roomId, question, history, memory, unrestricted, intel,
   const tooLate = () => chainTimer.signal.aborted;
   /* ⚡ SUPER MODE — รันโค้ดจริงก่อนตอบ (verified ต้องมาจากผลจริง ไม่ใช่ AI พิมพ์) */
   let superRun = null;
-  const attachSuper = (r) => { if (superRun) { r.verified = !!superRun.ok; r.superRun = { lang: superRun.lang, engine: superRun.engine, exitCode: superRun.exitCode, timeMs: superRun.timeMs, ok: !!superRun.ok }; } return r; };
+  const attachSuper = (r) => { if (superRun) { r.verified = !!superRun.ok; r.superRun = { lang: superRun.lang, engine: superRun.engine, exitCode: superRun.exitCode, timeMs: superRun.timeMs, ok: !!superRun.ok, blockCount: superRun.blockCount || 1 }; } return r; };
   if (superMode) {
     step('⚡ SUPER · Plan — อ่านโจทย์/แยกงาน', 'run');
     try {
-      const runRes = await superExecute(question);
+      const runRes = await superExecute(question, extSig);
       if (runRes) {
         superRun = runRes;
         if (runRes.ok) {
-          step('⚡ SUPER · Execute — รันจริง (' + runRes.lang + ' · ' + runRes.engine + ')', 'ok', { exitCode: runRes.exitCode, ms: runRes.timeMs });
+          const fixCount = runRes.blocks ? runRes.blocks.filter(x => x.attempts > 1).length : 0;
+          step('⚡ SUPER · Execute — รันจริง ' + runRes.blockCount + ' บล็อก (' + runRes.lang + ' · ' + runRes.engine + ')', 'ok', { exitCode: runRes.exitCode, ms: runRes.timeMs });
+          if (fixCount) step('⚡ SUPER · Auto-fix — แก้ error ' + fixCount + ' บล็อก แล้วรันซ้ำผ่าน', 'ok', { fixed: fixCount });
           step('⚡ SUPER · Verify — exit ' + runRes.exitCode + ' · ผ่านการตรวจ', 'ok', { verified: true });
-          sys += '\n\n[⚡ SUPER EXECUTION — ผลการรันจริง (verified: true)]\nภาษา: ' + runRes.lang + ' (engine: ' + runRes.engine + ', ' + runRes.timeMs + 'ms, exit ' + runRes.exitCode + ')\n\n--- stdout (ผลจริง) ---\n' + (runRes.stdout || '(ไม่มี output)') + (runRes.stderr ? '\n--- stderr ---\n' + runRes.stderr : '') + '\n\nกฎ: ตอบโดยใช้ผลการรันจริงนี้เป็นหลักฐาน อ้างอิงตัวเลข/output จริง ห้ามมโนผลที่ไม่ปรากฏ ลงท้ายด้วย [VERIFIED ✓]';
+          sys += '\n\n[⚡ SUPER EXECUTION — ผลการรันจริง (verified: true)]\n' + runRes.blockCount + ' บล็อก: ' + runRes.lang + ' (engine: ' + runRes.engine + ', ' + runRes.timeMs + 'ms, exit ' + runRes.exitCode + ')' + (fixCount ? '\n(auto-fix แก้ error สำเร็จ ' + fixCount + ' บล็อก)' : '') + '\n\n--- stdout (ผลจริง) ---\n' + (runRes.stdout || '(ไม่มี output)') + (runRes.stderr ? '\n--- stderr ---\n' + runRes.stderr : '') + '\n\nกฎ: ตอบโดยใช้ผลการรันจริงนี้เป็นหลักฐาน อ้างอิงตัวเลข/output จริง ห้ามมโนผลที่ไม่ปรากฏ ลงท้ายด้วย [VERIFIED ✓]';
         } else {
-          step('⚡ SUPER · Execute — รันจริง (' + runRes.lang + ' · ' + runRes.engine + ')', 'err', { exitCode: runRes.exitCode });
-          step('⚡ SUPER · Verify — exit ' + runRes.exitCode + ' · มี error', 'fail', { verified: false });
-          sys += '\n\n[⚡ SUPER EXECUTION — รันแล้ว error (verified: false)]\nภาษา: ' + runRes.lang + ' (engine: ' + runRes.engine + ', ' + runRes.timeMs + 'ms, exit ' + runRes.exitCode + ')\n\n--- stderr (error จริง) ---\n' + (runRes.stderr || '(ไม่มี error output)') + (runRes.stdout ? '\n--- stdout บางส่วน ---\n' + runRes.stdout.slice(0, 1000) : '') + '\n\nกฎ: ทำงานต่อจาก error นี้ — วิเคราะห์สาเหตุจริง อธิบาย แล้วเสนอโค้ดที่แก้แล้วพร้อมบล็อก ```lang ...``` ห้ามลงท้าย [VERIFIED ✓] เพราะยังไม่ผ่านการตรวจ ให้บอกตรง ๆ ว่ายังไม่ผ่าน';
+          const errBlocks = runRes.blocks ? runRes.blocks.filter(x => !x.ok) : [];
+          step('⚡ SUPER · Execute — รันจริง ' + runRes.blockCount + ' บล็อก (' + runRes.lang + ' · ' + runRes.engine + ')', 'err', { exitCode: runRes.exitCode });
+          step('⚡ SUPER · Verify — มี error ' + errBlocks.length + '/' + runRes.blockCount + ' บล็อก', 'fail', { verified: false });
+          sys += '\n\n[⚡ SUPER EXECUTION — รันแล้ว error (verified: false)]\n' + runRes.blockCount + ' บล็อก: ' + runRes.lang + ' (engine: ' + runRes.engine + ', ' + runRes.timeMs + 'ms, exit ' + runRes.exitCode + ')' + (errBlocks.length ? '\nบล็อกที่ error: ' + errBlocks.map(x => x.lang + ' (exit ' + x.exitCode + ')').join(', ') : '') + '\n\n--- stderr (error จริง) ---\n' + (runRes.stderr || '(ไม่มี error output)') + (runRes.stdout ? '\n--- stdout บางส่วน ---\n' + runRes.stdout.slice(0, 1000) : '') + '\n\nกฎ: ทำงานต่อจาก error นี้ — วิเคราะห์สาเหตุจริง อธิบาย แล้วเสนอโค้ดที่แก้แล้วพร้อมบล็อก ```lang ...``` ห้ามลงท้าย [VERIFIED ✓] เพราะยังไม่ผ่านการตรวจ ให้บอกตรง ๆ ว่ายังไม่ผ่าน';
         }
         msgs[0] = { role: 'system', content: sys };
       } else {
@@ -2272,19 +2275,61 @@ function extractCodeBlocks(text) {
   }
   return blocks;
 }
-async function superExecute(question) {
+/* 🔧 Auto-fix: ให้ AI แก้โค้ดที่ error แล้วคืนบล็อกใหม่ (ใช้ Groq เร็ว — 0.4s) */
+async function aiFixCode(b, res, signal) {
+  try {
+    if (signal && signal.aborted) return null;
+    const msgs = [
+      { role: 'system', content: 'คุณคือตัวแก้โค้ดอัตโนมัติ ตอบเฉพาะโค้ดที่แก้แล้วในบล็อก ```lang ... ``` ห้ามอธิบายยาว ห้ามพูดคุย' },
+      { role: 'user', content: 'โค้ด ' + b.lang + ' นี้รัน error:\n```' + b.lang + '\n' + b.src + '\n```\n\nerror:\n' + String(res.stderr || res.error || '').slice(0, 1500) + '\n\nแก้โค้ดให้ทำงานได้ แล้วตอบเฉพาะโค้ดใหม่ในบล็อก' }
+    ];
+    const r = await groqChat(msgs, signal);
+    if (!r || !r.reply) return null;
+    const fixed = extractCodeBlocks(r.reply);
+    return fixed.length ? fixed[0] : null;
+  } catch (e) { return null; }
+}
+/* ⚡ SUPER MODE v1.30 — รันทุกบล็อกโค้ดในข้อความ + auto-fix error (verified ต้องมาจากผลรันจริงเท่านั้น) */
+async function superExecute(question, signal) {
   const blocks = extractCodeBlocks(question);
   if (!blocks.length) return null;
-  const b = blocks[0];
-  const res = await executeCode(b.src, b.lang);
+  const t0 = Date.now();
+  const results = [];
+  let allOk = true;
+  for (let i = 0; i < blocks.length; i++) {
+    let b = blocks[i];
+    let res = await executeCode(b.src, b.lang);
+    let attempts = 1;
+    while (res && (!res.ok || res.code !== 0) && attempts < 3 && !(signal && signal.aborted)) {
+      const fix = await aiFixCode(b, res, signal);
+      if (!fix || !fix.src) break;
+      b = { lang: fix.lang || b.lang, src: fix.src };
+      res = await executeCode(b.src, b.lang);
+      attempts++;
+    }
+    const ok = !!(res && res.ok && res.code === 0);
+    if (!ok) allOk = false;
+    results.push({
+      lang: b.lang,
+      engine: (res && res.engine) || '?',
+      exitCode: res ? res.code : -1,
+      timeMs: res ? res.timeMs : 0,
+      ok,
+      attempts,
+      stdout: (res && res.stdout ? res.stdout : '').slice(0, 4000),
+      stderr: (res && res.stderr ? res.stderr : '').slice(0, 2000)
+    });
+  }
   return {
-    ok: !!(res && res.ok && res.code === 0),
-    exitCode: res ? res.code : -1,
-    stdout: (res && res.stdout ? res.stdout : '').slice(0, 4000),
-    stderr: (res && res.stderr ? res.stderr : '').slice(0, 2000),
-    lang: b.lang,
-    engine: (res && res.engine) || '?',
-    timeMs: res ? res.timeMs : 0
+    ok: allOk,
+    exitCode: allOk ? 0 : 1,
+    stdout: results.map(r => r.stdout).filter(Boolean).join('\n---\n').slice(0, 4000),
+    stderr: results.map(r => r.stderr).filter(Boolean).join('\n---\n').slice(0, 2000),
+    lang: results.map(r => r.lang).join(','),
+    engine: results.map(r => r.engine).join(','),
+    timeMs: Date.now() - t0,
+    blockCount: results.length,
+    blocks: results
   };
 }
 async function wandboxRun(compiler, src, timeoutMs) {
