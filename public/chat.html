@@ -728,6 +728,15 @@ header::after { height: 1px; background: linear-gradient(90deg, transparent, rgb
 .run-inline:hover, .monopen:hover { transform: translateY(-1px); box-shadow: 0 8px 26px color-mix(in srgb, var(--accent) 42%, transparent); background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 38%, transparent), color-mix(in srgb, #d946ef 30%, transparent)); }
 .run-inline:disabled { opacity: .55; cursor: wait; }
 .run-lang { font-family: var(--font-mono); font-size: 10px; background: rgba(255,255,255,.16); padding: 2px 9px; border-radius: 999px; letter-spacing: .5px; }
+.super-badge {
+  margin-top: 11px; display: inline-flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  padding: 7px 14px; border-radius: 999px; font-size: 11.5px; font-weight: 700; letter-spacing: .3px;
+  font-family: var(--font-ui); border: 1px solid;
+}
+.super-badge b { font-size: 12px; }
+.super-badge span { font-family: var(--font-mono); font-size: 10px; font-weight: 500; opacity: .85; letter-spacing: .5px; }
+.super-badge.ok { color: #4ade80; background: rgba(34,197,94,.12); border-color: rgba(74,222,128,.4); box-shadow: 0 0 18px rgba(34,197,94,.15); }
+.super-badge.fail { color: #ff9d7a; background: rgba(239,68,68,.12); border-color: rgba(248,113,113,.45); box-shadow: 0 0 18px rgba(239,68,68,.12); }
 
 /* ---------- Monitor (Lab console) — styled for the first time! ---------- */
 .mon {
@@ -962,15 +971,15 @@ body.theme-dola #inp { border-radius: 16px; }
   padding: 10px 20px 2px; gap: 0; animation: heroIn .5s cubic-bezier(.2,.9,.3,1.2);
 }
 @keyframes heroIn { from { opacity: 0; transform: translateY(18px) scale(.97); } }
-.whero-orb { position: relative; width: 92px; height: 92px; margin-bottom: 8px; display: grid; place-items: center; flex: none; }
+.whero-orb { position: relative; width: 78px; height: 78px; margin-bottom: 6px; display: grid; place-items: center; flex: none; }
 .whero-glow {
   position: absolute; inset: 0; border-radius: 50%;
   background: conic-gradient(from 90deg, var(--accent), #d946ef, #f59e0b, #60a5fa, var(--accent));
   filter: blur(26px); opacity: .65; animation: heroFloat 6s ease-in-out infinite;
 }
 .whero-core {
-  position: relative; width: 72px; height: 72px; border-radius: 50%;
-  display: grid; place-items: center; font-size: 32px;
+  position: relative; width: 62px; height: 62px; border-radius: 50%;
+  display: grid; place-items: center; font-size: 28px;
   background:
     radial-gradient(circle at 36% 28%, rgba(160,130,240,.85), rgba(90,50,170,.9) 48%, rgba(30,15,70,.95) 78%);
   box-shadow: 0 0 60px color-mix(in srgb, var(--accent) 30%, transparent), inset 0 0 30px rgba(255,255,255,.18), inset 0 0 90px rgba(0,0,0,.45);
@@ -979,23 +988,23 @@ body.theme-dola #inp { border-radius: 16px; }
   animation: heroFloat 6s ease-in-out infinite;
 }
 @keyframes heroFloat { 50% { transform: translateY(-8px) scale(1.02); } }
-.whero-ttl { font-family: var(--font-head); font-size: clamp(21px, 4.2vw, 27px); font-weight: 700; letter-spacing: -.4px; line-height: 1.3; }
+.whero-ttl { font-family: var(--font-head); font-size: clamp(19px, 3.8vw, 23px); font-weight: 700; letter-spacing: -.4px; line-height: 1.25; }
 .whero-ttl .grad {
   background: linear-gradient(90deg, var(--accent), #d946ef);
   -webkit-background-clip: text; background-clip: text; color: transparent;
 }
-.whero-sub { color: var(--dim); font-size: 12.5px; line-height: 1.65; margin-top: 4px; max-width: 420px; }
-.whero-badges { display: flex; flex-wrap: wrap; justify-content: center; gap: 5px; margin-top: 6px; }
+.whero-sub { color: var(--dim); font-size: 11.5px; line-height: 1.55; margin-top: 3px; max-width: 420px; }
+.whero-badges { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px; margin-top: 5px; }
 .whero-badge {
-  display: inline-flex; align-items: center; gap: 5px; padding: 4px 10px; border-radius: 999px;
-  font-size: 10px; font-weight: 600; letter-spacing: .2px; color: rgba(255,255,255,.82);
+  display: inline-flex; align-items: center; gap: 4px; padding: 3px 8px; border-radius: 999px;
+  font-size: 9px; font-weight: 600; letter-spacing: .2px; color: rgba(255,255,255,.82);
   background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.12);
 }
 .whero-badge b { color: var(--accent); }
-.starter-grid2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; width: 100%; max-width: 480px; margin-top: 8px; }
+.starter-grid2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 5px; width: 100%; max-width: 480px; margin-top: 6px; }
 .starter-card {
   display: flex; align-items: center; gap: 10px; text-align: left;
-  padding: 9px 12px; border-radius: 16px; cursor: pointer;
+  padding: 8px 10px; border-radius: 15px; cursor: pointer;
   border: 1px solid rgba(255,255,255,.1); background: rgba(255,255,255,.045);
   color: var(--txt); font-size: 13px; font-weight: 500; font-family: var(--font-ui);
   transition: transform .16s ease, background .16s ease, border-color .16s ease, box-shadow .16s ease;
@@ -1003,7 +1012,7 @@ body.theme-dola #inp { border-radius: 16px; }
 .starter-card:hover { background: rgba(255,255,255,.09); border-color: color-mix(in srgb, var(--accent) 45%, transparent); transform: translateY(-2px); box-shadow: 0 8px 26px rgba(0,0,0,.35); }
 .starter-card:active { transform: scale(.96); }
 .starter-ico {
-  width: 32px; height: 32px; border-radius: 10px; flex: none; display: grid; place-items: center; font-size: 18px;
+  width: 28px; height: 28px; border-radius: 9px; flex: none; display: grid; place-items: center; font-size: 16px;
   background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 22%, transparent), rgba(217,70,239,.14));
   border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
 }
@@ -1012,7 +1021,7 @@ body.theme-dola #inp { border-radius: 16px; }
 .starter-tx span { display: block; font-size: 10px; color: var(--dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .starter-card .go-ico { margin-left: auto; color: var(--dim); font-size: 14px; flex: none; transition: transform .16s; }
 .starter-card:hover .go-ico { transform: translate(2px,-2px); color: var(--accent); }
-.whero-foot { margin-top: 6px; font-size: 9px; color: var(--dim); letter-spacing: .6px; font-family: var(--font-mono); }
+.whero-foot { margin-top: 5px; font-size: 8.5px; color: var(--dim); letter-spacing: .6px; font-family: var(--font-mono); }
 
 /* Agent process chips */
 .agent-proc {
@@ -1035,18 +1044,18 @@ body.theme-dola #inp { border-radius: 16px; }
 
 @media (max-width: 560px) {
   .welcome-hero { padding: 14px 12px 4px; }
-  .whero-orb { width: 92px; height: 92px; margin-bottom: 10px; }
-  .whero-core { width: 72px; height: 72px; font-size: 30px; }
-  .whero-ttl { font-size: 20px; }
-  .whero-sub { font-size: 12px; margin-top: 5px; line-height: 1.6; }
-  .whero-badges { gap: 5px; margin-top: 7px; }
-  .whero-badge { font-size: 9px; padding: 3px 9px; }
-  .starter-grid2 { grid-template-columns: 1fr 1fr; max-width: 420px; margin-top: 9px; gap: 6px; }
-  .starter-card { padding: 9px 11px; border-radius: 14px; gap: 8px; }
-  .starter-ico { width: 32px; height: 32px; font-size: 15px; border-radius: 10px; }
+  .whero-orb { width: 80px; height: 80px; margin-bottom: 8px; }
+  .whero-core { width: 64px; height: 64px; font-size: 26px; }
+  .whero-ttl { font-size: 18px; }
+  .whero-sub { font-size: 11px; margin-top: 4px; line-height: 1.55; }
+  .whero-badges { gap: 4px; margin-top: 5px; }
+  .whero-badge { font-size: 8.5px; padding: 2px 8px; }
+  .starter-grid2 { grid-template-columns: 1fr 1fr; max-width: 420px; margin-top: 7px; gap: 5px; }
+  .starter-card { padding: 8px 10px; border-radius: 13px; gap: 7px; }
+  .starter-ico { width: 28px; height: 28px; font-size: 14px; border-radius: 9px; }
   .starter-tx b { font-size: 11.5px; }
   .starter-tx span { font-size: 9px; }
-  .whero-foot { margin-top: 8px; font-size: 8.5px; }
+  .whero-foot { margin-top: 6px; font-size: 8px; }
   .agent-proc { gap: 3px; }
   .ap-chip { font-size: 9.5px; padding: 4px 9px; }
   .ap-arrow { display: none; }
@@ -1539,9 +1548,10 @@ body.theme-dola #inp { border-radius: 16px; }
     }
     msgsEl.scrollTop = msgsEl.scrollHeight;
   }
-  function addMsg(role, content, t, image) {
+  function addMsg(role, content, t, image, extra) {
     const m = { role, content, t: t || Date.now() };
     if (image) m.image = image;
+    if (extra && typeof extra === 'object') Object.assign(m, extra);
     history.push(m); if (history.length > 200) history = history.slice(-200);
     try { localStorage.setItem(KEY, JSON.stringify(history)); } catch (e) {}
     const el = renderMsg(m);
@@ -1611,6 +1621,17 @@ body.theme-dola #inp { border-radius: 16px; }
         msgsEl.scrollTop = msgsEl.scrollHeight;
       };
       div.querySelector('.bubble').appendChild(vbtn);
+    }
+    if (m.role === 'assistant' && m.superRun) {
+      const sb = document.createElement('div');
+      if (m.verified) {
+        sb.className = 'super-badge ok';
+        sb.innerHTML = '⚡ SUPER · <b>VERIFIED ✓</b> <span>exit ' + m.superRun.exitCode + ' · ' + escHtml(m.superRun.lang) + ' · ' + escHtml(m.superRun.engine) + ' · ' + m.superRun.timeMs + 'ms</span>';
+      } else {
+        sb.className = 'super-badge fail';
+        sb.innerHTML = '⚡ SUPER · <b>RUN ERROR ⚠️</b> <span>exit ' + m.superRun.exitCode + ' · ' + escHtml(m.superRun.lang) + ' · ' + escHtml(m.superRun.engine) + ' · ' + m.superRun.timeMs + 'ms</span>';
+      }
+      div.querySelector('.bubble').appendChild(sb);
     }
     const spk = div.querySelector('.spk');
     if (spk) spk.onclick = () => { unlockAudio(); speak(m.content); };
@@ -1820,7 +1841,7 @@ body.theme-dola #inp { border-radius: 16px; }
           signal: AbortSignal.timeout(55000)
         });
         const j = await r.json();
-        if (j.reply) { addMsg('assistant', j.reply); notifyMsg(j.reply); scheduleReminder(j.reply); toast('⚡ ' + (j.provider === 'mock' ? 'BACKUP MODE' : j.provider.toUpperCase() + ' · ' + j.model)); speak(j.reply); }
+        if (j.reply) { addMsg('assistant', j.reply, Date.now(), null, (j.verified !== undefined && j.superRun) ? { verified: j.verified, superRun: j.superRun } : null); notifyMsg(j.reply); scheduleReminder(j.reply); toast('⚡ ' + (j.provider === 'mock' ? 'BACKUP MODE' : j.provider.toUpperCase() + ' · ' + j.model)); speak(j.reply); }
         else toast('⚠️ ' + (j.error || 'NO REPLY'));
       }
     } catch (e) { toast('⚠️ SERVER UNREACHABLE'); }

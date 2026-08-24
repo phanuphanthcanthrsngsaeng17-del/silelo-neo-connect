@@ -998,14 +998,42 @@ async function askRoomAI(roomId, question, history, memory, unrestricted, intel,
   const tStart = Date.now();
   const trace = [];
   const step = (n, s, extra) => { trace.push(Object.assign({ n, s, ms: Date.now() - tStart }, extra || {})); ACTIVE_TRACE.steps = trace.slice(); };
-  const ok = (r, n) => { step(n, 'ok', { provider: r.provider, model: r.model }); r.trace = trace; ACTIVE_TRACE.steps = trace.slice(); return r; };
+  const ok = (r, n) => { step(n, 'ok', { provider: r.provider, model: r.model }); r.trace = trace; attachSuper(r); ACTIVE_TRACE.steps = trace.slice(); return r; };
   const mockReply = () => {
     step('🔁 Mock fallback (ทุก AI ไม่ว่าง)', 'ok', { provider: 'mock' });
     const r = { provider: 'mock', model: 'offline', reply: aiMockReply(roomId, question) };
-    r.trace = trace; ACTIVE_TRACE.steps = trace.slice();
+    r.trace = trace; attachSuper(r); ACTIVE_TRACE.steps = trace.slice();
     return r;
   };
   const tooLate = () => chainTimer.signal.aborted;
+  /* ⚡ SUPER MODE — รันโค้ดจริงก่อนตอบ (verified ต้องมาจากผลจริง ไม่ใช่ AI พิมพ์) */
+  let superRun = null;
+  const attachSuper = (r) => { if (superRun) { r.verified = !!superRun.ok; r.superRun = { lang: superRun.lang, engine: superRun.engine, exitCode: superRun.exitCode, timeMs: superRun.timeMs, ok: !!superRun.ok }; } return r; };
+  if (superMode) {
+    step('⚡ SUPER · Plan — อ่านโจทย์/แยกงาน', 'run');
+    try {
+      const runRes = await superExecute(question);
+      if (runRes) {
+        superRun = runRes;
+        if (runRes.ok) {
+          step('⚡ SUPER · Execute — รันจริง (' + runRes.lang + ' · ' + runRes.engine + ')', 'ok', { exitCode: runRes.exitCode, ms: runRes.timeMs });
+          step('⚡ SUPER · Verify — exit ' + runRes.exitCode + ' · ผ่านการตรวจ', 'ok', { verified: true });
+          sys += '\n\n[⚡ SUPER EXECUTION — ผลการรันจริง (verified: true)]\nภาษา: ' + runRes.lang + ' (engine: ' + runRes.engine + ', ' + runRes.timeMs + 'ms, exit ' + runRes.exitCode + ')\n\n--- stdout (ผลจริง) ---\n' + (runRes.stdout || '(ไม่มี output)') + (runRes.stderr ? '\n--- stderr ---\n' + runRes.stderr : '') + '\n\nกฎ: ตอบโดยใช้ผลการรันจริงนี้เป็นหลักฐาน อ้างอิงตัวเลข/output จริง ห้ามมโนผลที่ไม่ปรากฏ ลงท้ายด้วย [VERIFIED ✓]';
+        } else {
+          step('⚡ SUPER · Execute — รันจริง (' + runRes.lang + ' · ' + runRes.engine + ')', 'err', { exitCode: runRes.exitCode });
+          step('⚡ SUPER · Verify — exit ' + runRes.exitCode + ' · มี error', 'fail', { verified: false });
+          sys += '\n\n[⚡ SUPER EXECUTION — รันแล้ว error (verified: false)]\nภาษา: ' + runRes.lang + ' (engine: ' + runRes.engine + ', ' + runRes.timeMs + 'ms, exit ' + runRes.exitCode + ')\n\n--- stderr (error จริง) ---\n' + (runRes.stderr || '(ไม่มี error output)') + (runRes.stdout ? '\n--- stdout บางส่วน ---\n' + runRes.stdout.slice(0, 1000) : '') + '\n\nกฎ: ทำงานต่อจาก error นี้ — วิเคราะห์สาเหตุจริง อธิบาย แล้วเสนอโค้ดที่แก้แล้วพร้อมบล็อก ```lang ...``` ห้ามลงท้าย [VERIFIED ✓] เพราะยังไม่ผ่านการตรวจ ให้บอกตรง ๆ ว่ายังไม่ผ่าน';
+        }
+        msgs[0] = { role: 'system', content: sys };
+      } else {
+        step('⚡ SUPER · Plan — ไม่มีโค้ดให้รันในข้อความนี้', 'ok');
+      }
+    } catch (e) {
+      step('⚡ SUPER · Execute — ไม่พร้อม: ' + (e && e.message ? e.message : 'err'), 'err');
+      sys += '\n\n[⚡ SUPER] เครื่องมือรันโค้ดไม่พร้อมในตอนนี้ (' + (e && e.message ? e.message : 'unknown') + ') — ตอบตรง ๆ ว่ายังรันไม่ได้ ห้ามลงท้าย [VERIFIED ✓]';
+      msgs[0] = { role: 'system', content: sys };
+    }
+  }
   try {
     // ⚡ ตัวหลัก = Groq gpt-oss-120b (0.4s ฟรี ไม่จำกัด) — เร็วสุดในโซ่
     step('⚡ Groq · gpt-oss-120b', 'run');
@@ -1917,7 +1945,7 @@ app.post('/api/chat', async (req, res) => {
     } catch (e) { intel = null; }
     const r = await askRoomAI(roomId, q, history || [], memory, !!unrestricted, intel, !!(req.body || {}).super);
     const trace = Array.isArray(r.trace) && r.trace.length ? r.trace : [{ n: 'ตอบจากระบบโดยตรง (ไม่ผ่าน AI chain)', s: 'ok', ms: 0, provider: r.provider, model: r.model }];
-    chatJson(res, { reply: r.reply, provider: r.provider, model: r.model, room: roomId, t: Date.now(), traceId: _tid, trace });
+    chatJson(res, Object.assign({ reply: r.reply, provider: r.provider, model: r.model, room: roomId, t: Date.now(), traceId: _tid, trace }, r.verified !== undefined ? { verified: r.verified, superRun: r.superRun } : {}));
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
@@ -2231,6 +2259,33 @@ async function executeCode(src, lang) {
     }
   }
   return { ok: false, error: 'ไม่รู้จักภาษา: ' + l + ' (รองรับ 60+ ภาษา)' };
+}
+/* ⚡ SUPER MODE — แยกบล็อกโค้ดจากข้อความ แล้วรันจริงผ่าน executeCode (verified คำนวณจาก exit code) */
+function extractCodeBlocks(text) {
+  const blocks = [];
+  const re = /```([a-zA-Z0-9+#.-]*)[ \t]*\n?([\s\S]*?)```/g;
+  let m;
+  while ((m = re.exec(String(text || ''))) !== null) {
+    const lang = (m[1] || 'python').toLowerCase().trim() || 'python';
+    const src = m[2].trim();
+    if (src) blocks.push({ lang, src });
+  }
+  return blocks;
+}
+async function superExecute(question) {
+  const blocks = extractCodeBlocks(question);
+  if (!blocks.length) return null;
+  const b = blocks[0];
+  const res = await executeCode(b.src, b.lang);
+  return {
+    ok: !!(res && res.ok && res.code === 0),
+    exitCode: res ? res.code : -1,
+    stdout: (res && res.stdout ? res.stdout : '').slice(0, 4000),
+    stderr: (res && res.stderr ? res.stderr : '').slice(0, 2000),
+    lang: b.lang,
+    engine: (res && res.engine) || '?',
+    timeMs: res ? res.timeMs : 0
+  };
 }
 async function wandboxRun(compiler, src, timeoutMs) {
   const ctl = new AbortController();
