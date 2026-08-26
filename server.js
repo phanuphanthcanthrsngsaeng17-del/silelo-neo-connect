@@ -2059,6 +2059,83 @@ async function runChatCodeBlocks(question) {
   return { blocks, results };
 }
 
+/* ============ 🤖 NATURAL COMMAND AGENT LOOP — plan/observe/iterate แบบ bounded ============ */
+const AGENT_LOOP_MAX_STEPS = 4;
+const AGENT_LOOP_MAX_COMMAND = 4000;
+const AGENT_LOOP_RUNS = new Map();
+const AGENT_MUTATION_RE = /(ลบ|แก้ไข|เขียน|สร้างไฟล์|ย้ายไฟล์|ติดตั้ง|ถอน|รันโค้ด|รันคำสั่ง|deploy|push|โพสต์|ส่งอีเมล|บันทึก|update|delete|write|execute|install|publish)/i;
+
+function agentLoopPlan(command) {
+  const text = String(command || '').trim();
+  const lower = text.toLowerCase();
+  const steps = [];
+  const repo = text.match(/(?:github|รีโพซิทอรี|repo)[^\n:]*[: ]+([A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+)/i);
+  if (repo || /github|รีโพซิทอรี|repo/i.test(lower)) steps.push({ tool: 'github', input: repo ? repo[1] : text });
+  if (/ค้นหา|ค้นเว็บ|ค้นข้อมูล|ข่าว|แหล่งข้อมูล|ล่าสุด|search|research|web/i.test(lower)) steps.push({ tool: 'websearch', input: text });
+  if (/อากาศ|อุณหภูมิ|ฝน|คริปโต|bitcoin|บิตคอยน์|อัตราแลกเปลี่ยน|ดอลลาร์|weather|ราคาเหรียญ/i.test(lower)) steps.push({ tool: 'worldintel', input: text });
+  if (!steps.length) steps.push({ tool: 'chat', input: text });
+  return steps.slice(0, AGENT_LOOP_MAX_STEPS);
+}
+
+async function runAgentLoop(command, traceId) {
+  const text = String(command || '').trim().slice(0, AGENT_LOOP_MAX_COMMAND);
+  const plan = agentLoopPlan(text);
+  const trace = [];
+  const add = (name, status, extra) => {
+    const item = Object.assign({ n: name, s: status, ms: Date.now() }, extra || {});
+    trace.push(item); ACTIVE_TRACE.steps = trace.slice(); return item;
+  };
+  add('🧭 Plan · แยกคำสั่งภาษาคนเป็นงานย่อย', 'ok', { steps: plan.map(x => x.tool) });
+  const observations = [];
+  for (let i = 0; i < plan.length; i++) {
+    const step = plan[i];
+    add('🔎 Observe · ' + step.tool + ' รอบที่ ' + (i + 1), 'run');
+    let value = null;
+    try {
+      if (step.tool === 'github') value = await githubInfo(step.input);
+      else if (step.tool === 'websearch') value = await webSearchResults(step.input.slice(0, 200));
+      else if (step.tool === 'worldintel') value = await worldIntel(step.input);
+      else value = { note: 'จะใช้ AI gateway ตอบจากคำสั่งโดยไม่รัน action ภายนอก' };
+      const safe = step.tool === 'github' ? { kind: value?.kind, data: value?.data, readme: value?.readme, error: value?.error } : value;
+      observations.push({ tool: step.tool, data: safe });
+      add('✅ Observe · ได้ผลจาก ' + step.tool, 'ok');
+    } catch (e) {
+      observations.push({ tool: step.tool, error: 'tool unavailable' });
+      add('⚠️ Observe · ' + step.tool + ' ไม่พร้อม', 'err');
+    }
+  }
+  const context = observations.map((o) => JSON.stringify(o).slice(0, 5000)).join('\n');
+  let reply = '';
+  let provider = 'agent-loop', model = 'bounded';
+  if (plan.some(x => x.tool === 'chat') || observations.length) {
+    const prompt = text + '\n\n[ผลจากเครื่องมืออ่านข้อมูลที่ระบบเก็บได้ — ห้ามอ้างข้อมูลที่ไม่มีในนี้]:\n' + context;
+    const r = await askRoomAI('private', prompt, [], '', false, null, false);
+    if (r && r.reply) { reply = r.reply; provider = r.provider; model = r.model; }
+  }
+  if (!reply) reply = observations.map(o => o.data?.data || o.data?.answer || o.data || o.error).filter(Boolean).map(x => typeof x === 'string' ? x : JSON.stringify(x)).join('\\n\\n').slice(0, 10000) || 'ยังไม่มีผลลัพธ์จากเครื่องมือ';
+  add('💬 Synthesize · สรุปผลโดยไม่ทำ action เพิ่ม', 'ok', { provider, model });
+  const mutation = AGENT_MUTATION_RE.test(text);
+  const approval = mutation ? { required: true, reason: 'คำสั่งนี้อาจเปลี่ยนแปลงข้อมูลหรือรันงาน จึงยังไม่ดำเนินการจนกว่าจะได้รับการอนุมัติชัดเจน', actions: [] } : { required: false };
+  AGENT_LOOP_RUNS.set(String(traceId), { traceId, command: text, plan, observations, approval, createdAt: Date.now() });
+  if (AGENT_LOOP_RUNS.size > 20) AGENT_LOOP_RUNS.delete(AGENT_LOOP_RUNS.keys().next().value);
+  return { reply, provider, model, plan, observations, approval, trace };
+}
+
+app.post('/api/agent/loop', async (req, res) => {
+  try {
+    const command = String(req.body?.command || req.body?.question || '').trim();
+    if (!command) return res.status(400).json({ ok: false, error: 'กรุณาระบุคำสั่งภาษาคน' });
+    if (command.length > AGENT_LOOP_MAX_COMMAND) return res.status(413).json({ ok: false, error: 'คำสั่งยาวเกินขีดจำกัด 4000 ตัวอักษร' });
+    const traceId = String(req.body?.traceId || (Date.now().toString(36) + Math.random().toString(36).slice(2, 8)));
+    thinkReset(traceId, command);
+    const out = await runAgentLoop(command, traceId);
+    thinkFinish(traceId, out.provider, out.model, out.reply.length);
+    res.json({ ok: true, traceId, reply: out.reply, provider: out.provider, model: out.model, plan: out.plan, observations: out.observations, approval: out.approval, trace: out.trace });
+  } catch (e) {
+    res.status(502).json({ ok: false, error: 'agent loop unavailable' });
+  }
+});
+
 app.post('/api/chat', async (req, res) => {
   try {
     const { room, question, history, memory, unrestricted } = req.body || {};

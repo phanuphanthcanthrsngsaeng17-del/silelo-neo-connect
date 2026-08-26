@@ -2341,6 +2341,29 @@ body.theme-dola #inp { border-radius: 16px; }
     toast(runCodeNext ? '▶ เปิดรัน code block สำหรับข้อความถัดไป' : 'รัน code block ปิดอยู่');
   };
   syncChatRunBtn();
+  function isNaturalAgentCommand(text) {
+    return /^(ช่วย|โปรด|กรุณา|ให้ระบบ|ทำงาน|ตรวจสอบ|ดึง|ค้นหา|วิเคราะห์|สรุป|เปิด|เชื่อม|แก้ไข|สร้าง|รัน|deploy|research|review)\b/i.test(String(text || '').trim());
+  }
+  async function callNaturalAgent(command) {
+    setTyping('🧭 กำลังวางแผนและตรวจผลเป็นรอบ...');
+    sendBtn.disabled = true; sending = true;
+    try {
+      const r = await fetch('/api/agent/loop', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ command: String(command).slice(0, 4000), traceId: Date.now().toString(36) }),
+        signal: AbortSignal.timeout(60000)
+      });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok || !j.ok) { toast('⚠️ ' + (j.error || 'AGENT LOOP UNAVAILABLE')); return; }
+      const tools = (j.plan || []).map(x => x.tool).join(' → ') || 'chat';
+      const guard = j.approval && j.approval.required ? '\n\n⚠️ งานนี้ต้องรอการอนุมัติชัดเจนก่อนจึงจะรันหรือแก้ไขข้อมูล' : '';
+      const trace = (j.trace || []).map(x => (x.s === 'err' ? '⚠️ ' : '✓ ') + x.n).join('\n');
+      addMsg('assistant', '🧭 **AGENT LOOP**\n\nแผน: `' + tools + '`\n\n' + String(j.reply || 'ยังไม่มีผลลัพธ์') + guard + '\n\n<small>Trace:\n' + trace + '</small>');
+      notifyMsg(j.reply || 'Agent Loop เสร็จแล้ว');
+      toast(j.approval && j.approval.required ? '⏸ รออนุมัติ' : '✅ Agent Loop เสร็จแล้ว');
+    } catch (e) { toast('⚠️ AGENT LOOP UNREACHABLE'); }
+    finally { typing.style.display = 'none'; sendBtn.disabled = false; sending = false; }
+  }
   async function send() {
     unlockAudio();
     if (sending) { toast('⏳ รอสลี่ตอบก่อนน้า... เดี๋ยวส่งต่อให้'); return; }
@@ -2351,6 +2374,8 @@ body.theme-dola #inp { border-radius: 16px; }
     syncChatRunBtn();
     addMsg('user', q);
     showAgentProc();
+    // 🧭 คำสั่งภาษาคน → bounded Agentic Loop; slash commands และแชททั่วไปยังใช้ flow เดิม
+    if (isNaturalAgentCommand(q)) { await callNaturalAgent(q); return; }
     inp.value = ''; autoGrow();
     // 🎨 วาดรูป
     const dp = extractDrawPrompt(q);
