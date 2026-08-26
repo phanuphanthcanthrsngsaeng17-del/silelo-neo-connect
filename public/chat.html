@@ -1077,6 +1077,20 @@ body.theme-dola #inp { border-radius: 16px; }
 }
 
 .ide-empty { color: #8b8fa8; font-size: 11px; padding: 10px; }
+.image-batch-panel { margin: 4px 10px 0; padding: 8px 10px; border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent); border-radius: 14px; background: rgba(10,16,32,.82); }
+.image-batch-panel[hidden] { display: none; }
+.image-batch-head, .image-batch-controls { display: flex; align-items: center; gap: 7px; }
+.image-batch-head { justify-content: space-between; color: var(--txt); font-size: 11px; margin-bottom: 6px; }
+.image-batch-head span, .image-batch-status { color: var(--dim); font-size: 10px; }
+.image-batch-controls input { min-width: 0; border: 1px solid rgba(255,255,255,.12); border-radius: 9px; background: rgba(255,255,255,.06); color: var(--txt); padding: 8px 9px; font: inherit; }
+#batchPrompt { flex: 1; }
+#batchCount { width: 56px; text-align: center; }
+.image-batch-controls button { border: 0; border-radius: 9px; padding: 8px 10px; background: color-mix(in srgb, var(--accent) 70%, #111827); color: #fff; font-weight: 700; cursor: pointer; }
+.image-batch-controls button:disabled { opacity: .45; cursor: not-allowed; }
+.image-batch-progress { height: 5px; margin-top: 7px; overflow: hidden; border-radius: 99px; background: rgba(255,255,255,.1); }
+.image-batch-progress span { display: block; width: 0; height: 100%; border-radius: inherit; background: var(--accent); transition: width .25s ease; }
+.image-batch-status { margin-top: 5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+@media (max-width: 560px) { .image-batch-panel { margin: 3px 7px 0; padding: 7px 8px; } .image-batch-controls { flex-wrap: wrap; } #batchPrompt { flex-basis: calc(100% - 70px); } #batchCount { flex: 0 0 56px; } .image-batch-controls button { flex: 1; min-height: 38px; } }
 
 </style>
 <!-- ===== 📐 SCREEN MANAGER CSS ===== -->
@@ -1632,12 +1646,24 @@ body.theme-dola #inp { border-radius: 16px; }
     <button class="ct-btn" data-mode="refactor" title="จัดโครงสร้างโค้ดให้สะอาด">🔧 Refactor</button>
     <button class="ct-btn ct-web" data-mode="websearch" title="ค้นหาเว็บ live (DuckDuckGo) แล้ว AI สรุป">🌐 ค้นหาเว็บ</button>
   </div>
+  <div class="image-batch-panel" id="imageBatchPanel" hidden>
+    <div class="image-batch-head"><strong>🖼️ สร้างภาพหลายภาพ</strong><span id="batchCountLabel">0/0</span></div>
+    <div class="image-batch-controls">
+      <input id="batchPrompt" type="text" maxlength="300" placeholder="คำอธิบายภาพ..." aria-label="คำอธิบายภาพสำหรับ batch">
+      <input id="batchCount" type="number" min="1" max="100" value="4" aria-label="จำนวนภาพ สูงสุด 100">
+      <button id="batchStart" type="button">เริ่ม</button>
+      <button id="batchCancel" type="button" hidden>หยุด</button>
+    </div>
+    <div class="image-batch-progress" aria-live="polite"><span id="batchProgressBar"></span></div>
+    <div class="image-batch-status" id="batchStatus">คิวจะทำงานทีละไม่เกิน 2 คำขอ เพื่อประหยัดพื้นที่และทรัพยากร</div>
+  </div>
   <div class="inputbar">
-    <input type="file" id="imgFile" accept="image/*" hidden>
+    <input type="file" id="imgFile" accept="image/*,.txt,.md,.csv,.json,.pdf,.docx,.xlsx,.xls" hidden>
     <textarea id="inp" rows="1" placeholder="พิมพ์ข้อความ..." enterkeyhint="send"></textarea>
     <button class="icon-btn ptt" id="pttBtn" title="🎤 พูดแล้วส่ง (กดค้าง)">🎤</button>
     <button class="icon-btn chat-call-inline" id="chatCallFab" title="📞 โทรหาสลี่">📞</button>
-    <button class="icon-btn" id="imgBtn" title="แนบรูป">📄</button>
+    <button class="icon-btn" id="imgBtn" title="แนบรูปหรือไฟล์">📎</button>
+    <button class="icon-btn" id="batchBtn" title="สร้างภาพหลายภาพ สูงสุด 100 ภาพ">🖼️</button>
     <button class="send" id="sendBtn" title="ส่ง">➤</button>
     <button class="icon-btn" id="chatRunBtn" title="▶ รัน code block ในแชต (ต้องกดเปิดเอง)">▶</button>
     <button class="icon-btn" id="codeBtn" title="💻 Lab Console">💻</button></div>
@@ -2284,6 +2310,50 @@ body.theme-dola #inp { border-radius: 16px; }
     sendBtn.disabled = false;
   }
 
+  /* ===== 🖼️ IMAGE BATCH QUEUE ===== */
+  const batchBtn = document.getElementById('batchBtn');
+  const batchPanel = document.getElementById('imageBatchPanel');
+  const batchPrompt = document.getElementById('batchPrompt');
+  const batchCount = document.getElementById('batchCount');
+  const batchStart = document.getElementById('batchStart');
+  const batchCancel = document.getElementById('batchCancel');
+  const batchCountLabel = document.getElementById('batchCountLabel');
+  const batchProgressBar = document.getElementById('batchProgressBar');
+  const batchStatus = document.getElementById('batchStatus');
+  let activeBatchId = null;
+  batchBtn.onclick = () => { batchPanel.hidden = !batchPanel.hidden; if (!batchPanel.hidden) batchPrompt.focus(); };
+  function setBatchUi(running, job) {
+    const done = Number(job?.completed || 0) + Number(job?.failed || 0);
+    const total = Number(job?.requested || batchCount.value || 0);
+    batchCountLabel.textContent = done + '/' + total;
+    batchProgressBar.style.width = (total ? Math.min(100, done * 100 / total) : 0) + '%';
+    batchStatus.textContent = running ? 'กำลังสร้าง ' + done + '/' + total + ' ภาพ · สำเร็จ ' + (job?.completed || 0) + ' · ล้มเหลว ' + (job?.failed || 0) : (job?.status === 'done' ? 'เสร็จแล้ว ' + (job.completed || 0) + '/' + total + ' ภาพ' : 'หยุดงานแล้ว ' + done + '/' + total);
+    batchStart.disabled = running; batchCancel.hidden = !running; batchCount.disabled = running; batchPrompt.disabled = running;
+  }
+  async function pollImageBatch(id) {
+    const r = await fetch('/api/draw/batch/' + encodeURIComponent(id));
+    const job = await r.json();
+    if (!r.ok) throw new Error(job.error || 'อ่านสถานะ batch ไม่ได้');
+    setBatchUi(job.status === 'queued' || job.status === 'running', job);
+    if (job.status === 'queued' || job.status === 'running') { setTimeout(() => pollImageBatch(id).catch(e => { batchStatus.textContent = 'ผิดพลาด: ' + e.message; }), 1200); return; }
+    activeBatchId = null;
+    if (job.results?.length) {
+      addMsg('assistant', '🖼️ สร้างภาพเสร็จ ' + job.completed + '/' + job.requested + ' ภาพ จากคำสั่ง: ' + job.prompt);
+      job.results.forEach(item => addMsg('assistant', 'ภาพที่ ' + item.index + '/' + job.requested, Date.now(), item.url));
+    } else toast('⚠️ ไม่ได้ภาพจาก provider');
+  }
+  batchStart.onclick = async () => {
+    const prompt = batchPrompt.value.trim() || inp.value.trim();
+    const count = Math.max(1, Math.min(100, Number.parseInt(batchCount.value, 10) || 1));
+    if (!prompt) { toast('⚠️ ใส่คำอธิบายภาพก่อน'); batchPrompt.focus(); return; }
+    batchCount.value = count; setBatchUi(true, { requested: count, completed: 0, failed: 0 });
+    try {
+      const r = await fetch('/api/draw/batch', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ prompt, count }) });
+      const job = await r.json(); if (!r.ok) throw new Error(job.error || 'เริ่ม batch ไม่ได้');
+      activeBatchId = job.id; setBatchUi(true, job); pollImageBatch(job.id).catch(e => { activeBatchId = null; batchStatus.textContent = 'ผิดพลาด: ' + e.message; batchStart.disabled = false; batchCancel.hidden = true; });
+    } catch (e) { setBatchUi(false, { requested: count, completed: 0, failed: count, status: 'error' }); toast('⚠️ ' + e.message); }
+  };
+  batchCancel.onclick = async () => { if (!activeBatchId) return; await fetch('/api/draw/batch/' + encodeURIComponent(activeBatchId) + '/cancel', { method: 'POST' }).catch(() => {}); activeBatchId = null; setBatchUi(false, { requested: Number(batchCount.value), completed: 0, failed: 0, status: 'canceled' }); };
 
   /* ===== 🔔 แจ้งเตือนข้อความใหม่ (Notification API) ===== */
   function askNotifyPerm() {
@@ -2673,7 +2743,9 @@ body.theme-dola #inp { border-radius: 16px; }
     const f = imgFile.files[0];
     imgFile.value = '';
     if (!f) return;
-    const dataUrl = await resizeImage(f, 1024, 0.85);
+    if (!f.type.startsWith('image/')) { await handleDroppedFile(f); return; }
+    if (f.size > 12 * 1024 * 1024) { toast('⚠️ ไฟล์ใหญ่เกิน 12MB'); return; }
+    const dataUrl = await resizeImage(f, 1024, 0.82);
     if (!dataUrl) { toast('⚠ อ่านรูปไม่ได้'); return; }
     const q = inp.value.trim();
     inp.value = ''; autoGrow();
@@ -2720,6 +2792,7 @@ body.theme-dola #inp { border-radius: 16px; }
   }
   async function handleDroppedFile(f) {
     if (!f) return;
+    if (f.size > 8 * 1024 * 1024) { toast('⚠️ ไฟล์ใหญ่เกิน 8MB'); return; }
     const ext = extOf(f.name);
     if (f.type.startsWith('image/')) { try { const dt = new DataTransfer(); dt.items.add(f); imgFile.files = dt.files; imgFile.dispatchEvent(new Event('change')); } catch (e) { toast('❌ แนบรูปไม่สำเร็จ'); } return; }
     toast('📖 กำลังอ่าน ' + f.name + '...');

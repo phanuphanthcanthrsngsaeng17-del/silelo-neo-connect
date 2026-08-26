@@ -2342,6 +2342,69 @@ app.post('/api/tts', async (req, res) => {
 });
 
 // 🎨 วาดรูป — ⚡ Stability AI (คีย์จริง ภาพ HD) ก่อน → fallback Pollinations flux ฟรี
+// Batch queue: จำกัด 100 ภาพ/งาน, concurrency ต่ำ, ยกเลิกได้ และรายงาน requested/completed จริง
+const imageBatchJobs = new Map();
+const IMAGE_BATCH_MAX = 100;
+const IMAGE_BATCH_CONCURRENCY = 2;
+const IMAGE_BATCH_TTL_MS = 30 * 60 * 1000;
+function createBatchJob(prompt, requested) {
+  const id = crypto.randomBytes(12).toString('hex');
+  const job = { id, prompt, requested, completed: 0, failed: 0, status: 'queued', results: [], errors: [], next: 0, active: 0, canceled: false, createdAt: Date.now(), updatedAt: Date.now() };
+  imageBatchJobs.set(id, job);
+  return job;
+}
+function publicBatchJob(job) {
+  return { id: job.id, prompt: job.prompt, requested: job.requested, completed: job.completed, failed: job.failed, status: job.status, results: job.results.slice(-IMAGE_BATCH_MAX), errors: job.errors.slice(-10), createdAt: job.createdAt, updatedAt: job.updatedAt };
+}
+async function processImageBatch(job) {
+  if (!job || job.status === 'done' || job.status === 'canceled') return;
+  job.status = 'running'; job.updatedAt = Date.now();
+  const worker = async () => {
+    while (!job.canceled) {
+      const index = job.next++;
+      if (index >= job.requested) break;
+      job.active++; job.updatedAt = Date.now();
+      let ok = false;
+      for (let attempt = 0; attempt < 2 && !ok && !job.canceled; attempt++) {
+        try {
+          const seed = Math.floor(Math.random() * 1e9);
+          const url = 'https://image.pollinations.ai/prompt/' + encodeURIComponent(job.prompt) + '?width=768&height=768&nologo=true&seed=' + seed;
+          // ตรวจว่าผู้ให้บริการตอบกลับก่อนนับเป็น completed; ไม่เก็บภาพ 100 ภาพไว้ใน RAM
+          const r = await fetch(url, { signal: AbortSignal.timeout(60000) });
+          if (!r.ok) throw new Error('image provider HTTP ' + r.status);
+          await r.arrayBuffer();
+          job.results.push({ index: index + 1, url, seed }); job.completed++; ok = true;
+        } catch (e) { if (attempt === 1) { job.failed++; job.errors.push({ index: index + 1, error: String(e.message || e).slice(0, 160) }); } }
+      }
+      job.active--; job.updatedAt = Date.now();
+    }
+  };
+  await Promise.all(Array.from({ length: IMAGE_BATCH_CONCURRENCY }, worker));
+  if (job.canceled) job.status = 'canceled'; else if (job.completed + job.failed >= job.requested) job.status = 'done';
+  job.updatedAt = Date.now();
+}
+app.post('/api/draw/batch', (req, res) => {
+  try {
+    const prompt = String(req.body?.prompt || '').trim().slice(0, 300);
+    const requested = Math.max(1, Math.min(IMAGE_BATCH_MAX, Number.parseInt(req.body?.count, 10) || 1));
+    if (!prompt) return res.status(400).json({ error: 'prompt ว่าง' });
+    const job = createBatchJob(prompt, requested);
+    processImageBatch(job).catch(e => { job.status = 'error'; job.errors.push({ error: String(e.message || e).slice(0, 160) }); job.updatedAt = Date.now(); });
+    res.status(202).json(publicBatchJob(job));
+  } catch (e) { res.status(500).json({ error: 'สร้างงาน batch ไม่สำเร็จ' }); }
+});
+app.get('/api/draw/batch/:id', (req, res) => {
+  const job = imageBatchJobs.get(req.params.id);
+  if (!job) return res.status(404).json({ error: 'ไม่พบงาน batch' });
+  res.json(publicBatchJob(job));
+});
+app.post('/api/draw/batch/:id/cancel', (req, res) => {
+  const job = imageBatchJobs.get(req.params.id);
+  if (!job) return res.status(404).json({ error: 'ไม่พบงาน batch' });
+  job.canceled = true; job.status = 'canceled'; job.updatedAt = Date.now();
+  res.json(publicBatchJob(job));
+});
+setInterval(() => { for (const [id, job] of imageBatchJobs) if (Date.now() - job.updatedAt > IMAGE_BATCH_TTL_MS) imageBatchJobs.delete(id); }, 5 * 60 * 1000).unref();
 app.post('/api/draw', async (req, res) => {
   try {
     const { prompt } = req.body || {};
