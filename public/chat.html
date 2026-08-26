@@ -1988,6 +1988,12 @@ body.theme-dola #inp { border-radius: 16px; }
   const LANG_ICON = { python: '🐍', javascript: '🟨', bash: '🐚', java: '☕', cpp: '➕', c: '🔵', go: '🐹', rust: '🦀', typescript: '🔷', ruby: '💎', php: '🐘' };
   function escHtml(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;'); }
   function escAttr(s) { return String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+  function safeExternalUrl(raw) {
+    try {
+      const u = new URL(String(raw), window.location.origin);
+      return (u.protocol === 'http:' || u.protocol === 'https:') ? u.href : '#';
+    } catch (e) { return '#'; }
+  }
   function extractHtmlDoc(code) {
     const s = String(code || '');
     if (/^\s*<!doctype\s+html/i.test(s) || /<html[\s>]/i.test(s)) return s;
@@ -4045,7 +4051,7 @@ async function runCodeTool(mode) {
       const r = await fetch('/api/websearch', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ q: payload.question }) });
       j = await r.json().catch(() => ({}));
       if (j.ok && j.results && j.results.length) {
-        const lines = j.results.map(r => '🔗 <b>' + escHtml(r.title) + '</b>\n   <a href="' + escAttr(r.url) + '" target="_blank" rel="noopener" style="color:#7dd3fc">' + escHtml(r.url) + '</a>' + (r.snippet ? '\n   ' + escHtml(r.snippet) : '')).join('\n\n');
+        const lines = j.results.map(r => '🔗 <b>' + escHtml(r.title) + '</b>\n   <a href="' + escAttr(safeExternalUrl(r.url)) + '" target="_blank" rel="noopener noreferrer" style="color:#7dd3fc">' + escHtml(r.url) + '</a>' + (r.snippet ? '\n   ' + escHtml(r.snippet) : '')).join('\n\n');
         el.innerHTML = '🔍 **ผลค้นหา live** — ' + escHtml(payload.question) + ':\n\n' + lines;
       } else if (j.answer) {
         el.innerHTML = j.answer;
