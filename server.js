@@ -19,8 +19,18 @@ try { ENV.validate(); } catch (e) { console.warn('[KeyManager] validate error:',
 
 const app = express();
 app.use(express.json({ limit: '5mb' }));
+app.use((req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+  res.setHeader('Referrer-Policy', 'same-origin');
+  res.setHeader('Permissions-Policy', 'camera=(), microphone=()');
+  next();
+});
 app.use(express.static(path.join(__dirname, 'public')));
-app.get('/chat', (req, res) => res.sendFile(path.join(__dirname, 'public', 'chat.html')));
+app.get('/chat', (req, res) => {
+  if (!getAuthUser(req)) return res.redirect('/');
+  res.sendFile(path.join(__dirname, 'public', 'chat.html'));
+});
 const PORT = process.env.PORT || 3000;
 
 /* ---------------- 💭 จอคิด: กระบวนการคิด/คำนวณแบบเรียลไทม์ ----------------
@@ -1357,7 +1367,12 @@ async function msedgeTtsFile(safe, out, voiceName, rate) {
 // 🔒 ปลดล็อกแอพ (PIN)
 /* ================= 🔐 OAuth Login (LINE / Google / Facebook) ================= */
 const crypto = require('crypto');
-const AUTH_SECRET = process.env.AUTH_SECRET || 'nc-dev-secret';
+const AUTH_SECRET = process.env.AUTH_SECRET || (process.env.NODE_ENV === 'production' ? '' : 'nc-dev-secret');
+const LOGIN_EMAIL = String(process.env.ADMIN_EMAIL || '').trim().toLowerCase();
+const LOGIN_PASSWORD_HASH = String(process.env.ADMIN_PASSWORD_HASH || '').trim();
+const LOGIN_MAX_ATTEMPTS = 8;
+const LOGIN_WINDOW_MS = 15 * 60 * 1000;
+const loginAttempts = new Map();
 const AUTH_WHITELIST = (process.env.AUTH_WHITELIST || '').split(',').map(s => s.trim()).filter(Boolean);
 const OWNER_EMAILS = ['phanuphanthcanthrsngsaeng17@gmail.com', 'phanuphanthcanthrsngsaeng6@gmail.com', 'bossnu@gmail.com'];
 const OWNER_LINE_IDS = ['U4529156e4ce2270579f3b26afb463cdb'];
@@ -1380,13 +1395,45 @@ function verifyToken(token) {
   } catch (e) { return null; }
 }
 function authCookieStr(payload) {
+  if (!AUTH_SECRET) throw new Error('AUTH_SECRET is not configured');
   const token = signToken(Object.assign({ exp: Date.now() + 90 * 24 * 3600 * 1000 }, payload));
   return `nc_auth=${token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${90 * 24 * 3600}; Secure`;
 }
-function clearAuthCookie() { return 'nc_auth=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0'; }
+function clearAuthCookie() { return 'nc_auth=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0; Secure'; }
 function getAuthUser(req) {
   const m = /(?:^|;\s*)nc_auth=([^;]+)/.exec(req.headers.cookie || '');
   return m ? verifyToken(decodeURIComponent(m[1])) : null;
+}
+function clientIp(req) {
+  return String(req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown').split(',')[0].trim().slice(0, 80);
+}
+function passwordMatches(password, encoded) {
+  try {
+    const parts = String(encoded || '').split('$');
+    if (parts.length !== 6 || parts[0] !== 'scrypt') return false;
+    const [, nText, rText, pText, saltB64, hashB64] = parts;
+    const N = Number(nText), r = Number(rText), p = Number(pText);
+    if (![N, r, p].every(Number.isInteger) || N < 16384 || N > 1048576 || r < 1 || r > 32 || p < 1 || p > 8) return false;
+    const salt = Buffer.from(saltB64, 'base64url');
+    const expected = Buffer.from(hashB64, 'base64url');
+    if (!salt.length || expected.length < 32 || expected.length > 128) return false;
+    const actual = crypto.scryptSync(String(password || ''), salt, expected.length, { N, r, p, maxmem: Math.max(32 * 1024 * 1024, 128 * N * r + 1024) });
+    return crypto.timingSafeEqual(actual, expected);
+  } catch (e) { return false; }
+}
+function loginRateLimited(ip) {
+  const now = Date.now();
+  const a = loginAttempts.get(ip) || { count: 0, reset: now + LOGIN_WINDOW_MS };
+  if (now > a.reset) { a.count = 0; a.reset = now + LOGIN_WINDOW_MS; }
+  a.count += 1; loginAttempts.set(ip, a);
+  if (loginAttempts.size > 5000) for (const [key, value] of loginAttempts) if (now > value.reset) loginAttempts.delete(key);
+  return a.count > LOGIN_MAX_ATTEMPTS;
+}
+function requireAuth(req, res, next) {
+  const user = getAuthUser(req);
+  if (!user) return res.status(401).json({ error: 'UNAUTHORIZED', message: 'กรุณาเข้าสู่ระบบก่อนใช้งาน' });
+  req.authUser = user;
+  next();
 }
 function setStateCookie(res, state) {
   res.setHeader('Set-Cookie', `nc_oauth=${state}; Path=/; HttpOnly; SameSite=Lax; Max-Age=600`);
@@ -1509,14 +1556,26 @@ app.post('/api/auth/logout', (req, res) => {
   res.json({ ok: true });
 });
 
-app.post('/api/unlock', (req, res) => {
-  try {
-    const { pin } = req.body || {};
-    const ok = String(pin || '').trim() === String(process.env.PIN_CODE || '22223').trim();
-    logAI('lock', ok ? '✅ ปลดล็อกสำเร็จ' : '❌ PIN ผิด');
-    res.json({ ok, t: Date.now() });
-  } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+/* -- Password Login: hash แบบ scrypt เก็บเฉพาะใน environment -- */
+app.post('/api/auth/login', (req, res) => {
+  const ip = clientIp(req);
+  if (loginRateLimited(ip)) return res.status(429).json({ error: 'TOO_MANY_REQUESTS', message: 'ลองเข้าสู่ระบบใหม่ภายหลัง' });
+  const email = String((req.body || {}).email || '').trim().toLowerCase().slice(0, 254);
+  const password = String((req.body || {}).password || '').slice(0, 512);
+  const valid = Boolean(LOGIN_EMAIL && LOGIN_PASSWORD_HASH && email === LOGIN_EMAIL && passwordMatches(password, LOGIN_PASSWORD_HASH));
+  if (!valid) return res.status(401).json({ error: 'INVALID_CREDENTIALS', message: 'อีเมลหรือรหัสผ่านไม่ถูกต้อง' });
+  if (!AUTH_SECRET) return res.status(503).json({ error: 'AUTH_NOT_CONFIGURED', message: 'ระบบยืนยันตัวตนยังตั้งค่าไม่ครบ' });
+  res.setHeader('Set-Cookie', authCookieStr({ u: 'password:' + email, n: email, p: 'password', e: email }));
+  res.json({ ok: true, name: email, provider: 'password' });
 });
+
+app.post('/api/unlock', (req, res) => {
+  res.status(410).json({ ok: false, error: 'PIN_LOGIN_DISABLED', message: 'การเข้าสู่ระบบด้วย PIN ถูกปิดใช้งาน กรุณาใช้อีเมลและรหัสผ่าน' });
+});
+
+/* ทุก API หลังจากจุดนี้ต้องมี session ยกเว้น health/status และข้อมูลสาธารณะ */
+const PUBLIC_API_PATHS = new Set(['/auth/me', '/auth/login', '/auth/logout', '/unlock', '/ping', '/stats', '/status', '/env-status']);
+app.use('/api', (req, res, next) => PUBLIC_API_PATHS.has(req.path) ? next() : requireAuth(req, res, next));
 
 // แชท
 

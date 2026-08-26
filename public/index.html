@@ -311,6 +311,8 @@
   .lock-inp { width: 100%; box-sizing: border-box; padding: 14px 16px; border-radius: 10px; border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent); background: color-mix(in srgb, var(--accent) 6%, transparent); color: var(--lock-txt); font-size: 20px; letter-spacing: 6px; text-align: center; font-family: 'Orbitron', monospace; outline: none; transition: all .2s; }
   .lock-inp:focus { border-color: var(--accent); box-shadow: 0 0 18px color-mix(in srgb, var(--accent) 35%, transparent); background: color-mix(in srgb, var(--accent) 10%, transparent); }
   .lock-inp::placeholder { letter-spacing: 1px; color: color-mix(in srgb, var(--lock-txt) 35%, transparent); font-size: 13px; }
+  .lock-inp[type="email"] { letter-spacing: 1px; font-size: 15px; text-align: left; }
+  .lock-inp[type="password"] { letter-spacing: 3px; font-size: 18px; }
   .lock-go { width: 100%; margin-top: 12px; padding: 13px; border-radius: 10px; border: 1px solid rgba(34,229,132,.45); background: rgba(34,229,132,.1); color: var(--green); font-size: 15px; font-weight: 600; cursor: pointer; transition: all .15s; }
   .lock-go:active { transform: scale(.97); background: rgba(34,229,132,.25); }
   .go-kbd { opacity: .6; font-size: 12px; }
@@ -433,21 +435,24 @@
 </div>
 
 <!-- 🔒 Lock -->
-<div class="lock" id="lockScreen" style="display:none!important">
+<div class="lock" id="lockScreen">
   <div class="lock-box">
     <div class="lock-ico">🔒</div>
     <div class="lock-ttl">SILELO NEO-CONNECT</div>
-    <div class="lock-sub">กรอกรหัสปลดล็อก</div>
-    <input class="lock-inp" id="lockInp" type="password" placeholder="รหัสปลดล็อก" autocomplete="off" autocapitalize="off" spellcheck="false">
-    <button class="lock-go" id="lockGo">ปลดล็อก <span class="go-kbd">⏎</span></button>
-    <div class="lock-msg" id="lockMsg"></div>
+    <div class="lock-sub">เข้าสู่ระบบเพื่อใช้งาน</div>
+    <form id="loginForm" autocomplete="on">
+      <input class="lock-inp" id="loginEmail" type="email" placeholder="อีเมล" autocomplete="username" required maxlength="254">
+      <input class="lock-inp" id="loginPassword" type="password" placeholder="รหัสผ่าน" autocomplete="current-password" required maxlength="512">
+      <button class="lock-go" id="loginGo" type="submit">เข้าสู่ระบบ <span class="go-kbd">⏎</span></button>
+    </form>
+    <div class="lock-msg" id="lockMsg" role="alert" aria-live="polite"></div>
     <div class="lock-divider"><span>หรือเข้าสู่ระบบด้วย</span></div>
     <div class="lock-oauth">
       <a class="oauth-btn oa-line" href="/api/auth/line" title="เข้าสู่ระบบด้วย LINE">💬 LINE</a>
       <a class="oauth-btn oa-google" href="/api/auth/google" title="เข้าสู่ระบบด้วย Google">🌐 Google</a>
       <a class="oauth-btn oa-fb" href="/api/auth/fb" title="เข้าสู่ระบบด้วย Facebook">👤 Meta</a>
     </div>
-    <div class="lock-note">🔒 เฉพาะเจ้าของเท่านั้น · รหัสผ่านยังใช้ได้</div>
+    <div class="lock-note">🔒 รหัสผ่านถูกตรวจสอบฝั่งเซิร์ฟเวอร์และไม่ถูกเก็บในเบราว์เซอร์</div>
   </div>
 </div>
 
@@ -501,25 +506,30 @@
 
   /* ===== 🔒 Lock ===== */
   var lockScreen = document.getElementById('lockScreen');
-  var lockInp = document.getElementById('lockInp');
   var lockMsg = document.getElementById('lockMsg');
   var LOCK_KEY = 'nc_unlocked';
-  function isUnlocked() { try { return localStorage.getItem(LOCK_KEY) === '1'; } catch (e) { return false; } }
-  async function verifyPin() {
-    var pin = lockInp.value.trim();
-    if (!pin) return;
-    lockMsg.textContent = '...';
-    try {
-      var r = await fetch('/api/unlock', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ pin: pin }) });
-      var j = await r.json();
-      if (j.ok) { try { localStorage.setItem(LOCK_KEY, '1'); } catch (e) {} lockScreen.classList.remove('show'); lockMsg.textContent = ''; lockInp.value = ''; }
-      else { lockMsg.textContent = 'รหัสไม่ถูกต้อง ❌'; lockInp.value = ''; lockInp.focus(); }
-    } catch (e) { lockMsg.textContent = 'เชื่อมต่อเซิร์ฟเวอร์ไม่ได้'; lockInp.value = ''; }
+  function setLocked(locked) {
+    lockScreen.classList.toggle('show', locked);
+    document.body.classList.toggle('auth-locked', locked);
   }
-  document.getElementById('lockGo').onclick = verifyPin;
-  lockInp.addEventListener('keydown', function (e) { if (e.key === 'Enter') verifyPin(); });
-  /* 🔓 v1.23: ปลดล็อกถาวร (พี่นุสั่ง) — เปิดมาเข้าแชทได้เลย ไม่ต้องใส่รหัส */
-  lockScreen.classList.remove('show');
+  document.getElementById('loginForm').addEventListener('submit', async function (e) {
+    e.preventDefault();
+    var email = document.getElementById('loginEmail').value.trim();
+    var password = document.getElementById('loginPassword').value;
+    var button = document.getElementById('loginGo');
+    if (!email || !password) return;
+    button.disabled = true; lockMsg.textContent = 'กำลังตรวจสอบ...';
+    try {
+      var r = await fetch('/api/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: email, password: password }) });
+      var j = await r.json();
+      if (!r.ok || !j.ok) throw new Error(j.message || 'อีเมลหรือรหัสผ่านไม่ถูกต้อง');
+      try { sessionStorage.setItem(LOCK_KEY, '1'); } catch (e) {}
+      document.getElementById('loginPassword').value = '';
+      lockMsg.textContent = 'เข้าสู่ระบบสำเร็จ'; setLocked(false);
+    } catch (err) { lockMsg.textContent = err.message || 'เข้าสู่ระบบไม่สำเร็จ'; }
+    finally { button.disabled = false; }
+  });
+  setLocked(true);
     /* ===== 🎨 THEMES 2026 — เลือกหน้าแรก = เปลี่ยนทั้งแอพ (sync กับแชท) ===== */
   var THEMES = {
     neo:       { accent: '#00e5ff', bg: '#01030a', txt: '#e8f6ff', dim: '#6b7f99', panel: 'rgba(10,20,42,.72)' },
@@ -549,8 +559,9 @@
 
 /* ===== 🔐 OAuth: ล็อกอินอัตโนมัติถ้ามี session ===== */
   fetch('/api/auth/me').then(function (r) { return r.json(); }).then(function (j) {
-    if (j.ok) { try { localStorage.setItem(LOCK_KEY, '1'); } catch (e) {} lockScreen.classList.remove('show'); }
-  }).catch(function () {});
+    setLocked(!j.ok);
+    if (j.ok) { try { sessionStorage.setItem(LOCK_KEY, '1'); } catch (e) {} }
+  }).catch(function () { setLocked(true); });
   if (/[?&]auth=ok/.test(location.search)) {
     setTimeout(function () { var el = document.getElementById('lockMsg'); if (el) el.textContent = '✅ เข้าสู่ระบบสำเร็จ'; }, 300);
     history.replaceState(null, '', location.pathname);
