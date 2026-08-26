@@ -33,11 +33,12 @@ const ENV = {
   },
   openrouter: {
     apiKey: process.env.OPENROUTER_API_KEY || '',
-    textModels: process.env.OPENROUTER_TEXT_MODELS || 'nvidia/nemotron-3-ultra-550b-a55b:free,google/gemma-4-26b-a4b-it:free',
+    textModels: process.env.OPENROUTER_TEXT_MODELS || 'z-ai/glm-5.2:free,liquid/lfm-2.5-2.6b:free,cohere/north-mini-code:free,thinkingmachines/inkling-small:free,poolside/laguna-xs-2.1:free,nvidia/nemotron-3-super-120b-a12b:free,nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free,dots-studio/dots-3-note-preview:free,minimax/minimax-m2.7:free,minimax/minimax-m3:free,google/gemma-4-26b-a4b-it:free,poolside/laguna-s-2.1:free,google/gemma-4-31b-it:free,thinkingmachines/inkling:free,nvidia/nemotron-3-ultra-550b-a55b:free,nvidia/nemotron-3.5-lightning:free',
+    fastTimeoutMs: Math.max(1000, Math.min(20000, Number(process.env.OPENROUTER_FAST_TIMEOUT_MS) || 8000)),
   },
   pollinations: { model: process.env.POLLINATIONS_MODEL || 'openai' },
 
-  // 🧠 OpenAI (สำรอง — ใส่คีย์แล้วค่อยต่อเข้า RACE)
+  // 🧠 OpenAI (primary เมื่อมีคีย์ — fallback ไป Groq/OpenRouter เมื่อไม่พร้อม)
   openai: {
     apiKey: process.env.OPENAI_API_KEY || '',
     model: process.env.OPENAI_MODEL || 'gpt-4o-mini',

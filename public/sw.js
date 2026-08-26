@@ -1,5 +1,5 @@
-/* SILELO Neo-Connect Service Worker v1.13 - force refresh (white screen fix) */
-const CACHE = 'silelo-v14';
+/* SILELO Neo-Connect Service Worker v1.16 - Settings control center and LINE status flow */
+const CACHE = 'silelo-v16';
 const SHELL = [
   '/',
   '/index.html',

@@ -8,7 +8,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="SILELO">
-<meta name="description" content="SILELO Neo-Connect — แชทกับสลี่ออลา ภรรยาของพี่นุ">
+<meta name="description" content="SILELO Neo-Connect — ห้องแชต Sali ผู้ช่วย AI ของพี่นุ">
 <link rel="manifest" href="/manifest.json">
 <link rel="icon" type="image/png" href="/icon-192.png">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
@@ -517,7 +517,7 @@
   .dola-sb-foot { padding: 10px 12px calc(12px + env(safe-area-inset-bottom)); border-top: 1px solid rgba(167,139,250,.16); }
   .dola-sb-foot .dola-chat-item { width: 100%; }
   /* ===== หน้า "บัญชี Bossnusilelo" (ตั้งค่า) ===== */
-  .dola-settings { position: fixed; inset: 0; z-index: 520; display: none; flex-direction: column; background: linear-gradient(180deg, rgba(14,9,26,.98), rgba(6,3,13,.99)); backdrop-filter: blur(22px); -webkit-backdrop-filter: blur(22px); }
+  .dola-settings { position: fixed; inset: 0; z-index: 960; display: none; flex-direction: column; background: linear-gradient(180deg, rgba(14,9,26,.98), rgba(6,3,13,.99)); backdrop-filter: blur(22px); -webkit-backdrop-filter: blur(22px); }
   .dola-settings.show { display: flex; }
   .dola-set-head { display: flex; align-items: center; gap: 12px; padding: 18px 16px 12px; }
   .dola-set-back { width: 40px; height: 40px; border-radius: 50%; border: 1px solid rgba(255,255,255,.14); background: rgba(255,255,255,.06); color: var(--txt); font-size: 17px; cursor: pointer; transition: all .15s; }
@@ -848,6 +848,25 @@ header::after { height: 1px; background: linear-gradient(90deg, transparent, rgb
 .send::before { display: none; }
 .send:hover { transform: translateY(-1px) scale(1.04); box-shadow: 0 10px 30px color-mix(in srgb, var(--accent) 60%, transparent); }
 .send:active { transform: scale(.88); }
+.add-sheet { position:fixed; inset:0; z-index:9999; display:none; background:rgba(0,0,0,.58); }
+.add-sheet.open { display:flex; align-items:flex-end; }
+.add-sheet-panel { width:min(680px,100%); max-height:min(84vh,760px); overflow:auto; margin:0 auto; padding:8px 16px calc(22px + env(safe-area-inset-bottom)); border:1px solid rgba(255,255,255,.12); border-bottom:0; border-radius:26px 26px 0 0; background:linear-gradient(180deg,rgba(31,35,47,.98),rgba(15,18,27,.99)); box-shadow:0 -18px 60px rgba(0,0,0,.45); }
+.add-sheet-handle { width:42px; height:5px; border-radius:999px; background:rgba(255,255,255,.25); margin:3px auto 12px; }
+.add-sheet-head { display:flex; align-items:center; justify-content:space-between; gap:10px; padding:2px 0 12px; }
+.add-sheet-head h2 { margin:0; color:#fff; font-size:19px; }
+.add-sheet-close { appearance:none; border:0; width:36px; height:36px; border-radius:50%; background:rgba(255,255,255,.09); color:#fff; font-size:25px; line-height:1; cursor:pointer; }
+.add-sheet-group { padding:8px 0; border-top:1px solid rgba(255,255,255,.08); }
+.add-sheet-group:first-of-type { border-top:0; }
+.add-sheet-label { display:block; padding:2px 8px 8px; color:#8e9ab1; font-size:11px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; }
+.add-sheet-item { width:100%; display:grid; grid-template-columns:34px minmax(0,1fr) auto; align-items:center; gap:10px; padding:13px 8px; border:0; border-radius:12px; color:#f7f8ff; background:transparent; text-align:left; cursor:pointer; font:inherit; }
+.add-sheet-item:hover:not(:disabled) { background:rgba(139,92,246,.14); }
+.add-sheet-item:active:not(:disabled) { transform:scale(.985); }
+.add-sheet-item:disabled { opacity:.48; cursor:not-allowed; }
+.add-sheet-icon { font-size:21px; text-align:center; }
+.add-sheet-title { font-size:16px; font-weight:650; }
+.add-sheet-note { margin-top:2px; color:#9ba6bc; font-size:11px; }
+.add-sheet-badge { padding:3px 8px; border-radius:999px; color:#e5e7ff; background:rgba(59,130,246,.22); font-size:11px; white-space:nowrap; }
+.add-sheet-badge.setup { color:#fef3c7; background:rgba(245,158,11,.18); }
 
 /* ---------- Images in chat ---------- */
 .img-msg { border-radius: 16px; border: 1px solid rgba(255,255,255,.14); box-shadow: 0 10px 30px rgba(0,0,0,.4); }
@@ -969,6 +988,21 @@ body.theme-dola #inp { border-radius: 16px; }
   .think-panel { border-radius: 20px; max-height: 78vh; }
   .mon-body { max-height: 260px; }
   #codeTools { margin: 4px 8px 2px; }
+  .screen-plugin-center { margin-top: 18px; padding: 16px; border: 1px solid rgba(167,139,250,.28); border-radius: 16px; background: rgba(7,12,28,.72); }
+  .screen-plugin-head { display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:12px; }
+  .screen-plugin-head h3 { margin:0; color:#f2ecff; font-size:15px; }
+  .screen-plugin-head small { color:#91a0bd; font-size:11px; }
+  .screen-plugin-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(190px,1fr)); gap:10px; }
+  .screen-plugin-card { padding:12px; border:1px solid rgba(148,163,184,.18); border-radius:12px; background:rgba(15,23,42,.72); }
+  .screen-plugin-card.is-off { opacity:.68; }
+  .screen-plugin-row { display:flex; align-items:flex-start; justify-content:space-between; gap:8px; }
+  .screen-plugin-name { color:#fff; font-size:13px; font-weight:700; }
+  .screen-plugin-status { color:#c4b5fd; font-size:10px; white-space:nowrap; }
+  .screen-plugin-desc { margin:7px 0 10px; color:#aab7ce; font-size:11px; line-height:1.45; }
+  .screen-plugin-toggle { border:1px solid rgba(167,139,250,.35); border-radius:999px; padding:5px 9px; color:#fff; background:rgba(124,58,237,.25); cursor:pointer; font-size:11px; }
+  .screen-plugin-toggle:disabled { cursor:not-allowed; opacity:.45; }
+  .screen-plugin-toggle.is-on { background:linear-gradient(135deg,#7c3aed,#a855f7); }
+  @media (max-width: 620px) { .screen-plugin-grid { grid-template-columns:1fr; } .screen-plugin-center { padding:12px; } }
   .theme-pop, .voice-pop, .team-pop { right: 8px; bottom: 84px; }
 }
 @media (max-width: 380px) {
@@ -1077,6 +1111,68 @@ body.theme-dola #inp { border-radius: 16px; }
 }
 
 .ide-empty { color: #8b8fa8; font-size: 11px; padding: 10px; }
+
+/* ===== Manus-wide chat refinement: layout only; chat state/actions remain unchanged ===== */
+@media (min-width: 761px) {
+  body { padding: clamp(10px, 2vw, 26px); background: radial-gradient(1000px 620px at 50% -14%, color-mix(in srgb, var(--accent) 13%, transparent), transparent 70%), var(--bg); }
+  .app { max-width: 1240px; min-height: calc(100dvh - clamp(20px, 4vw, 52px)); border: 1px solid color-mix(in srgb, var(--accent) 20%, transparent); border-radius: 26px; background: color-mix(in srgb, var(--bg) 86%, transparent); box-shadow: 0 34px 100px rgba(0,0,0,.32), 0 0 80px color-mix(in srgb, var(--accent) 7%, transparent); overflow: hidden; }
+  header { padding: 15px 24px; gap: 18px; background: linear-gradient(180deg, color-mix(in srgb, var(--panel) 96%, transparent), color-mix(in srgb, var(--panel-2) 88%, transparent)); }
+  .hinfo h1 { font-size: 18px; letter-spacing: 2px; }
+  #msgs { padding: 30px clamp(34px, 7vw, 110px) 16px; gap: 18px; }
+  .msg { max-width: min(760px, 78%); }
+  .bubble { padding: 15px 18px; font-size: 16px; line-height: 1.76; border-radius: 18px; clip-path: none !important; }
+  .msg.user .bubble { border-radius: 18px 18px 6px 18px; }
+  .msg.bot .bubble { border-radius: 18px 18px 18px 6px; }
+  .img-msg { max-width: min(420px, 100%); max-height: 420px; border-radius: 14px; }
+  .modelbar { margin: 0 24px; padding: 8px 12px 0; }
+  #codeTools { margin: 8px 24px 0; border: 1px solid color-mix(in srgb, var(--accent) 20%, transparent); border-radius: 14px; }
+  .inputbar { margin: 12px 24px 22px; padding: 11px 12px; border: 1px solid color-mix(in srgb, var(--accent) 28%, transparent); border-radius: 22px; background: color-mix(in srgb, var(--panel) 94%, transparent); box-shadow: 0 14px 36px rgba(0,0,0,.18); }
+  .inputbar::before { display: none; }
+  #inp { min-height: 50px; border-radius: 16px; clip-path: none; }
+  .inputbar .icon-btn { width: 46px; height: 46px; }
+  .send { width: 50px; height: 50px; }
+  .think-panel { width:min(920px, calc(100vw - 72px)); border-radius:24px; }
+  .add-sheet-panel { width:min(820px, calc(100vw - 48px)); border-radius:28px 28px 0 0; padding:10px 26px 28px; }
+  .add-sheet-item { padding:15px 12px; }
+}
+@media (max-width: 760px) {
+  .app { max-width:none; }
+  #msgs { padding-bottom: 12px; }
+  .bubble { border-radius:16px !important; clip-path:none !important; }
+  .msg.user .bubble { border-radius:16px 16px 5px 16px !important; }
+  .msg.bot .bubble { border-radius:16px 16px 16px 5px !important; }
+  .add-sheet-panel { border-radius:24px 24px 0 0; }
+}
+.inputbar { flex-direction:column; align-items:stretch; gap:8px; }
+.composer-tools { display:flex; align-items:center; justify-content:flex-end; gap:7px; min-width:0; order:-1; padding:0 2px 2px; }
+.composer-tools .icon-btn, .composer-tools .send { flex:none; }
+.composer-tools .send { display:flex; align-items:center; justify-content:center; }
+@media (max-width: 560px) {
+  .app { width:100%; max-width:100%; min-width:0; overflow:hidden; }
+  .app > header { min-width:0; width:100%; padding:9px 10px; gap:6px; overflow:hidden; }
+  .app > header .back-btn { width:38px; height:38px; flex:0 0 38px; }
+  .avatar-wrap { width:38px; height:38px; flex:0 0 38px; }
+  .avatar { width:32px; height:32px; font-size:17px; }
+  .hinfo { flex:1 1 auto; min-width:0; max-width:74px; overflow:hidden; }
+  .hinfo h1 { font-size:15px; letter-spacing:1px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .hinfo .status { font-size:9px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .hbtns { flex:0 1 auto; min-width:0; max-width:none; gap:4px; overflow:hidden; }
+  .hbtns .icon-btn, .hbtns .call-top { width:38px; height:38px; flex:0 0 38px; font-size:15px; }
+  .hbtns > #voiceBtn, .hbtns > #soundBtn, .hbtns > #memBtn, .hbtns > #toolsBtn,
+  .hbtns > #ruleBtn, .hbtns > #superBtn, .hbtns > #coderBtn, .hbtns > #previewBtn,
+  .hbtns > #themeBtn, .hbtns > #puterBtn, .hbtns > #teamBtn, .hbtns > #clearBtn { display:none !important; }
+  .modelbar { width:calc(100% - 24px); margin:0 12px; min-width:0; }
+  .modelbar select { min-width:0; max-width:100%; }
+  .inputbar { width:calc(100% - 24px); margin:12px 12px 18px; gap:7px; min-width:0; }
+  .composer-tools { justify-content:space-between; gap:5px; padding:0; min-width:0; }
+  .composer-tools .icon-btn { width:40px; height:40px; font-size:16px; }
+  .composer-tools .send { width:42px; height:42px; font-size:17px; }
+  .composer-tools #codeBtn { display:none !important; }
+  #inp { width:100%; min-width:0; min-height:48px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .msg, .add-sheet-panel, .add-sheet, .typing span { animation:none !important; transition:none !important; }
+}
 
 </style>
 <!-- ===== 📐 SCREEN MANAGER CSS ===== -->
@@ -1221,6 +1317,65 @@ body.theme-dola #inp { border-radius: 16px; }
     margin-top: 4px;
     line-height: 1.5;
   }
+
+  /* ===== Live Operations: verified 2026 operational console ===== */
+  .ops-console { max-width: 1180px; margin: 0 auto; padding-bottom: 22px; }
+  .ops-hero { position: relative; isolation: isolate; overflow: hidden; display: flex; justify-content: space-between; align-items: center; gap: 18px; min-height: 148px; padding: 24px; border: 1px solid rgba(111,227,255,.22); border-radius: 22px; background: radial-gradient(circle at 88% 12%, rgba(34,211,238,.17), transparent 31%), linear-gradient(135deg, rgba(29,78,216,.16), rgba(15,23,42,.9) 55%, rgba(88,28,135,.18)); box-shadow: 0 18px 48px rgba(0,0,0,.25); }
+  .ops-hero::before { content: ''; position: absolute; inset: 0; z-index: -1; opacity: .32; background-image: linear-gradient(rgba(125,211,252,.08) 1px, transparent 1px), linear-gradient(90deg, rgba(125,211,252,.08) 1px, transparent 1px); background-size: 32px 32px; mask-image: linear-gradient(90deg, #000, transparent 85%); }
+  .ops-kicker { display:flex; align-items:center; gap:8px; color:#9eeeff; font-size:11px; font-weight:800; letter-spacing:.13em; }
+  .ops-signal { width:9px; height:9px; border-radius:999px; background:#38f2a1; box-shadow:0 0 0 5px rgba(56,242,161,.12),0 0 18px rgba(56,242,161,.75); }
+  .ops-heading { margin:10px 0 6px; font-family:var(--font-head, Orbitron, sans-serif); font-size:clamp(22px,3vw,32px); letter-spacing:-.025em; color:#f1f8ff; }
+  .ops-subtitle { max-width:610px; color:#aec0d8; font-size:13px; line-height:1.65; }
+  .ops-actions { display:flex; align-items:center; gap:10px; flex-shrink:0; }
+  .ops-meta { color:#8fa5c0; font-size:11px; line-height:1.5; text-align:right; }
+  .ops-refresh { display:inline-flex; align-items:center; gap:8px; min-height:38px; padding:0 13px; border:1px solid rgba(148,206,255,.28); border-radius:12px; background:rgba(5,12,27,.45); color:#e8f7ff; cursor:pointer; font:800 12px inherit; transition:transform .16s ease-out,background .16s ease-out,border-color .16s ease-out; }
+  .ops-refresh:hover { transform:translateY(-1px); border-color:rgba(102,225,255,.7); background:rgba(17,65,104,.43); }
+  .ops-refresh:active { transform:scale(.97); }
+  .ops-refresh[aria-busy="true"] .ops-refresh-icon { animation:opsSpin .8s linear infinite; }
+  .ops-metrics { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px; margin-top:14px; }
+  .ops-card { position:relative; overflow:hidden; min-height:160px; padding:16px; border:1px solid rgba(176,204,237,.11); border-radius:18px; background:linear-gradient(145deg,rgba(255,255,255,.065),rgba(255,255,255,.022)); box-shadow:0 12px 30px rgba(0,0,0,.13); }
+  .ops-card::after { content:''; position:absolute; width:100px; height:100px; right:-42px; bottom:-53px; border-radius:999px; background:radial-gradient(circle,var(--ops-color,#65dfff),transparent 69%); opacity:.13; pointer-events:none; }
+  .ops-card-head { display:flex; align-items:center; justify-content:space-between; gap:10px; color:#dceaff; font-size:12px; font-weight:800; }
+  .ops-card-label { display:flex; align-items:center; gap:8px; min-width:0; }
+  .ops-card-title { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .ops-card-icon { display:inline-grid; place-items:center; width:28px; height:28px; border:1px solid color-mix(in srgb,var(--ops-color,#65dfff) 45%,transparent); border-radius:9px; color:var(--ops-color,#65dfff); background:color-mix(in srgb,var(--ops-color,#65dfff) 12%,transparent); font-size:14px; }
+  .ops-status { display:inline-flex; align-items:center; gap:6px; color:var(--ops-color,#65dfff); font-size:10px; font-weight:850; letter-spacing:.06em; text-transform:uppercase; white-space:nowrap; }
+  .ops-status::before { content:''; width:6px; height:6px; border-radius:99px; background:currentColor; box-shadow:0 0 10px currentColor; }
+  .ops-value { margin-top:22px; color:#f5f9ff; font-size:21px; font-weight:850; letter-spacing:-.03em; line-height:1.05; overflow-wrap:anywhere; }
+  .ops-detail { margin-top:8px; color:#9eb0c8; font-size:11px; line-height:1.55; overflow-wrap:anywhere; }
+  .ops-lower { display:grid; grid-template-columns:minmax(0,1.48fr) minmax(260px,.82fr); gap:12px; margin-top:12px; }
+  .ops-panel { padding:17px; border:1px solid rgba(176,204,237,.11); border-radius:18px; background:rgba(4,11,25,.48); }
+  .ops-panel-head { display:flex; align-items:center; justify-content:space-between; gap:10px; }
+  .ops-panel-title { color:#edf6ff; font-size:13px; font-weight:850; }
+  .ops-caption { color:#8398b3; font-size:10px; }
+  .ops-trace-line { display:flex; align-items:center; gap:8px; margin-top:17px; }
+  .ops-trace-steps { display:flex; gap:5px; flex:1; }
+  .ops-step { height:8px; flex:1; border-radius:999px; background:rgba(137,172,211,.13); transition:background .22s ease-out,box-shadow .22s ease-out; }
+  .ops-step.is-active { background:#51e5a7; box-shadow:0 0 12px rgba(81,229,167,.55); }
+  .ops-trace-number { min-width:39px; color:#c8d9ea; font:11px ui-monospace,SFMono-Regular,Menlo,monospace; text-align:right; }
+  .ops-facts { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; margin-top:14px; }
+  .ops-fact { padding:10px; border-radius:11px; background:rgba(255,255,255,.035); }
+  .ops-fact-label { color:#8095af; font-size:10px; }
+  .ops-fact-value { margin-top:4px; color:#d7e7f6; font-size:11px; font-weight:750; overflow-wrap:anywhere; }
+  .ops-security { display:flex; gap:9px; margin-top:12px; padding:11px 12px; border:1px solid rgba(125,211,252,.13); border-radius:12px; background:rgba(14,42,66,.22); color:#a9c8de; font-size:11px; line-height:1.55; }
+  .ops-security b { color:#d9f5ff; }
+  body.theme-dusty .ops-hero { background:radial-gradient(circle at 88% 12%,rgba(99,102,241,.18),transparent 31%),linear-gradient(135deg,#eff1ff,#fbfbff 55%,#edf7ff); border-color:rgba(112,99,226,.2); box-shadow:0 18px 40px rgba(88,74,170,.12); }
+  body.theme-dusty .ops-hero::before { opacity:.42; }
+  body.theme-dusty .ops-heading { color:#232944; }
+  body.theme-dusty .ops-subtitle,body.theme-dusty .ops-meta { color:#58617c; }
+  body.theme-dusty .ops-refresh { background:rgba(255,255,255,.82); color:#343b5a; border-color:rgba(112,99,226,.25); }
+  body.theme-dusty .ops-card { background:linear-gradient(145deg,rgba(255,255,255,.96),rgba(247,248,255,.88)); border-color:rgba(88,94,130,.12); box-shadow:0 11px 24px rgba(46,54,96,.08); }
+  body.theme-dusty .ops-card-head,body.theme-dusty .ops-value,body.theme-dusty .ops-panel-title { color:#2a314a; }
+  body.theme-dusty .ops-detail,body.theme-dusty .ops-caption,body.theme-dusty .ops-fact-label { color:#626b85; }
+  body.theme-dusty .ops-panel { background:rgba(255,255,255,.8); border-color:rgba(88,94,130,.12); box-shadow:0 11px 24px rgba(46,54,96,.05); }
+  body.theme-dusty .ops-fact { background:rgba(105,92,205,.055); }
+  body.theme-dusty .ops-fact-value,body.theme-dusty .ops-trace-number { color:#37415f; }
+  body.theme-dusty .ops-security { background:rgba(99,102,241,.055); border-color:rgba(99,102,241,.12); color:#59637f; }
+  body.theme-dusty .ops-security b { color:#394260; }
+  @keyframes opsSpin { to { transform:rotate(360deg); } }
+  @media (max-width:880px) { .ops-metrics { grid-template-columns:repeat(2,minmax(0,1fr)); } .ops-lower { grid-template-columns:1fr; } }
+  @media (max-width:640px) { .ops-hero { display:block; min-height:auto; padding:18px; border-radius:18px; } .ops-actions { margin-top:16px; justify-content:space-between; } .ops-meta { text-align:left; } .ops-metrics { grid-template-columns:1fr; } .ops-card { min-height:138px; } .ops-panel { padding:14px; } }
+  @media (prefers-reduced-motion:reduce) { .ops-refresh[aria-busy="true"] .ops-refresh-icon { animation:none; } .ops-step,.ops-refresh { transition:none; } }
 
   /* ===== Header button active ===== */
   [data-screen].screen-btn-active {
@@ -1592,6 +1747,8 @@ body.theme-dola #inp { border-radius: 16px; }
       <button class="icon-btn" id="ruleBtn" title="โหมดไร้กฎ — ไม่มีข้อจำกัด">⚡</button>
       <button class="icon-btn" id="superBtn" title="⚡ SUPER MODE — Super CodingFleet: AI operator ระดับสูง ทำงานจริง ตรวจจริง">🚀</button>
       <button class="icon-btn coder-btn" id="coderBtn" title="🤖 โหมดเขียนโค้ด — สลี่เขียน+รันให้อัตโนมัติ">🤖</button>
+      <button class="icon-btn" id="browserBtn" title="🌐 Browser Workspace — เปิดเว็บหรือ Preview">🌐</button>
+      <button class="icon-btn" id="liveOpsBtn" title="📡 Live Operations — สถานะระบบจริง">📡</button>
       <button class="icon-btn" id="previewBtn" title="👁 Live Preview — ดูเว็บจาก workspace แบบ Bolt">👁</button>
       <button class="icon-btn" id="ideBtn" title="🗂 IDE — File Explorer + Editor + Terminal">🗂</button>
       <button class="icon-btn" id="themeBtn" title="เปลี่ยนธีม">🎨</button>
@@ -1606,8 +1763,10 @@ body.theme-dola #inp { border-radius: 16px; }
 
   <div class="modelbar">
     <span class="modelbar-ico">🧠</span>
-    <select id="modelSel" title="เลือกโมเดล AI (ผ่าน Puter ฟรี ไม่จำกัด)">
+    <select id="modelSel" title="เลือกโหมดโมเดล AI">
       <option value="auto">🤖 อัตโนมัติ (โซ่เต็ม)</option>
+      <option value="openrouter_fast">⚡ OpenRouter · เน้นความเร็ว</option>
+      <option value="openrouter_balanced">🔀 OpenRouter · สมดุล/สำรอง</option>
       <option value="deepseek/deepseek-v4-flash">🐋 DeepSeek V4 Flash · Max</option>
       <option value="deepseek/deepseek-v4-pro">🐋 DeepSeek V4 Pro · Max</option>
       <option value="qwen/qwen3.5-397b-a17b">🐋 Qwen3.5 397B</option>
@@ -1634,15 +1793,25 @@ body.theme-dola #inp { border-radius: 16px; }
   </div>
   <div class="inputbar">
     <input type="file" id="imgFile" accept="image/*" hidden>
+    <input type="file" id="allFile" accept="image/png,image/jpeg,image/webp,image/gif,application/pdf,text/plain,text/markdown,application/json" multiple hidden>
+    <div class="composer-tools" role="toolbar" aria-label="เครื่องมือแชต">
+      <button class="icon-btn ptt" id="pttBtn" title="🎤 พูดแล้วส่ง (กดค้าง)" aria-label="พูดแล้วส่ง">🎤</button>
+      <button class="icon-btn chat-call-inline" id="chatCallFab" title="📞 โทรหาสลี่" aria-label="โทรหาสลี่">📞</button>
+      <button class="icon-btn" id="imgBtn" title="เพิ่มลงในแชท" aria-haspopup="dialog" aria-controls="addSheet" aria-label="เพิ่มลงในแชท">✚</button>
+      <button class="send" id="sendBtn" title="ส่ง" aria-label="ส่งข้อความ">➤</button>
+      <button class="icon-btn" id="chatRunBtn" title="▶ รัน code block ในแชต (ต้องกดเปิดเอง)" aria-label="รัน code block ในแชต">▶</button>
+      <button class="icon-btn" id="codeBtn" title="💻 Lab Console" aria-label="Lab Console">💻</button>
+    </div>
     <textarea id="inp" rows="1" placeholder="พิมพ์ข้อความ..." enterkeyhint="send"></textarea>
-    <button class="icon-btn ptt" id="pttBtn" title="🎤 พูดแล้วส่ง (กดค้าง)">🎤</button>
-    <button class="icon-btn chat-call-inline" id="chatCallFab" title="📞 โทรหาสลี่">📞</button>
-    <button class="icon-btn" id="imgBtn" title="แนบรูป">📄</button>
-    <button class="send" id="sendBtn" title="ส่ง">➤</button>
-    <button class="icon-btn" id="chatRunBtn" title="▶ รัน code block ในแชต (ต้องกดเปิดเอง)">▶</button>
-    <button class="icon-btn" id="codeBtn" title="💻 Lab Console">💻</button></div>
+  </div>
 </div>
-
+<div class="add-sheet" id="addSheet" aria-hidden="true">
+  <section class="add-sheet-panel" role="dialog" aria-modal="true" aria-labelledby="addSheetTitle">
+    <div class="add-sheet-handle"></div>
+    <header class="add-sheet-head"><h2 id="addSheetTitle">เพิ่มลงในแชท</h2><button class="add-sheet-close" id="addSheetClose" type="button" aria-label="ปิด">×</button></header>
+    <div id="addSheetItems"></div>
+  </section>
+</div>
 <!-- 🔒 หน้าจอล็อก -->
 <div class="lock" id="lockScreen" style="display:none!important">
   <div class="lock-box">
@@ -1718,7 +1887,7 @@ body.theme-dola #inp { border-radius: 16px; }
       <div class="ring2"></div><div class="ring2"></div><div class="ring2"></div>
       <div class="cface" id="callFace">💜</div>
     </div>
-    <div id="callName">สลี่ออลา</div>
+    <div id="callName">Sali · สลี่</div>
     <div id="callState">CONNECTING...</div>
     <div id="callTimer">00:00</div>
   </div>
@@ -1740,7 +1909,7 @@ body.theme-dola #inp { border-radius: 16px; }
 <script>
   /* ===== ห้อง ===== */
   const ROOMS = {
-    private: { name: 'SLI', tag: 'สลี่ออลา · ภรรยาของพี่นุ · ONLINE', avatar: '💜', accent: '#a78bfa' }
+    private: { name: 'SALI', tag: 'สลี่ · ผู้ช่วย AI ของพี่นุ · ONLINE', avatar: '💜', accent: '#a78bfa' }
   };
   let room = new URLSearchParams(location.search).get('room') || 'private';
   if (!ROOMS[room]) { room = 'private'; window.history.replaceState(null, '', '/chat'); }
@@ -2179,7 +2348,7 @@ body.theme-dola #inp { border-radius: 16px; }
     ];
     hero.innerHTML = `
       <div class="whero-orb"><div class="whero-glow"></div><div class="whero-core">💜</div></div>
-      <div class="whero-ttl">สวัสดีพี่นุ ครู CodingFleet อยู่ตรงนี้แล้ว <span class="grad">💜</span></div>
+      <div class="whero-ttl">สวัสดีพี่นุ สลี่อยู่ตรงนี้แล้ว <span class="grad">💜</span></div>
       <div class="whero-sub">AI ผู้ช่วยส่วนตัวที่ทำงานจริง ไม่ใช่แค่คุย — บอกสิ่งที่ต้องการ สลี่ทำให้เสร็จ</div>
       <div class="whero-badges">
         <span class="whero-badge">🐍 <b>รันโค้ดจริง</b> ผลลัพธ์จริง</span>
@@ -2206,39 +2375,49 @@ body.theme-dola #inp { border-radius: 16px; }
     msgsEl.scrollTop = 0;
   }
   function hideWelcome() { const wh = document.getElementById('welcomeHero'); if (wh) wh.remove(); }
-  function showAgentProc() {
+  function showAgentProc(traceId) {
     window.__procShownAt = Date.now();
-    const old = document.querySelectorAll('.agent-proc');
-    old.forEach(e => e.remove());
+    window.__procPoll = true;
+    document.querySelectorAll('.agent-proc').forEach(e => e.remove());
     const proc = document.createElement('div');
     proc.className = 'agent-proc';
-    const steps = [['🎯', 'วางแผน'], ['🛠️', 'เลือกเครื่องมือ'], ['⚙️', 'ลงมือทำ'], ['✅', 'ตรวจสอบ']];
-    proc.innerHTML = steps.map((s, i) => `
-      <span class="ap-chip" data-i="${i}"><span class="ap-ico">${s[0]}</span>${s[1]}</span>
-      ${i < steps.length - 1 ? '<span class="ap-arrow">→</span>' : ''}`).join('');
+    proc.style.cssText = 'width:min(100%,620px);display:block;padding:10px 12px;border:1px solid color-mix(in srgb,var(--accent) 32%,transparent);border-radius:14px;background:linear-gradient(135deg,color-mix(in srgb,var(--accent) 10%,transparent),rgba(255,255,255,.025));';
+    proc.innerHTML = '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px"><strong style="font-size:11px;color:var(--txt)">⚡ SILELO PROCESS · LIVE TRACE</strong><span class="ap-status" style="font-size:10px;color:var(--accent)">กำลังประมวลผล</span></div><div class="ap-live" style="margin-top:8px;display:flex;flex-direction:column;gap:5px"><div class="ap-empty" style="font-size:10px;color:var(--dim)">กำลังรอ trace จากเซิร์ฟเวอร์…</div></div><button type="button" class="ap-details" style="margin-top:8px;background:none;border:0;color:var(--accent);font-size:10px;cursor:pointer;padding:0" aria-expanded="false">ดูรายละเอียด</button>';
     msgsEl.appendChild(proc);
     msgsEl.scrollTop = msgsEl.scrollHeight;
-    steps.forEach((_, i) => setTimeout(() => {
-      const chips = proc.querySelectorAll('.ap-chip');
-      chips.forEach((c, j) => {
-        c.className = 'ap-chip ' + (j < i ? 'ok' : (j === i ? 'run' : ''));
-      });
-    }, 350 + i * 800));
+    const live = proc.querySelector('.ap-live');
+    const status = proc.querySelector('.ap-status');
+    const details = proc.querySelector('.ap-details');
+    let expanded = false;
+    details.onclick = () => { expanded = !expanded; details.setAttribute('aria-expanded', String(expanded)); details.textContent = expanded ? 'ซ่อนรายละเอียด' : 'ดูรายละเอียด'; live.style.maxHeight = expanded ? '280px' : '92px'; live.style.overflow = 'auto'; };
+    const render = (steps, done, provider, model) => {
+      const safe = Array.isArray(steps) ? steps.slice(-5) : [];
+      live.innerHTML = safe.length ? safe.map((s, i) => '<div class="ap-chip ' + (s.s === 'err' || s.s === 'fail' ? 'fail' : (s.s === 'ok' ? 'ok' : 'run')) + '" style="display:flex;justify-content:space-between;gap:10px;white-space:normal"><span><span class="ap-ico">' + (s.s === 'ok' ? '✓' : (s.s === 'err' || s.s === 'fail' ? '!' : '⟳')) + '</span> รอบ ' + (i + 1) + ' · ' + escHtml(String(s.n || 'กำลังทำงาน')) + '</span><span style="font:9px var(--font-mono);opacity:.75">' + (s.ms != null ? escHtml(String(s.ms)) + 'ms' : '') + '</span></div>').join('') : '<div class="ap-empty" style="font-size:10px;color:var(--dim)">เซิร์ฟเวอร์ยังไม่ส่งขั้นตอน</div>';
+      if (done) { status.textContent = 'เสร็จสิ้น' + (provider ? ' · ' + provider : '') + (model ? ' · ' + model : ''); status.style.color = '#34d399'; window.__procPoll = false; }
+    };
+    const poll = async () => {
+      if (!window.__procPoll || !traceId || !document.body.contains(proc)) return;
+      try { const r = await fetch('/api/think?since=' + encodeURIComponent(traceId), { credentials: 'same-origin' }); const j = await r.json(); render(j.steps || (j.current && j.current.steps), false); } catch (e) { status.textContent = 'กำลังรอเซิร์ฟเวอร์'; }
+      if (window.__procPoll) setTimeout(poll, 450);
+    };
+    poll();
+    proc._finish = (j) => { render(j && j.trace, true, j && j.provider, j && j.model); };
     return proc;
   }
   function hideAgentProc() {
+    window.__procPoll = false;
     const shown = window.__procShownAt || 0;
     const elapsed = Date.now() - shown;
-    const wait = 3000 - elapsed;
+    const wait = 900 - elapsed;
     if (wait > 0 && shown) { setTimeout(() => hideAgentProc(), wait); return; }
-    document.querySelectorAll('.agent-proc').forEach(e => e.remove());
+    document.querySelectorAll('.agent-proc').forEach(e => { if (e._finish) e._finish(); else e.remove(); });
   }
   function sendFromWelcome(q) { inp.value = q; autoGrow(); send(); }
 
   if (history.length) history.forEach(renderMsg);
   else {
     const hellos = {
-      private: 'สวัสดีครับพี่นุ! 👋 ครู CodingFleet อยู่ตรงนี้แล้ว 💜 — วันนี้มีอะไรให้ครูช่วยไหมครับ?'
+      private: 'สวัสดีพี่นุ! 👋 สลี่อยู่ตรงนี้แล้วนะ 💜 — วันนี้อยากให้สลี่ช่วยอะไรครับ?'
     };
     addMsg('assistant', hellos[room] || hellos.private);
     showWelcome();
@@ -2344,7 +2523,8 @@ body.theme-dola #inp { border-radius: 16px; }
     runCodeNext = false;
     syncChatRunBtn();
     addMsg('user', q);
-    showAgentProc();
+    const clientTraceId = Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+    const processPanel = showAgentProc(clientTraceId);
     inp.value = ''; autoGrow();
     // 🎨 วาดรูป
     const dp = extractDrawPrompt(q);
@@ -2361,9 +2541,12 @@ body.theme-dola #inp { border-radius: 16px; }
     bumpMemory();
     sending = true;
     try {
-      // 🐋 Puter DeepSeek ฟรีไม่จำกัด — ลองก่อน ถ้าสำเร็จไม่ต้องใช้โควต้าเซิร์ฟเวอร์
-      const p = requestedCodeRun ? null : await askPuter(q);
+      // 🐋 โหมด auto คง Puter ปลาโลมาเป็นทางเร็วเดิม; โหมด server ใช้ GPT → Groq → OpenRouter จริง
+      const selectedMode = (localStorage.getItem('nc_model') || 'auto').trim();
+      const serverModeSelected = selectedMode === 'openrouter_fast' || selectedMode === 'openrouter_balanced';
+      const p = requestedCodeRun || serverModeSelected ? null : await askPuter(q);
       if (p) {
+        if (processPanel && processPanel._finish) processPanel._finish({ trace: [{ n: 'Puter fast-path · ตอบเร็ว', s: 'ok', ms: p.ms || 0 }], provider: 'puter', model: p.model });
         addMsg('assistant', p.reply); notifyMsg(p.reply); scheduleReminder(p.reply);
         toast('⚡ ' + p.model + (p.ms ? ' · ' + (p.ms / 1000).toFixed(1) + 's' : ''));
         speak(p.reply);
@@ -2374,17 +2557,17 @@ body.theme-dola #inp { border-radius: 16px; }
         }
         const r = await fetch('/api/chat', {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ room, question: q, history: cleanHist(history.slice(-24, -1)), memory: getMemoryFor(q), unrestricted: noRules, super: superMode, runCode: requestedCodeRun }),
+          body: JSON.stringify({ room, question: q, history: cleanHist(history.slice(-24, -1)), memory: getMemoryFor(q), unrestricted: noRules, super: superMode, runCode: requestedCodeRun, traceId: clientTraceId, modelMode: ['openrouter_fast', 'openrouter_balanced'].includes((localStorage.getItem('nc_model') || '').trim()) ? localStorage.getItem('nc_model').trim() : 'auto' }),
           signal: AbortSignal.timeout(55000)
         });
         const j = await r.json();
-        if (j.reply) { const mb = addMsg('assistant', j.reply, Date.now(), null, (j.verified !== undefined && j.superRun) ? { verified: j.verified, superRun: j.superRun } : null); notifyMsg(j.reply); scheduleReminder(j.reply); toast('⚡ ' + (j.provider === 'mock' ? 'BACKUP MODE' : j.provider.toUpperCase() + ' · ' + j.model)); speak(j.reply);
+        if (j.reply) { if (processPanel && processPanel._finish) processPanel._finish(j); const mb = addMsg('assistant', j.reply, Date.now(), null, (j.verified !== undefined && j.superRun) ? { verified: j.verified, superRun: j.superRun } : null); notifyMsg(j.reply); scheduleReminder(j.reply); toast('⚡ ' + (j.provider === 'mock' ? 'BACKUP MODE' : j.provider.toUpperCase() + ' · ' + j.model)); speak(j.reply);
           if (j.provider === 'web' || j.provider === 'preview' || j.provider === 'ide') { try { SM.show('preview'); } catch (e) {} }
           if (j.provider === 'web' && mb) { const bb = mb.querySelector('.bubble'); if (bb) { const pb = document.createElement('button'); pb.className = 'preview-jump'; pb.innerHTML = '👁 ดูเว็บ Live'; pb.onclick = function () { try { SM.show('preview'); } catch (e) {} }; bb.appendChild(pb); } }
         }
-        else toast('⚠️ ' + (j.error || 'NO REPLY'));
+        else { if (processPanel && processPanel._finish) processPanel._finish({ trace: [{ n: 'เซิร์ฟเวอร์ไม่ส่งคำตอบ', s: 'err', ms: 0 }], provider: 'gateway', model: 'error' }); toast('⚠️ ' + (j.error || 'NO REPLY')); }
       }
-    } catch (e) { toast('⚠️ SERVER UNREACHABLE'); }
+    } catch (e) { if (processPanel && processPanel._finish) processPanel._finish({ trace: [{ n: 'เชื่อมต่อ gateway ไม่สำเร็จ', s: 'err', ms: Date.now() - window.__procShownAt }], provider: 'gateway', model: 'unreachable' }); toast('⚠️ SERVER UNREACHABLE'); }
     typing.style.display = 'none';
     sendBtn.disabled = false;
     sending = false;
@@ -2637,6 +2820,35 @@ body.theme-dola #inp { border-radius: 16px; }
       img.src = url;
     });
   }
+  async function uploadChatFile(file, dataOverride) {
+    if (!file) return null;
+    const data = dataOverride || await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result || ''));
+      reader.onerror = () => reject(new Error('อ่านไฟล์สำหรับอัปโหลดไม่ได้'));
+      reader.readAsDataURL(file);
+    });
+    const r = await fetch('/api/files/upload', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: file.name, type: file.type || 'application/octet-stream', data }) });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok || !j.ok) throw new Error(j.error === 'FILE_TOO_LARGE' ? 'ไฟล์เกิน 3MB' : (j.message || j.error || 'อัปโหลดไม่สำเร็จ'));
+    return j.file;
+  }
+  function uploadLargeImage(file) {
+    return new Promise((resolve, reject) => {
+      const request = new XMLHttpRequest();
+      request.open('POST', '/api/images/upload');
+      request.setRequestHeader('Content-Type', file.type || 'application/octet-stream');
+      request.setRequestHeader('X-File-Name', encodeURIComponent(file.name));
+      request.upload.onprogress = event => { if (event.lengthComputable) setTyping('📤 กำลังอัปโหลดรูป ' + Math.round(event.loaded / event.total * 100) + '%'); };
+      request.onerror = () => reject(new Error('เชื่อมต่อ upload ไม่สำเร็จ'));
+      request.onload = () => {
+        const data = (() => { try { return JSON.parse(request.responseText || '{}'); } catch (_) { return {}; } })();
+        if (request.status >= 200 && request.status < 300 && data.ok) resolve(data.file);
+        else reject(new Error(data.error === 'IMAGE_TOO_LARGE' ? 'รูปเกิน 50MB' : (data.error || 'อัปโหลดรูปไม่สำเร็จ')));
+      };
+      request.send(file);
+    });
+  }
   imgBtn.onclick = () => imgFile.click();
   imgFile.onchange = async () => {
     const f = imgFile.files[0];
@@ -2644,9 +2856,11 @@ body.theme-dola #inp { border-radius: 16px; }
     if (!f) return;
     const dataUrl = await resizeImage(f, 1024, 0.85);
     if (!dataUrl) { toast('⚠ อ่านรูปไม่ได้'); return; }
+    let uploaded = null;
+    try { uploaded = await uploadLargeImage(f); toast('📤 อัปโหลดรูปแล้ว (' + Math.ceil(uploaded.size / 1024 / 1024 * 10) / 10 + 'MB)'); } catch (uploadError) { toast('⚠️ รูปยังไม่ถูกเก็บ: ' + uploadError.message); }
     const q = inp.value.trim();
     inp.value = ''; autoGrow();
-    addMsg('user', q || '', Date.now(), dataUrl);
+    addMsg('user', q || (uploaded ? 'แนบรูป: ' + uploaded.name : ''), Date.now(), uploaded ? uploaded.url : dataUrl);
     bumpMemory();
     setTyping('👁️ กำลังวิเคราะห์รูป... (Gemini Vision)');
     sendBtn.disabled = true;
@@ -2701,10 +2915,90 @@ body.theme-dola #inp { border-radius: 16px; }
       else { toast('❌ ไฟล์ .' + ext + ' ยังอ่านไม่ได้'); return; }
     } catch (e) { toast('❌ อ่านไฟล์ไม่สำเร็จ: ' + e.message); return; }
     if (!text || !text.trim()) { toast('⚠️ ไม่มีข้อความในไฟล์'); return; }
-    const q = '📎 [ไฟล์: ' + f.name + ']\n\n' + text.trim().slice(0, 9000) + '\n\nช่วยอ่านและสรุป/วิเคราะห์ไฟล์นี้ให้หน่อย (ภาษาไทย กระชับ เข้าใจง่าย)';
+    let uploaded = null;
+    try { uploaded = await uploadChatFile(f); toast('📤 อัปโหลดไฟล์แล้ว'); } catch (uploadError) { toast('⚠️ ไฟล์ยังไม่ถูกเก็บ: ' + uploadError.message); }
+    const q = '📎 [ไฟล์: ' + f.name + (uploaded ? ' · เก็บที่ ' + uploaded.url : '') + ']\n\n' + text.trim().slice(0, 9000) + '\n\nช่วยอ่านและสรุป/วิเคราะห์ไฟล์นี้ให้หน่อย (ภาษาไทย กระชับ เข้าใจง่าย)';
     inp.value = q; autoGrow();
     send();
   }
+  /* ===== ➕ ADD TO CHAT — Manus-like menu with honest capability states ===== */
+  const addSheet = document.getElementById('addSheet');
+  const addSheetItems = document.getElementById('addSheetItems');
+  const addSheetClose = document.getElementById('addSheetClose');
+  const allFile = document.getElementById('allFile');
+  const addMenuGroups = [
+    { label: 'ไฟล์และพื้นที่ทำงาน', items: [
+      { id: 'files', icon: '📎', title: 'เพิ่มไฟล์ในเครื่อง', note: 'PNG, JPEG, WebP, GIF, PDF, TXT, MD, JSON · สูงสุด 3MB/ไฟล์', state: 'พร้อมใช้' },
+      { id: 'recent-files', icon: '📄', title: 'ไฟล์ล่าสุด', note: 'แสดงไฟล์ที่อัปโหลดใน session ปัจจุบัน', state: 'พร้อมใช้' },
+      { id: 'recent-work', icon: '☷', title: 'งานล่าสุด', note: 'เปิดหน้าจอการทำงานและเครื่องมือที่มีอยู่', state: 'พร้อมใช้' },
+      { id: 'skills', icon: '🧩', title: 'ทักษะและปลั๊กอิน', note: 'ตรวจ catalog และสิทธิ์จากระบบของคุณ', state: 'พร้อมใช้' },
+      { id: 'plan', icon: '☷', title: 'วางแผน', note: 'เริ่มคำสั่งภาษาคนผ่าน Agent Loop สูงสุด 5 รอบ', state: 'พร้อมใช้' }
+    ]},
+    { label: 'สร้างสื่อ', items: [
+      { id: 'image', icon: '🖼️', title: 'สร้างภาพ', note: 'ส่ง prompt ไปยัง Image Studio ที่มีอยู่', state: 'Image' },
+      { id: 'image-vision', icon: '🔎', title: 'วิเคราะห์รูป', note: 'แนบรูปเพื่อ Vision และเก็บไฟล์ตาม policy', state: 'พร้อมใช้' },
+      { id: 'edit-image', icon: '✨', title: 'แก้ไขภาพ', note: 'ยังไม่มี image-edit endpoint ที่ตรวจสอบได้', state: 'ต้องตั้งค่า', disabled: true },
+      { id: 'audio', icon: '〽', title: 'สร้างเสียง', note: 'แปลงข้อความในกล่องแชตเป็นเสียงด้วย TTS', state: 'พร้อมใช้' },
+      { id: 'video', icon: '▣', title: 'วางแผนวิดีโอ', note: 'สร้าง scene plan ไม่อ้างว่า render วิดีโอเสร็จ', state: 'พร้อมใช้' }
+    ]},
+    { label: 'สร้างโปรเจกต์', items: [
+      { id: 'game', icon: '🎮', title: 'สร้างเกม', note: 'เปิดคำสั่งสร้างโค้ดใน LAB', state: 'พร้อมใช้', badge: 'New' },
+      { id: 'slides', icon: '▰', title: 'สร้างสไลด์', note: 'สร้างโครงสไลด์และเนื้อหาผ่าน AI ก่อน export', state: 'พร้อมใช้' },
+      { id: 'website', icon: '▣', title: 'สร้างเว็บไซต์', note: 'เปิดคำสั่งสร้างเว็บและ preview workspace', state: 'พร้อมใช้' },
+      { id: 'app', icon: '▯', title: 'พัฒนาแอปพลิเคชัน', note: 'เปิดคำสั่งสร้างแอปและ IDE', state: 'พร้อมใช้' },
+      { id: 'spreadsheet', icon: '▦', title: 'สร้างสเปรดชีต', note: 'เริ่มคำสั่งสร้าง CSV/XLSX plan ผ่าน AI', state: 'พร้อมใช้' }
+    ]},
+    { label: 'เครื่องมือเพิ่มเติม', items: [
+      { id: 'research', icon: '◉', title: 'Wide Research', note: 'เปิด web search ที่มีแหล่งข้อมูล', state: 'พร้อมใช้' },
+      { id: 'browser', icon: '🌐', title: 'Browser Workspace', note: 'เปิด Preview หรือเว็บไซต์ HTTP/HTTPS ที่อนุญาต', state: 'พร้อมใช้' },
+      { id: 'liveops', icon: '📡', title: 'Live Operations', note: 'ดู LINE, trace, provider และ upload จากสถานะจริง', state: 'พร้อมใช้' },
+      { id: 'schedule', icon: '▣', title: 'งานที่กำหนดเวลา', note: 'ยังไม่มี scheduler backend ใน Neo-Connect', state: 'ต้องตั้งค่า', disabled: true },
+      { id: 'computer', icon: '▱', title: 'เชื่อมต่อคอมพิวเตอร์ของฉัน', note: 'ยังไม่มี secure computer connector', state: 'ต้องตั้งค่า', disabled: true },
+      { id: 'playbook', icon: '▤', title: 'Playbook', note: 'เปิดคู่มือการใช้ห้องและเครื่องมือ', state: 'พร้อมใช้' }
+    ]}
+  ];
+  function closeAddSheet() { addSheet.classList.remove('open'); addSheet.setAttribute('aria-hidden', 'true'); }
+  function openAddSheet() { addSheet.classList.add('open'); addSheet.setAttribute('aria-hidden', 'false'); }
+  function putPrompt(text) { inp.value = text; autoGrow(); inp.focus(); }
+  async function handleAddAction(id) {
+    if (id === 'files') return allFile.click();
+    if (id === 'recent-files') {
+      const r = await fetch('/api/files/recent'); const j = await r.json().catch(() => ({}));
+      if (!r.ok || !j.ok) return toast('🔒 เข้าสู่ระบบก่อนดูไฟล์ล่าสุด');
+      const lines = (j.files || []).map(file => '📄 ' + file.name + ' · ' + Math.ceil(file.size / 1024) + 'KB').join('\n');
+      return addMsg('assistant', lines ? ('ไฟล์ล่าสุดใน session นี้\n\n' + lines) : 'ยังไม่มีไฟล์ที่อัปโหลดใน session นี้');
+    }
+    if (id === 'image-vision') return imgFile.click();
+    if (id === 'plan') return putPrompt('ช่วยวางแผนงานนี้แบบเป็นขั้นตอน พร้อมเริ่มทำส่วนที่อนุญาต: ');
+    if (id === 'image') return putPrompt('/draw ');
+    if (id === 'audio') { const text = inp.value.trim(); if (!text) return putPrompt('พิมพ์ข้อความที่ต้องการสร้างเสียง: '); speak(text); return toast('🔊 กำลังสร้างเสียงจากข้อความในกล่องแชต'); }
+    if (id === 'video') return putPrompt('ช่วยวางแผนวิดีโอเป็น scene manifest ที่ตรวจสอบได้: ');
+    if (id === 'game') return putPrompt('ช่วยสร้างเกมเว็บจากคำอธิบายนี้ พร้อมแผนไฟล์และโค้ดเริ่มต้น: ');
+    if (id === 'slides') return putPrompt('ช่วยสร้างโครงสไลด์พร้อมชื่อสไลด์ เนื้อหา และ speaker notes: ');
+    if (id === 'website') return putPrompt('ช่วยสร้างเว็บไซต์จากคำอธิบายนี้ พร้อมโครงสร้างและ preview plan: ');
+    if (id === 'app') return putPrompt('ช่วยพัฒนาแอปพลิเคชันจากคำอธิบายนี้ พร้อม architecture ที่ปลอดภัย: ');
+    if (id === 'spreadsheet') return putPrompt('ช่วยออกแบบสเปรดชีต/CSV จากความต้องการนี้ พร้อมคอลัมน์และสูตรที่จำเป็น: ');
+    if (id === 'recent-work') return SM.show('tools');
+    if (id === 'playbook') return SM.show('help');
+    if (id === 'research') { const web = document.querySelector('.ct-btn.ct-web'); if (web) return web.click(); return toast('⚠️ Web search ยังไม่พร้อม'); }
+    if (id === 'browser') return SM.show('browser');
+    if (id === 'liveops') return SM.show('liveops');
+    if (id === 'skills') {
+      const r = await fetch('/api/plugins'); const j = await r.json().catch(() => ({}));
+      if (!r.ok || !j.ok) return toast('🔒 เข้าสู่ระบบก่อนดูปลั๊กอิน');
+      return toast('🧩 ปลั๊กอินพร้อมใช้ ' + j.plugins.filter(p => p.usable).length + ' รายการ');
+    }
+  }
+  addSheetItems.innerHTML = addMenuGroups.map(group => '<section class="add-sheet-group"><span class="add-sheet-label">' + group.label + '</span>' + group.items.map(item => '<button class="add-sheet-item" type="button" data-add-action="' + item.id + '"' + (item.disabled ? ' disabled' : '') + '><span class="add-sheet-icon">' + item.icon + '</span><span><span class="add-sheet-title">' + item.title + '</span><span class="add-sheet-note">' + item.note + '</span></span><span class="add-sheet-badge' + (item.disabled ? ' setup' : '') + '">' + (item.badge || item.state) + '</span></button>').join('') + '</section>').join('');
+  imgBtn.onclick = openAddSheet;
+  addSheetClose.onclick = closeAddSheet;
+  addSheet.addEventListener('click', e => { if (e.target === addSheet) closeAddSheet(); });
+  addSheetItems.addEventListener('click', async e => { const button = e.target.closest('[data-add-action]'); if (!button || button.disabled) return; closeAddSheet(); try { await handleAddAction(button.dataset.addAction); } catch (error) { toast('⚠️ ' + (error.message || 'เปิดเมนูไม่สำเร็จ')); } });
+  allFile.onchange = async () => {
+    const files = Array.from(allFile.files || []); allFile.value = '';
+    if (files.length > 4) toast('📎 เลือกได้ครั้งละ 4 ไฟล์เพื่อคงความเสถียร');
+    for (const file of files.slice(0, 4)) await handleDroppedFile(file);
+  };
   let dragDepth = 0;
   document.addEventListener('dragenter', e => { dragDepth++; document.body.classList.add('dropzone'); e.preventDefault(); });
   document.addEventListener('dragover', e => { e.preventDefault(); });
@@ -3904,6 +4198,7 @@ lockScreen.classList.remove('show');
       <button class="dola-set-item" data-act="newtopic"><span class="dola-set-ico">➕</span> เริ่มหัวข้อใหม่</button>
       <button class="dola-set-item" data-act="history"><span class="dola-set-ico">🔍</span> ประวัติการค้นหา</button>
       <button class="dola-set-item" data-act="default"><span class="dola-set-ico">⚡</span> ค่าเริ่มต้นสำหรับแชทใหม่ — รวดเร็ว<span class="dola-set-val" id="dolaValModel">อัตโนมัติ</span></button>
+      <button class="dola-set-item" data-act="system-controls"><span class="dola-set-ico">🧩</span> System Control Center<span class="dola-set-val">ปลั๊กอิน · Agent · LINE</span></button>
       <button class="dola-set-item" data-act="privacy"><span class="dola-set-ico">🔒</span> ความเป็นส่วนตัวและสิทธิ์</button>
       <button class="dola-set-item" data-act="help"><span class="dola-set-ico">🚩</span> ความช่วยเหลือและข้อเสนอแนะ</button>
       <button class="dola-set-item" data-act="about"><span class="dola-set-ico">ℹ️</span> เกี่ยวกับ CFBossnusilelo</button>
@@ -4267,6 +4562,13 @@ document.addEventListener('DOMContentLoaded', () => {
           try { localStorage.setItem('nc_model', 'auto'); } catch (e) {}
           syncSettingsVals();
           toast('⚡ ค่าเริ่มต้นแชทใหม่: รวดเร็ว (อัตโนมัติ)');
+        } else if (act === 'system-controls') {
+          closeSettings();
+          if (typeof SM !== 'undefined' && SM && typeof SM.show === 'function') {
+            SM.show('settings');
+          } else {
+            toast('⚠️ System Control Center ยังไม่พร้อม');
+          }
         } else if (act === 'privacy') {
           showInfo('🔒 ความเป็นส่วนตัวและสิทธิ์', '<p>ข้อมูลแชทของคุณถูกเก็บไว้ในเครื่องคุณเอง (localStorage) และผ่านเซิร์ฟเวอร์เพื่อประมวลผลคำตอบเท่านั้น</p><ul><li>🔐 บทสนทนาส่วนตัว — ไม่แชร์กับใคร</li><li>🛡️ ไม่เก็บประวัติการค้นหา</li><li>🎙️ ไมโครโฟนใช้เฉพาะตอนกดโทร/พูด</li><li>📷 กล้องใช้เฉพาะตอนเปิดกล้องให้ AI ดู</li></ul><p>สิทธิ์ทั้งหมดสามารถเปิด-ปิดได้ที่เบราว์เซอร์ของคุณ</p>');
         } else if (act === 'help') {
@@ -4839,6 +5141,114 @@ SM.register('preview', {
   }
 });
 
+/* ── Browser Workspace ── */
+SM.register('browser', {
+  title: '🌐 Browser Workspace',
+  subtitle: 'เปิด Preview หรือเว็บที่อนุญาตในพื้นที่ปลอดภัย',
+  actions: '<button class="silelo-screen-back" onclick="SM.back()" title="กลับห้องแชต">← กลับ</button>',
+  init: async function(el) {
+    var body = el.querySelector('.silelo-screen-body');
+    if (!body) return;
+    body.innerHTML =
+      '<div class="screen-preview-toolbar">' +
+        '<input type="text" class="screen-preview-url" id="browserWorkspaceUrl" value="/preview/" placeholder="https://example.com หรือ /preview/">' +
+        '<button id="browserWorkspaceGo" title="เปิด URL">เปิด</button>' +
+        '<button id="browserWorkspaceRefresh" title="รีเฟรช">🔄</button>' +
+        '<button id="browserWorkspaceExternal" title="เปิดในแท็บใหม่">↗</button>' +
+      '</div>' +
+      '<p id="browserWorkspaceStatus" class="screen-preview-status">พร้อมเปิด Preview ของ workspace</p>' +
+      '<iframe class="screen-preview-frame" id="browserWorkspaceFrame" src="/preview/" sandbox="allow-scripts allow-same-origin allow-forms allow-popups"></iframe>';
+    var input = body.querySelector('#browserWorkspaceUrl');
+    var frame = body.querySelector('#browserWorkspaceFrame');
+    var status = body.querySelector('#browserWorkspaceStatus');
+    function safeUrl(raw) {
+      var value = String(raw || '').trim();
+      if (value.startsWith('/preview/')) return value;
+      try { var url = new URL(value); return /^https?:$/.test(url.protocol) ? url.href : null; } catch (_) { return null; }
+    }
+    function openWorkspace() {
+      var url = safeUrl(input.value);
+      if (!url) { status.textContent = 'ใช้ได้เฉพาะ /preview/ หรือ URL ที่ขึ้นต้นด้วย http:// / https://'; status.dataset.state = 'error'; return; }
+      input.value = url; status.textContent = 'กำลังเปิด ' + url; status.dataset.state = 'loading'; frame.src = url;
+    }
+    body.querySelector('#browserWorkspaceGo').addEventListener('click', openWorkspace);
+    body.querySelector('#browserWorkspaceRefresh').addEventListener('click', function() { frame.src = frame.src; status.textContent = 'กำลังรีเฟรช'; status.dataset.state = 'loading'; });
+    body.querySelector('#browserWorkspaceExternal').addEventListener('click', function() { var url = safeUrl(input.value); if (!url) return openWorkspace(); window.open(url, '_blank', 'noopener,noreferrer'); status.textContent = 'เปิดแท็บภายนอกแล้ว'; status.dataset.state = 'ok'; });
+    input.addEventListener('keydown', function(e) { if (e.key === 'Enter') openWorkspace(); });
+    frame.addEventListener('load', function() { status.textContent = 'เปิดใน Browser Workspace แล้ว'; status.dataset.state = 'ok'; });
+  }
+});
+
+/* ── Live Operations ── */
+SM.register('liveops', {
+  title: '📡 Live Operations',
+  subtitle: 'สถานะที่ยืนยันได้ของระบบปัจจุบัน',
+  actions: '<button class="silelo-screen-back" onclick="SM.back()" title="กลับห้องแชต">← กลับ</button>',
+  init: async function(el) {
+    var body = el.querySelector('.silelo-screen-body');
+    if (!body) return;
+    if (el._liveOpsTimer) clearInterval(el._liveOpsTimer);
+    body.innerHTML =
+      '<main class="ops-console" aria-live="polite">' +
+        '<section class="ops-hero"><div><div class="ops-kicker"><span class="ops-signal"></span> VERIFIED RUNTIME</div><h2 class="ops-heading" id="liveOpsHeadline">กำลังเชื่อมสถานะจริง</h2><p class="ops-subtitle">ภาพรวมของ AI trace, LINE bridge, ไฟล์ และ runtime สำหรับ session ปัจจุบันเท่านั้น</p></div><div class="ops-actions"><div class="ops-meta" id="liveOpsUpdated">รอข้อมูลจาก server</div><button id="liveOpsRefresh" class="ops-refresh" type="button" aria-busy="false"><span class="ops-refresh-icon">↻</span><span>รีเฟรช</span></button></div></section>' +
+        '<section class="ops-metrics" id="liveOpsCards" aria-label="สถานะระบบ"></section>' +
+        '<section class="ops-lower"><article class="ops-panel"><div class="ops-panel-head"><div class="ops-panel-title">AI execution trace</div><div class="ops-caption" id="liveOpsTraceState">รอข้อมูล</div></div><div class="ops-trace-line"><div class="ops-trace-steps" id="liveOpsSteps"></div><div class="ops-trace-number" id="liveOpsStepCount">0/5</div></div><div class="ops-facts"><div class="ops-fact"><div class="ops-fact-label">Provider ล่าสุด</div><div class="ops-fact-value" id="liveOpsProvider">—</div></div><div class="ops-fact"><div class="ops-fact-label">Model ล่าสุด</div><div class="ops-fact-value" id="liveOpsModel">—</div></div></div></article><aside class="ops-panel"><div class="ops-panel-head"><div class="ops-panel-title">Data boundary</div><div class="ops-caption">session scoped</div></div><div class="ops-security"><span>◈</span><div><b>ไม่แสดงข้อมูลลับ</b><br>ไม่มี token, เนื้อหาข้อความ, LINE user ID หรือไฟล์ของผู้ใช้อื่น</div></div><div class="ops-security"><span>◌</span><div><b>Polling ตามหน้าจอ</b><br>รีเฟรชเฉพาะขณะเปิด Live Operations</div></div></aside></section>' +
+      '</main>';
+    var cards = body.querySelector('#liveOpsCards');
+    var headline = body.querySelector('#liveOpsHeadline');
+    var updated = body.querySelector('#liveOpsUpdated');
+    var refreshButton = body.querySelector('#liveOpsRefresh');
+    var steps = body.querySelector('#liveOpsSteps');
+    var stepCount = body.querySelector('#liveOpsStepCount');
+    var traceStateLabel = body.querySelector('#liveOpsTraceState');
+    var provider = body.querySelector('#liveOpsProvider');
+    var model = body.querySelector('#liveOpsModel');
+    function escapeText(value) { return String(value == null ? '' : value).replace(/[&<>'"]/g, function(char) { return ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', "'":'&#39;', '"':'&quot;' })[char]; }); }
+    function card(icon, title, state, value, detail, color) {
+      return '<article class="ops-card" style="--ops-color:' + color + '"><div class="ops-card-head"><span class="ops-card-label"><span class="ops-card-icon">' + icon + '</span><span class="ops-card-title">' + escapeText(title) + '</span></span><span class="ops-status">' + escapeText(state) + '</span></div><div class="ops-value">' + escapeText(value) + '</div><div class="ops-detail">' + escapeText(detail) + '</div></article>';
+    }
+    function renderTrace(stepTotal, state, traceProvider, traceModel) {
+      var count = Math.max(0, Math.min(5, Number(stepTotal) || 0));
+      steps.innerHTML = Array.from({ length: 5 }, function(_, index) { return '<span class="ops-step' + (index < count ? ' is-active' : '') + '"></span>'; }).join('');
+      stepCount.textContent = count + '/5';
+      traceStateLabel.textContent = state === 'live' ? 'กำลังทำงานจริง' : (state === 'complete' ? 'เสร็จล่าสุด' : 'ยังไม่มีงาน');
+      provider.textContent = traceProvider || '—';
+      model.textContent = traceModel || '—';
+    }
+    async function refresh() {
+      try {
+        refreshButton.setAttribute('aria-busy', 'true');
+        headline.textContent = 'กำลังอ่านสถานะจริง';
+        var response = await fetch('/api/live-operations', { credentials: 'same-origin' });
+        var data = await response.json().catch(function() { return {}; });
+        if (!response.ok || !data.ok) throw new Error(data.error || 'โหลดสถานะไม่ได้');
+        var traceState = data.trace.state === 'live' ? 'LIVE' : (data.trace.state === 'complete' ? 'เสร็จล่าสุด' : 'ว่าง');
+        var traceColor = data.trace.state === 'live' ? '#22c55e' : (data.trace.state === 'complete' ? '#60a5fa' : '#94a3b8');
+        var lineState = data.line.state === 'configured' ? 'พร้อม' : (data.line.state === 'login-only' ? 'Login พร้อม' : 'ต้องตั้งค่า');
+        var lineColor = data.line.state === 'configured' ? '#22c55e' : (data.line.state === 'login-only' ? '#fbbf24' : '#94a3b8');
+        cards.innerHTML =
+          card('◌', 'AI Trace', traceState, data.trace.state === 'live' ? 'กำลังทำงาน' : (data.trace.state === 'complete' ? 'จบล่าสุด' : 'ยังไม่มีงาน'), 'Trace ' + (data.trace.id ? 'พร้อมตรวจสอบ' : 'ยังไม่เริ่ม') + ' · ' + data.trace.stepCount + ' ขั้นตอน', traceColor) +
+          card('↗', 'LINE Bridge', lineState, data.line.botConfigured ? 'Bot พร้อม' : (data.line.loginConfigured ? 'Login พร้อม' : 'รอตั้งค่า'), data.line.botConfigured ? 'ตรวจพบการตั้งค่า bot' : (data.line.loginConfigured ? 'ยังไม่มี bot bridge runtime' : 'ไม่มี LINE config ใน runtime'), lineColor) +
+          card('⌁', 'Upload', data.upload.state === 'ready' ? 'พร้อม' : data.upload.state, data.upload.recentCount + ' ไฟล์', 'รูปสูงสุด 50MB · ไฟล์สูงสุด 3MB', '#51e5a7') +
+          card('◈', 'Runtime', 'online', 'Node ' + data.runtime.node, 'Uptime ' + data.runtime.uptimeSeconds + ' วินาที · response ' + data.runtime.responseMs + 'ms', '#72baff');
+        renderTrace(data.trace.stepCount, data.trace.state, data.trace.provider, data.trace.model);
+        headline.textContent = data.trace.state === 'live' ? 'ระบบกำลังทำงาน' : 'ระบบพร้อมใช้งาน';
+        updated.textContent = 'อัปเดต ' + new Date(data.at).toLocaleTimeString() + ' · ทุก ' + (data.refreshAfterMs / 1000) + ' วินาที';
+      } catch (error) {
+        headline.textContent = 'อ่านสถานะไม่ได้';
+        cards.innerHTML = card('!', 'Live Operations', 'error', 'เชื่อมไม่ได้', String(error.message || error), '#fb7185');
+        renderTrace(0, 'error', '', '');
+        updated.textContent = 'ตรวจสอบการเข้าสู่ระบบหรือการเชื่อมต่อ แล้วลองรีเฟรชอีกครั้ง';
+      } finally {
+        refreshButton.setAttribute('aria-busy', 'false');
+      }
+    }
+    body.querySelector('#liveOpsRefresh').addEventListener('click', refresh);
+    await refresh();
+    el._liveOpsTimer = setInterval(function() { if (SM.isActive('liveops')) refresh(); }, 2500);
+  }
+});
+
 /* ── Deploy Screen ── */
 SM.register('deploy', {
   title: '🚀 Deploy',
@@ -5209,6 +5619,42 @@ SM.register('settings', {
             '<option value="x-ai/grok-4-1-fast">Grok 4.1 Fast</option>' +
           '</select>' +
         '</div>' +
+      '</div>' +
+      '<div class="screen-settings-group">' +
+        '<div class="screen-settings-group-title">🧩 ปลั๊กอินและ Agent</div>' +
+        '<div class="screen-settings-item">' +
+          '<div class="screen-settings-item-icon">🧩</div>' +
+          '<div class="screen-settings-item-body"><div class="screen-settings-item-title">Plugin Control Center</div><div class="screen-settings-item-desc">จัดการ catalog และสิทธิ์ปลั๊กอินของระบบคุณ</div></div>' +
+          '<button class="silelo-screen-back" type="button" data-settings-action="plugins">เปิด</button>' +
+        '</div>' +
+        '<div class="screen-settings-item">' +
+          '<div class="screen-settings-item-icon">🔁</div>' +
+          '<div class="screen-settings-item-body"><div class="screen-settings-item-title">Natural Language Agent Loop</div><div class="screen-settings-item-desc">คำสั่งภาษาคน ทำงานไม่เกิน 5 รอบ</div></div>' +
+          '<button class="silelo-screen-back" type="button" data-settings-action="agent">เปิด</button>' +
+        '</div>' +
+        '<div class="screen-settings-item">' +
+          '<div class="screen-settings-item-icon">📡</div>' +
+          '<div class="screen-settings-item-body"><div class="screen-settings-item-title">Live Processing Trace</div><div class="screen-settings-item-desc">แสดงขั้นตอนจริงจากจอประมวลผล</div></div>' +
+          '<button class="silelo-screen-back" type="button" data-settings-action="trace">เปิด</button>' +
+        '</div>' +
+      '</div>' +
+      '<div class="screen-settings-group">' +
+        '<div class="screen-settings-group-title">🔐 ความปลอดภัยและการเชื่อมต่อ</div>' +
+        '<div class="screen-settings-item">' +
+          '<div class="screen-settings-item-icon">🛡️</div>' +
+          '<div class="screen-settings-item-body"><div class="screen-settings-item-title">Privacy & Owner Armor</div><div class="screen-settings-item-desc">ตรวจ session และสิทธิ์เจ้าของจาก server</div></div>' +
+          '<button class="silelo-screen-back" type="button" data-settings-action="privacy">ตรวจสอบ</button>' +
+        '</div>' +
+        '<div class="screen-settings-item">' +
+          '<div class="screen-settings-item-icon">💬</div>' +
+          '<div class="screen-settings-item-body"><div class="screen-settings-item-title">LINE Bridge</div><div class="screen-settings-item-desc">คง webhook และ LINE Login เดิม</div></div>' +
+          '<button class="silelo-screen-back" type="button" data-settings-action="line">ตรวจสถานะ</button>' +
+        '</div>' +
+        '<div class="screen-settings-item">' +
+          '<div class="screen-settings-item-icon">📎</div>' +
+          '<div class="screen-settings-item-body"><div class="screen-settings-item-title">Secure Files</div><div class="screen-settings-item-desc">ไฟล์ต้องผ่าน auth, MIME และ size policy</div></div>' +
+          '<button class="silelo-screen-back" type="button" data-settings-action="files">ดู policy</button>' +
+        '</div>' +
       '</div>';
 
     /* Wire up settings actions */
@@ -5239,6 +5685,57 @@ SM.register('settings', {
             val.textContent = isOn ? 'ปิด' : 'เปิด';
             localStorage.setItem('nc_mem', isOn ? '0' : '1');
           }
+        }
+      });
+    });
+
+    /* Extended settings actions */
+    body.querySelectorAll('[data-settings-action]').forEach(function(button) {
+      button.addEventListener('click', async function() {
+        var action = button.dataset.settingsAction;
+        button.disabled = true;
+        try {
+          if (action === 'plugins') {
+            var pr = await fetch('/api/plugins');
+            var pj = await pr.json().catch(function() { return {}; });
+            if (!pr.ok || !pj.ok) throw new Error(pj.message || 'ต้องเข้าสู่ระบบก่อนจัดการปลั๊กอิน');
+            toast('🧩 Plugin Control Center: ' + pj.plugins.filter(function(p) { return p.usable; }).length + ' รายการพร้อมใช้');
+          } else if (action === 'agent' || action === 'trace') {
+            var key = action === 'agent' ? 'nc_agent_loop' : 'nc_trace';
+            var next = localStorage.getItem(key) !== '1';
+            localStorage.setItem(key, next ? '1' : '0');
+            button.textContent = next ? 'เปิดอยู่' : 'ปิดอยู่';
+            toast((action === 'agent' ? '🔁 Agent Loop' : '📡 Live Trace') + (next ? ' เปิดแล้ว' : ' ปิดแล้ว'));
+          } else if (action === 'privacy') {
+            var ar = await fetch('/api/auth/me');
+            var aj = await ar.json().catch(function() { return {}; });
+            toast(aj.ok ? ('🛡️ Session: ' + (aj.owner ? 'Owner' : 'Authenticated') + ' · Armor ' + (aj.ownerArmorEnabled ? 'ON' : 'OFF')) : '🔒 ยังไม่ได้เข้าสู่ระบบ');
+          } else if (action === 'line') {
+            var lr = await fetch('/api/live-operations');
+            var lj = await lr.json().catch(function() { return {}; });
+            if (!lr.ok || !lj.ok || !lj.line) throw new Error(lj.message || 'อ่านสถานะ LINE ไม่สำเร็จ');
+            if (lj.line.state === 'configured') {
+              button.textContent = 'เชื่อม LINE Login';
+              toast('💬 LINE Bot และ LINE Login พร้อมใช้งาน · กดอีกครั้งเพื่อเริ่มเข้าสู่ระบบ');
+              button.dataset.lineReady = '1';
+            } else if (lj.line.state === 'login-only') {
+              button.textContent = 'เชื่อม LINE Login';
+              toast('💬 LINE Login พร้อม แต่ LINE Bot ยังต้องตั้งค่าแยกต่างหาก');
+              button.dataset.lineReady = '1';
+            } else {
+              button.textContent = 'ต้องตั้งค่า';
+              button.dataset.lineReady = '0';
+              toast('💬 LINE ยังไม่ได้ตั้งค่าใน runtime นี้ · ไม่มีการเปลี่ยน webhook หรือส่งข้อความออก');
+            }
+            if (button.dataset.lineReady === '1' && button.dataset.lineChecked === '1') window.location.href = '/api/auth/line';
+            button.dataset.lineChecked = '1';
+          } else if (action === 'files') {
+            toast('📎 Secure Files: ต้อง login และผ่าน MIME/size policy ของ server');
+          }
+        } catch (err) {
+          toast('⚠️ ' + (err.message || 'ตั้งค่าไม่สำเร็จ'));
+        } finally {
+          button.disabled = false;
         }
       });
     });
@@ -5327,6 +5824,8 @@ function initScreenNavigation() {
     'teamBtn': 'team',
     'toolsBtn': 'tools',
     'coderBtn': 'ide',
+    'browserBtn': 'browser',
+    'liveOpsBtn': 'liveops',
     'themeBtn': 'settings',
   };
 
@@ -5334,7 +5833,8 @@ function initScreenNavigation() {
     var id = entry[0];
     var screen = entry[1];
     var btn = document.getElementById(id);
-    if (btn) {
+    if (btn && btn.dataset.screenBound !== '1') {
+      btn.dataset.screenBound = '1';
       btn.dataset.screen = screen;
       btn.classList.add('header-screen-btn');
       btn.addEventListener('click', function(e) {
@@ -5356,14 +5856,24 @@ function initScreenNavigation() {
 
   /* Menu button opens sidebar */
   var menuBtn = document.getElementById('menuBtn');
-  if (menuBtn) {
-    menuBtn.addEventListener('click', function() {
-      var sidebar = document.getElementById('dolaSidebar');
-      var overlay = document.getElementById('dolaOverlay');
-      if (sidebar) sidebar.classList.add('show');
-      if (overlay) overlay.classList.add('show');
-    });
-  }
+	if (menuBtn) {
+	  menuBtn.addEventListener('click', function() {
+	    var sidebar = document.getElementById('dolaSidebar');
+	    var overlay = document.getElementById('dolaOverlay');
+	    if (sidebar) sidebar.classList.add('show');
+	    if (overlay) overlay.classList.add('show');
+	  });
+	}
+}
+
+function bindBrowserWorkspaceButton() {
+  var browserButton = document.getElementById('browserBtn');
+  if (!browserButton || browserButton.dataset.workspaceBound === '1') return;
+  browserButton.dataset.workspaceBound = '1';
+  browserButton.addEventListener('click', function(e) {
+    e.preventDefault();
+    SM.show('browser');
+  });
 }
 
 /* ── Sidebar tools: กด = คลิกปุ่มหลัก (ที่ซ่อน) ── */
@@ -5380,6 +5890,7 @@ document.querySelectorAll('.sb-tool').forEach(function(bt) {
 /* ──── Initialize ──── */
 function sileloInitScreens() {
   try { initScreenNavigation(); } catch (e) { console.warn('nav', e); }
+  try { bindBrowserWorkspaceButton(); } catch (e) { console.warn('browser workspace', e); }
   try { SM.init(); } catch (e) { console.warn('sm', e); }
 }
 if (document.readyState === 'loading') {

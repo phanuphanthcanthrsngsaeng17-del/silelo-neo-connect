@@ -353,6 +353,19 @@
   .tp.on { border-color: var(--txt); box-shadow: 0 0 14px var(--glow); transform: scale(1.12); }
 
   /* ========== เบา: หยุด animation ถ้าผู้ใช้ตั้งค่า ========== */
+  @media (max-width: 640px) {
+    html, body { width: 100%; max-width: 100%; overflow-x: hidden; }
+    .wrap { width: 100%; max-width: 100%; padding: 14px 12px 84px; overflow: hidden; }
+    .hud { width: 100%; min-width: 0; gap: 8px 10px; padding: 10px 12px; }
+    .hud .cell { flex: 1 1 calc(50% - 10px); min-width: 0; letter-spacing: 1.4px; }
+    .hud .cell b { font-size: 12px; }
+    .hero h1 { letter-spacing: 6px; font-size: clamp(32px, 12vw, 60px); overflow-wrap: anywhere; }
+    .hero .sub { letter-spacing: 6px; }
+    .tagline { letter-spacing: .5px; padding: 0 8px; line-height: 1.55; }
+    .quick { gap: 9px; }
+    .quick a { width: 100%; justify-content: center; padding: 12px 16px; font-size: 12px; letter-spacing: 1.2px; }
+    .grid-bg { left: -10%; right: -10%; }
+  }
   @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after { animation: none !important; transition: none !important; }
   }
