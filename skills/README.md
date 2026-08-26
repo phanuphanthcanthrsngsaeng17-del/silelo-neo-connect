@@ -25,3 +25,9 @@
 ## Pull Request validation
 
 เมื่อเปิดหรืออัปเดต Pull Request workflow `.github/workflows/validate-silelo-skills.yml` จะเรียก `python scripts/validate_skills.py` โดยอัตโนมัติ งานตรวจใช้สิทธิ์ `contents: read` เท่านั้นและยกเลิกรันเก่าของ PR เดียวกันเมื่อมีการ push commit ใหม่ หากต้องการตรวจในเครื่อง ให้รันคำสั่งเดียวกันจาก root ของ repository
+
+## Chat code-block execution
+
+`/api/chat` รองรับการตรวจพบ fenced code block แต่จะรันก็ต่อเมื่อ client ส่ง `runCode: true` และเซิร์ฟเวอร์ตั้ง `CHAT_CODE_EXECUTION_ENABLED=on` เท่านั้น การมี markdown fence หรือ `super: true` เพียงอย่างเดียวจะไม่เปิด execution path ใหม่นี้ เพื่อไม่ให้ข้อความทั่วไปสั่งรันโค้ดโดยไม่ตั้งใจ
+
+ระบบจำกัดไม่เกิน 2 บล็อก และ 12,000 ตัวอักษรต่อบล็อก แล้วส่งผล `stdout`, `stderr`, exit code และเวลาใช้กลับเป็นข้อความในห้องเดิม หากปิด flag ระบบจะแจ้งตรง ๆ ว่ายังไม่รันและแนะนำให้ใช้ LAB Console การตั้งค่า `CHAT_CODE_EXECUTION_ENABLED=on` ควรใช้เฉพาะ deployment ที่มี sandbox/container isolation จริงเท่านั้น เพราะ child process ที่มี timeout และ output limit ไม่ใช่ security boundary สมบูรณ์

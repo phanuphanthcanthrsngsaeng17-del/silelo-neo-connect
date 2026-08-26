@@ -1639,6 +1639,7 @@ body.theme-dola #inp { border-radius: 16px; }
     <button class="icon-btn chat-call-inline" id="chatCallFab" title="📞 โทรหาสลี่">📞</button>
     <button class="icon-btn" id="imgBtn" title="แนบรูป">📄</button>
     <button class="send" id="sendBtn" title="ส่ง">➤</button>
+    <button class="icon-btn" id="chatRunBtn" title="▶ รัน code block ในแชต (ต้องกดเปิดเอง)">▶</button>
     <button class="icon-btn" id="codeBtn" title="💻 Lab Console">💻</button></div>
 </div>
 
@@ -2320,11 +2321,28 @@ body.theme-dola #inp { border-radius: 16px; }
     } catch (e) {}
   }
   let sending = false;
+  let runCodeNext = false;
+  const chatRunBtn = document.getElementById('chatRunBtn');
+  function syncChatRunBtn() {
+    if (!chatRunBtn) return;
+    chatRunBtn.classList.toggle('active', runCodeNext);
+    chatRunBtn.setAttribute('aria-pressed', runCodeNext ? 'true' : 'false');
+    chatRunBtn.title = runCodeNext ? '▶ รัน code block ในแชต: เปิดอยู่ (กดเพื่อปิด)' : '▶ รัน code block ในแชต (ต้องกดเปิดเอง)';
+  }
+  if (chatRunBtn) chatRunBtn.onclick = () => {
+    runCodeNext = !runCodeNext;
+    syncChatRunBtn();
+    toast(runCodeNext ? '▶ เปิดรัน code block สำหรับข้อความถัดไป' : 'รัน code block ปิดอยู่');
+  };
+  syncChatRunBtn();
   async function send() {
     unlockAudio();
     if (sending) { toast('⏳ รอสลี่ตอบก่อนน้า... เดี๋ยวส่งต่อให้'); return; }
     const q = inp.value.trim();
     if (!q) return;
+    const requestedCodeRun = runCodeNext;
+    runCodeNext = false;
+    syncChatRunBtn();
     addMsg('user', q);
     showAgentProc();
     inp.value = ''; autoGrow();
@@ -2344,7 +2362,7 @@ body.theme-dola #inp { border-radius: 16px; }
     sending = true;
     try {
       // 🐋 Puter DeepSeek ฟรีไม่จำกัด — ลองก่อน ถ้าสำเร็จไม่ต้องใช้โควต้าเซิร์ฟเวอร์
-      const p = await askPuter(q);
+      const p = requestedCodeRun ? null : await askPuter(q);
       if (p) {
         addMsg('assistant', p.reply); notifyMsg(p.reply); scheduleReminder(p.reply);
         toast('⚡ ' + p.model + (p.ms ? ' · ' + (p.ms / 1000).toFixed(1) + 's' : ''));
@@ -2356,7 +2374,7 @@ body.theme-dola #inp { border-radius: 16px; }
         }
         const r = await fetch('/api/chat', {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ room, question: q, history: cleanHist(history.slice(-24, -1)), memory: getMemoryFor(q), unrestricted: noRules, super: superMode }),
+          body: JSON.stringify({ room, question: q, history: cleanHist(history.slice(-24, -1)), memory: getMemoryFor(q), unrestricted: noRules, super: superMode, runCode: requestedCodeRun }),
           signal: AbortSignal.timeout(55000)
         });
         const j = await r.json();

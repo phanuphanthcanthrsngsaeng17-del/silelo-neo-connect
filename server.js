@@ -12,6 +12,7 @@ const express = require('express');
 const path = require('path');
 const fs = require('fs');
 const os = require('os');
+const { extractCodeBlocks, chatCodeRequested, validateChatCodeBlocks } = require('./lib/chat-code-policy');
 
 // 🛡️ Key Manager กลาง — ตรวจ/จัดการคีย์จากที่เดียว
 const ENV = require('./config/env');
@@ -2025,11 +2026,56 @@ app.post('/api/db', async (req, res) => {
   } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
 });
 
+/* 🧪 CHAT CODE BLOCK — explicit opt-in only; never execute just because text contains ``` */
+const CHAT_CODE_EXECUTION_ENABLED = process.env.CHAT_CODE_EXECUTION_ENABLED === 'on';
+const CHAT_CODE_MAX_BLOCKS = 2;
+const CHAT_CODE_MAX_SOURCE = 12000;
+const CHAT_CODE_LANGS = new Set(['python', 'py', 'javascript', 'js', 'node', 'bash', 'sh', 'shell']);
+
+function chatCodeReply(blocks, results) {
+  const sections = results.map((run, index) => {
+    const label = '### ผลการรันบล็อกที่ ' + (index + 1) + ' (' + (run.lang || blocks[index].lang) + ')';
+    if (!run.ok) return label + '\n⚠️ ยังรันไม่ได้: ' + String(run.error || 'runner unavailable').slice(0, 300);
+    const stdout = String(run.stdout || '').slice(0, 6000);
+    const stderr = String(run.stderr || '').slice(0, 3000);
+    return label + '\nสถานะ: ' + (run.code === 0 ? 'สำเร็จ' : 'จบด้วย exit code ' + run.code) + '\nเวลา: ' + (run.timeMs || 0) + 'ms' +
+      (stdout ? '\n\nstdout:\n```text\n' + stdout + '\n```' : '') +
+      (stderr ? '\n\nstderr:\n```text\n' + stderr + '\n```' : '');
+  });
+  return '🧪 **ผลการรันโค้ดในแชต**\n\n' + sections.join('\n\n');
+}
+
+async function runChatCodeBlocks(question) {
+  const allBlocks = extractCodeBlocks(question);
+  if (!allBlocks.length) return null;
+  const validation = validateChatCodeBlocks(allBlocks, { maxBlocks: CHAT_CODE_MAX_BLOCKS, maxSource: CHAT_CODE_MAX_SOURCE });
+  const blocks = allBlocks.slice(0, CHAT_CODE_MAX_BLOCKS);
+  if (!validation.ok) return { blocks, disabled: true, reason: validation.reason };
+  const unsupported = blocks.find((block) => !CHAT_CODE_LANGS.has(block.lang));
+  if (unsupported) return { blocks, disabled: true, reason: 'แชตรองรับเฉพาะ Python, JavaScript และ Bash เพื่อไม่ส่ง source ไป cloud runner' };
+  if (typeof IS_SERVERLESS !== 'undefined' && IS_SERVERLESS) return { blocks, disabled: true, reason: 'Chat execution ปิดบน serverless; ใช้ LAB Console ที่มี sandbox แยกแทน' };
+  const results = [];
+  for (const block of blocks) results.push(await executeCode(block.src, block.lang));
+  return { blocks, results };
+}
+
 app.post('/api/chat', async (req, res) => {
   try {
     const { room, question, history, memory, unrestricted } = req.body || {};
     if (!question || !String(question).trim()) return res.status(400).json({ error: 'ข้อความว่าง' });
     const roomId = ROOMS[room] ? room : 'private';
+    const body = req.body || {};
+    const codeBlocks = extractCodeBlocks(String(question));
+    if (codeBlocks.length && chatCodeRequested(body)) {
+      if (!CHAT_CODE_EXECUTION_ENABLED) {
+        return chatJson(res, { reply: '🧪 ตรวจพบบล็อกโค้ดแล้ว แต่การรันโค้ดจากห้องแชตยังปิดอยู่เพื่อความปลอดภัย — ใช้ LAB Console หรือเปิด CHAT_CODE_EXECUTION_ENABLED=on บนเซิร์ฟเวอร์ที่มี sandbox แยกจริงก่อน', provider: 'chat-code', model: 'disabled', room: roomId, t: Date.now(), verified: false });
+      }
+      const run = await runChatCodeBlocks(question);
+      if (run && run.disabled) return chatJson(res, { reply: '🧪 ไม่ได้รันโค้ด: ' + run.reason, provider: 'chat-code', model: 'blocked', room: roomId, t: Date.now(), verified: false });
+      const results = run.results || [];
+      const allPassed = results.length > 0 && results.every((item) => item.ok && item.code === 0);
+      return chatJson(res, { reply: chatCodeReply(run.blocks, results), provider: 'chat-code', model: 'bounded-exec', room: roomId, t: Date.now(), verified: allPassed, superRun: { blockCount: results.length, ok: allPassed, engine: results.map((item) => item.engine).join(',') } });
+    }
     // 💭 จอคิด: ผูก traceId จาก client (ถ้ามี) เพื่อให้ poll สถานะสดได้
     const _tid = String((req.body || {}).traceId || '') || (Date.now().toString(36) + Math.random().toString(36).slice(2, 8));
     thinkReset(_tid, String(question));
@@ -2380,6 +2426,9 @@ app.get('/api/sysprompt', (req, res) => {
 const RUN_TIMEOUT_MS = 8000;      /* Vercel Hobby จำกัด function 10s */
 const RUN_MAX_CODE = 20000;
 const RUN_MAX_OUT = 60000;
+function sandboxEnv() {
+  return { PATH: process.env.PATH || '/usr/bin:/bin', HOME: os.tmpdir(), LANG: 'C.UTF-8', NODE_ENV: 'sandbox' };
+}
 const RUN_BLOCK = [
   /rm\s+-(rf|fr)\s+(\/|\*)/i, /mkfs/i, /dd\s+if=.*of=\/dev/i, /:\s*\(\s*\)\s*\{/,
   /shutdown/i, /reboot/i, /format\s+[a-z]:/i, />\s*\/dev\/sda/i, /chmod\s+-R\s+777\s+\//i,
@@ -2450,7 +2499,7 @@ async function executeCode(src, lang) {
       try {
         const out = await new Promise((resolve, reject) => {
           const { spawn } = require('child_process');
-          const cp = spawn(cmd, [file], { cwd: dir, stdio: ['ignore', 'pipe', 'pipe'] });
+          const cp = spawn(cmd, [file], { cwd: dir, env: sandboxEnv(), stdio: ['ignore', 'pipe', 'pipe'] });
           let o = '', e = '';
           cp.stdout.on('data', d => { o += d.toString(); if (o.length > RUN_MAX_OUT) { try { cp.kill('SIGKILL'); } catch (x) {} } });
           cp.stderr.on('data', d => { e += d.toString(); if (e.length > RUN_MAX_OUT) { try { cp.kill('SIGKILL'); } catch (x) {} } });
@@ -2497,17 +2546,6 @@ async function executeCode(src, lang) {
   return { ok: false, error: 'ไม่รู้จักภาษา: ' + l + ' (รองรับ 60+ ภาษา)' };
 }
 /* ⚡ SUPER MODE — แยกบล็อกโค้ดจากข้อความ แล้วรันจริงผ่าน executeCode (verified คำนวณจาก exit code) */
-function extractCodeBlocks(text) {
-  const blocks = [];
-  const re = /```([a-zA-Z0-9+#.-]*)[ \t]*\n?([\s\S]*?)```/g;
-  let m;
-  while ((m = re.exec(String(text || ''))) !== null) {
-    const lang = (m[1] || 'python').toLowerCase().trim() || 'python';
-    const src = m[2].trim();
-    if (src) blocks.push({ lang, src });
-  }
-  return blocks;
-}
 /* 🔧 Auto-fix: ให้ AI แก้โค้ดที่ error แล้วคืนบล็อกใหม่ (ใช้ Groq เร็ว — 0.4s) */
 async function aiFixCode(b, res, signal) {
   try {
