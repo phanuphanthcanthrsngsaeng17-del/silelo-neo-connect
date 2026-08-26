@@ -21,3 +21,7 @@
 ## Package integrity
 
 ทักษะเดิม `silelo-ai-studio-workflow` ถูกคัดลอกไว้เป็นแพ็กเกจแยกพร้อม references ของมัน ส่วนทักษะเสริมอีกสี่แพ็กเกจมีชื่อไดเรกทอรีไม่ซ้ำและไม่มีไฟล์ตัวอย่างที่ไม่ใช้ การอัปเดตแพ็กเกจหนึ่งควรทำผ่านไฟล์ในโฟลเดอร์นั้นและตรวจ validation ของแพ็กเกจที่เปลี่ยนเท่านั้น ก่อน commit ให้ตรวจ secret leakage และ diff ทุกครั้ง
+
+## Pull Request validation
+
+เมื่อเปิดหรืออัปเดต Pull Request workflow `.github/workflows/validate-silelo-skills.yml` จะเรียก `python scripts/validate_skills.py` โดยอัตโนมัติ งานตรวจใช้สิทธิ์ `contents: read` เท่านั้นและยกเลิกรันเก่าของ PR เดียวกันเมื่อมีการ push commit ใหม่ หากต้องการตรวจในเครื่อง ให้รันคำสั่งเดียวกันจาก root ของ repository

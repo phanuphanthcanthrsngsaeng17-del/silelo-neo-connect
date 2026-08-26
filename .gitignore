@@ -14,6 +14,7 @@ dist/
 build/
 *.log
 *.py
+!scripts/validate_skills.py
 .vercel
 
 # local GGUF llama.cpp hub (ไม่ deploy)
