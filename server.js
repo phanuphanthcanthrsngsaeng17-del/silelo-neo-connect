@@ -13,6 +13,7 @@ const path = require('path');
 const fs = require('fs');
 const os = require('os');
 const { extractCodeBlocks, chatCodeRequested, validateChatCodeBlocks } = require('./lib/chat-code-policy');
+const { isOwnerIdentity, ownerModeEnabled, requiresOwner } = require('./lib/owner-armor');
 
 // 🛡️ Key Manager กลาง — ตรวจ/จัดการคีย์จากที่เดียว
 const ENV = require('./config/env');
@@ -58,7 +59,7 @@ function thinkFinish(id, provider, model, replyLen) {
   if (THINK_HISTORY.length > 30) THINK_HISTORY.pop();
   ACTIVE_TRACE.id = ''; ACTIVE_TRACE.steps = [];
 }
-app.get('/api/think', (req, res) => {
+app.get('/api/think', requireAuth, requireOwner, (req, res) => {
   const since = String(req.query.since || '');
   if (since && since === ACTIVE_TRACE.id) {
     return res.json({ live: true, id: ACTIVE_TRACE.id, startedAt: ACTIVE_TRACE.startedAt, question: ACTIVE_TRACE.question, steps: ACTIVE_TRACE.steps });
@@ -1379,6 +1380,9 @@ const OWNER_EMAILS = ['phanuphanthcanthrsngsaeng17@gmail.com', 'phanuphanthcanth
 const OWNER_LINE_IDS = ['U4529156e4ce2270579f3b26afb463cdb'];
 const OWNER_FB_IDS = [];
 const APP_URL = process.env.APP_URL || 'https://silelo-neo-connect.onrender.com';
+const OWNER_ARMOR_ENABLED = ownerModeEnabled(process.env.OWNER_ARMOR_ENABLED);
+const OWNER_AUDIT_LIMIT = 100;
+const ownerAudit = [];
 
 function signToken(payload) {
   const b = Buffer.from(JSON.stringify(payload)).toString('base64url');
@@ -1434,6 +1438,24 @@ function requireAuth(req, res, next) {
   const user = getAuthUser(req);
   if (!user) return res.status(401).json({ error: 'UNAUTHORIZED', message: 'กรุณาเข้าสู่ระบบก่อนใช้งาน' });
   req.authUser = user;
+  next();
+}
+function isOwner(user) {
+  return isOwnerIdentity(user, { ownerEmails: OWNER_EMAILS, ownerLineIds: OWNER_LINE_IDS, loginEmail: LOGIN_EMAIL });
+}
+function writeOwnerAudit(req, action, outcome) {
+  const entry = { at: new Date().toISOString(), action, outcome, provider: String(req.authUser?.p || 'unknown'), owner: isOwner(req.authUser) };
+  ownerAudit.unshift(entry);
+  if (ownerAudit.length > OWNER_AUDIT_LIMIT) ownerAudit.pop();
+  console.info('[OwnerArmor]', JSON.stringify(entry));
+}
+function requireOwner(req, res, next) {
+  if (!OWNER_ARMOR_ENABLED) return next();
+  if (!isOwner(req.authUser)) {
+    writeOwnerAudit(req, req.path, 'denied');
+    return res.status(403).json({ error: 'OWNER_ONLY', message: 'คำสั่งนี้สงวนไว้สำหรับเจ้าของระบบ' });
+  }
+  writeOwnerAudit(req, req.path, 'allowed');
   next();
 }
 function setStateCookie(res, state) {
@@ -1550,7 +1572,7 @@ app.get('/api/auth/fb/callback', async (req, res) => {
 /* -- Session check / logout -- */
 app.get('/api/auth/me', (req, res) => {
   const u = getAuthUser(req);
-  res.json(u ? { ok: true, name: u.n, provider: u.p } : { ok: false });
+  res.json(u ? { ok: true, name: u.n, provider: u.p, owner: isOwner(u), ownerArmorEnabled: OWNER_ARMOR_ENABLED } : { ok: false });
 });
 app.post('/api/auth/logout', (req, res) => {
   res.setHeader('Set-Cookie', clearAuthCookie());
@@ -1577,6 +1599,10 @@ app.post('/api/unlock', (req, res) => {
 /* ทุก API หลังจากจุดนี้ต้องมี session ยกเว้น health/status และข้อมูลสาธารณะ */
 const PUBLIC_API_PATHS = new Set(['/auth/me', '/auth/login', '/auth/logout', '/unlock', '/ping', '/stats', '/status', '/env-status']);
 app.use('/api', (req, res, next) => PUBLIC_API_PATHS.has(req.path) ? next() : requireAuth(req, res, next));
+app.use('/api', (req, res, next) => {
+  if (!OWNER_ARMOR_ENABLED || !requiresOwner(req.path, req.body)) return next();
+  return requireOwner(req, res, next);
+});
 
 // แชท
 
