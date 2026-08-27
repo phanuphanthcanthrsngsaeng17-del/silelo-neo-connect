@@ -2585,7 +2585,7 @@ body.theme-dola #inp { border-radius: 16px; }
         }
         const r = await fetch('/api/chat', {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ room, question: q, history: cleanHist(history.slice(-24, -1)), memory: getMemoryFor(q), unrestricted: noRules, super: superMode, runCode: requestedCodeRun, traceId: clientTraceId, modelMode: ['openrouter_fast', 'openrouter_balanced'].includes((localStorage.getItem('nc_model') || '').trim()) ? localStorage.getItem('nc_model').trim() : 'auto' }),
+          body: JSON.stringify({ room, question: q, history: cleanHist(history.slice(-24, -1)), memory: getMemoryFor(q), unrestricted: noRules, super: superMode, runCode: requestedCodeRun, traceId: clientTraceId, model: (localStorage.getItem('nc_puter_model') || '').trim() || null, modelMode: ['openrouter_fast', 'openrouter_balanced'].includes((localStorage.getItem('nc_model') || '').trim()) ? localStorage.getItem('nc_model').trim() : 'auto' }),
           signal: AbortSignal.timeout(55000)
         });
         const j = await r.json();
@@ -3725,7 +3725,7 @@ body.theme-dola #inp { border-radius: 16px; }
     const msgs = [{ role: 'system', content: sys }, { role: 'user', content: task }];
     if (puterOn && puterSignedIn && window.puter) {
       try {
-        const choice = (localStorage.getItem('nc_model') || 'auto').trim();
+        const choice = (localStorage.getItem('nc_puter_model') || localStorage.getItem('nc_model') || 'auto').trim();
         const pm = PUTER_MODELS[choice];
         const opts = { model: pm ? choice : 'deepseek/deepseek-v4-flash', temperature: 0.8 };
         const resp = await Promise.race([puter.ai.chat(msgs, Object.assign({}, opts, pm && pm.max ? { reasoning_effort: 'max' } : {})), new Promise((_, rej) => setTimeout(() => rej(new Error('t')), 30000))]);
@@ -3860,6 +3860,9 @@ body.theme-dola #inp { border-radius: 16px; }
       try { localStorage.setItem('nc_model', modelSel.value); } catch (e) {}
       syncModelHint();
       const pm = PUTER_MODELS[modelSel.value];
+      const selectedOption = modelSel.selectedOptions && modelSel.selectedOptions[0];
+      const isPuterCatalogModel = selectedOption && selectedOption.dataset && selectedOption.dataset.provider === 'puter';
+      try { if (isPuterCatalogModel) localStorage.setItem('nc_puter_model', modelSel.value); else localStorage.removeItem('nc_puter_model'); } catch (e) {}
       if (modelSel.value === 'auto') toast('\ud83e\udd16 \u0e2d\u0e31\u0e15\u0e42\u0e19\u0e21\u0e31\u0e15\u0e34 \u2014 \u0e43\u0e0a\u0e49\u0e42\u0e0b\u0e48\u0e40\u0e15\u0e47\u0e21 (Puter \u2192 Gemini \u2192 Groq \u2192 OpenRouter \u2192 Pollinations)');
       else if (!puterSignedIn) toast('\u26a0\ufe0f \u0e01\u0e14 \ud83d\udc0b \u0e43\u0e19 header \u0e40\u0e1e\u0e37\u0e48\u0e2d\u0e40\u0e0a\u0e37\u0e48\u0e2d\u0e21\u0e1a\u0e31\u0e0d\u0e0a\u0e35 Puter \u0e01\u0e48\u0e2d\u0e19\u0e43\u0e0a\u0e49 \ud83d\udc0b');
       else toast('\ud83e\udde0 ' + (pm ? pm.label : modelSel.value) + ' \u0e1c\u0e48\u0e32\u0e19 \ud83d\udc0b Puter \u0e1f\u0e23\u0e35' + (pm && pm.max ? ' \u00b7 Max' : ''));
@@ -3873,6 +3876,25 @@ body.theme-dola #inp { border-radius: 16px; }
       if (j.sys) puterSys = j.sys;
     } catch (e) {}
   }
+  async function loadPuterModelsFromServer() {
+    if (!modelSel) return;
+    try {
+      const r = await fetch('/api/puter/models');
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok || !j.ok || !Array.isArray(j.models)) return;
+      const existing = new Set(Array.from(modelSel.options).map(o => o.value));
+      const group = document.createElement('optgroup'); group.label = '🐋 Puter · โมเดลที่ตรวจพบจริง';
+      j.models.forEach(item => {
+        const id = String(item.id || '').trim(); if (!id || existing.has(id)) return;
+        const opt = document.createElement('option'); opt.value = id; opt.dataset.provider = 'puter'; opt.textContent = '🐋 ' + String(item.name || id);
+        group.appendChild(opt);
+      });
+      if (group.children.length) modelSel.appendChild(group);
+      const saved = localStorage.getItem('nc_puter_model');
+      if (saved && Array.from(modelSel.options).some(o => o.value === saved)) modelSel.value = saved;
+    } catch (e) { /* keep static options when catalog is unavailable */ }
+  }
+  loadPuterModelsFromServer();
   async function askPuter(q) {
     if (!window.puter || !puterOn || !puterSignedIn || !puterSys) return null;
     try {
@@ -3888,7 +3910,7 @@ body.theme-dola #inp { border-radius: 16px; }
       }
       msgs.push({ role: 'user', content: String(q).slice(0, 12000) });
       const t0 = Date.now();
-      const choice = (localStorage.getItem('nc_model') || 'auto').trim();
+      const choice = (localStorage.getItem('nc_puter_model') || localStorage.getItem('nc_model') || 'auto').trim();
       const pm = PUTER_MODELS[choice];
       const baseOpts = { model: pm ? choice : 'deepseek/deepseek-v4-flash', temperature: 0.9 };
       const wantMax = pm ? !!pm.max : true;

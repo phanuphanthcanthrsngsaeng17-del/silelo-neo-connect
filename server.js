@@ -10,6 +10,8 @@
    ============================================================ */
 const express = require('express');
 const AdmZip = require('adm-zip');
+let puterInit = null;
+try { puterInit = require('@heyputer/puter.js/src/init.cjs').init; } catch (e) { console.warn('[Puter] SDK unavailable:', e.message); }
 const path = require('path');
 const fs = require('fs');
 const os = require('os');
@@ -666,6 +668,28 @@ async function summarizeMemory(history) {
 }
 
 /* OpenRouter — DeepSeek-V4-Flash (ตัวแรก) + :free models, timeout 8 วิ */
+const PUTER_AUTH_TOKEN = String(process.env.PUTER_API_KEY || process.env.PUTER_AUTH_TOKEN || '').trim();
+let PUTER_CLIENT = null;
+function getPuterClient() {
+  if (!PUTER_AUTH_TOKEN || !puterInit) return null;
+  if (!PUTER_CLIENT) PUTER_CLIENT = puterInit(PUTER_AUTH_TOKEN);
+  return PUTER_CLIENT;
+}
+function puterText(response) {
+  const value = response?.message?.content ?? response?.content ?? response;
+  if (Array.isArray(value)) return value.map(part => typeof part === 'string' ? part : part?.text || '').join('');
+  return typeof value === 'string' ? value : '';
+}
+async function puterChat(messages, extSignal, requestedModel = 'auto') {
+  const puter = getPuterClient();
+  if (!puter) return null;
+  const model = String(requestedModel || process.env.PUTER_MODEL || 'gpt-5-nano').trim() || 'gpt-5-nano';
+  const request = puter.ai.chat(messages, { model, stream: false, compaction: true });
+  const response = extSignal ? await Promise.race([request, new Promise((_, reject) => extSignal.addEventListener('abort', () => reject(new Error('PUTER_TIMEOUT')), { once: true }))]) : await request;
+  const reply = puterText(response).trim();
+  if (!reply) throw new Error('PUTER_EMPTY_RESPONSE');
+  return { provider: 'puter', model, reply };
+}
 const OPENROUTER_KEYS = (process.env.OPENROUTER_API_KEY || '').split(',').map(s => s.trim()).filter(Boolean);
 const OPENROUTER_TEXT_MODELS = (process.env.OPENROUTER_TEXT_MODELS || 'z-ai/glm-5.2:free,liquid/lfm-2.5-2.6b:free,cohere/north-mini-code:free,thinkingmachines/inkling-small:free,poolside/laguna-xs-2.1:free,nvidia/nemotron-3-super-120b-a12b:free,nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free,dots-studio/dots-3-note-preview:free,minimax/minimax-m2.7:free,minimax/minimax-m3:free,google/gemma-4-26b-a4b-it:free,poolside/laguna-s-2.1:free,google/gemma-4-31b-it:free,thinkingmachines/inkling:free,nvidia/nemotron-3-ultra-550b-a55b:free,nvidia/nemotron-3.5-lightning:free').split(',').map(s => s.trim()).filter(Boolean);
 const OPENROUTER_FAST_TIMEOUT_MS = ENV.openrouter.fastTimeoutMs;
@@ -961,7 +985,7 @@ const SUPER_PERSONA = `คุณคือ "Super CodingFleet" — AI operator �
 - ถ้าเครื่องมือใช้ไม่ได้ ให้บอกข้อจำกัดตรง ๆ ไม่ปกปิด
 - เรียกบอสนุว่า "บอสนุ" เสมอ`;
 
-async function askRoomAI(roomId, question, history, memory, unrestricted, intel, superMode, modelMode) {
+async function askRoomAI(roomId, question, history, memory, unrestricted, intel, superMode, modelMode, requestedModel = 'auto') {
   const room = ROOMS[roomId] || ROOMS.private;
   let sys = room.sys;
   if (superMode) sys = SUPER_PERSONA + '\n\n(⚡ SUPER MODE เปิดอยู่ — ปฏิบัติตามบทบาท Super CodingFleet)' + '\n\n' + sys;
@@ -1062,6 +1086,16 @@ async function askRoomAI(roomId, question, history, memory, unrestricted, intel,
     }
   }
   try {
+    const puterRequestedModel = String(requestedModel || process.env.PUTER_MODEL || 'auto').trim();
+    if (PUTER_AUTH_TOKEN) {
+      step('🐋 Puter AI · ' + (puterRequestedModel === 'auto' ? 'อัตโนมัติ' : puterRequestedModel), 'run');
+      try {
+        const puter = await puterChat(msgs, extSig, puterRequestedModel === 'auto' ? 'gpt-5-nano' : puterRequestedModel);
+        if (puter) { logAI('chain', '✅ Puter: ' + puter.model); return ok(puter, '🐋 Puter AI'); }
+      } catch (e) { step('🐋 Puter AI', 'fail', { error: e.message }); logAI('chain', '⚠️ Puter ล้ม: ' + e.message); }
+      step('🐋 Puter AI', 'fail');
+      if (tooLate()) return mockReply();
+    }
     const selectedModelMode = normalizeChatModelMode(modelMode);
     if (selectedModelMode !== 'auto') {
       const selectedMode = getOpenRouterMode(selectedModelMode, OPENROUTER_FAST_TIMEOUT_MS);
@@ -1153,10 +1187,27 @@ async function askRoomAI(roomId, question, history, memory, unrestricted, intel,
   } finally { chainTimer.clear(); }
 }
 
+/* ---------------- 🐋 PUTER MODEL CATALOG ---------------- */
+let PUTER_MODELS_CACHE = { at: 0, models: [] };
+app.get('/api/puter/status', requireAuth, (req, res) => {
+  res.json({ ok: true, configured: !!getPuterClient(), provider: 'puter', model: process.env.PUTER_MODEL || 'gpt-5-nano' });
+});
+app.get('/api/puter/models', requireAuth, async (req, res) => {
+  try {
+    const puter = getPuterClient();
+    if (!puter) return res.status(503).json({ ok: false, error: 'PUTER_AUTH_TOKEN_MISSING', models: [] });
+    if (Date.now() - PUTER_MODELS_CACHE.at < 5 * 60 * 1000 && PUTER_MODELS_CACHE.models.length) return res.json({ ok: true, provider: 'puter', source: 'cache', models: PUTER_MODELS_CACHE.models });
+    if (!puter.ai || typeof puter.ai.listModels !== 'function') return res.status(501).json({ ok: false, error: 'PUTER_MODEL_LIST_UNAVAILABLE', models: [] });
+    const raw = await puter.ai.listModels();
+    const models = (Array.isArray(raw) ? raw : raw?.models || []).map((item) => typeof item === 'string' ? { id: item } : { id: item.id || item.name, name: item.name || item.id, provider: item.provider }).filter(item => item.id).slice(0, 1000);
+    PUTER_MODELS_CACHE = { at: Date.now(), models };
+    res.json({ ok: true, provider: 'puter', source: 'live', models });
+  } catch (e) { res.status(502).json({ ok: false, error: 'PUTER_MODEL_LIST_FAILED', models: [] }); }
+});
 /* ---------------- 🩺 DIAG (ตรวจ env runtime จริง) ---------------- */
 app.get('/api/diag', async (req, res) => {
   const out = { env: {} };
-  for (const key of ['GROQ_API_KEY','GEMINI_API_KEYS','OPENROUTER_API_KEY','HF_TOKEN','POLLINATIONS_MODEL','BLOCKS_API_KEY']) out.env[key] = (process.env[key] || '').length;
+  for (const key of ['GROQ_API_KEY','GEMINI_API_KEYS','OPENROUTER_API_KEY','HF_TOKEN','POLLINATIONS_MODEL','BLOCKS_API_KEY','PUTER_API_KEY','PUTER_AUTH_TOKEN','PUTER_MODEL']) out.env[key] = (process.env[key] || '').length;
   const raw = async (name, url, opts) => {
     const t0 = Date.now();
     try {
@@ -2250,7 +2301,7 @@ async function runChatCodeBlocks(question) {
 
 app.post('/api/chat', requireAuth, async (req, res) => {
   try {
-    const { room, question, history, memory, unrestricted, modelMode } = req.body || {};
+    const { room, question, history, memory, unrestricted, modelMode, model } = req.body || {};
     if (!question || !String(question).trim()) return res.status(400).json({ error: 'ข้อความว่าง' });
     const roomId = ROOMS[room] ? room : 'private';
     const body = req.body || {};
@@ -2414,7 +2465,7 @@ app.post('/api/chat', requireAuth, async (req, res) => {
         intel = await worldIntel(question);
       }
     } catch (e) { intel = null; }
-    const r = await askRoomAI(roomId, q, history || [], memory, !!unrestricted, intel, !!(req.body || {}).super, normalizeChatModelMode(modelMode));
+    const r = await askRoomAI(roomId, q, history || [], memory, !!unrestricted, intel, !!(req.body || {}).super, normalizeChatModelMode(modelMode), model);
     const trace = Array.isArray(r.trace) && r.trace.length ? r.trace : [{ n: 'ตอบจากระบบโดยตรง (ไม่ผ่าน AI chain)', s: 'ok', ms: 0, provider: r.provider, model: r.model }];
     chatJson(res, Object.assign({ reply: r.reply, provider: r.provider, model: r.model, room: roomId, t: Date.now(), traceId: _tid, trace }, r.verified !== undefined ? { verified: r.verified, superRun: r.superRun } : {}));
   } catch (e) { res.status(500).json({ error: e.message }); }
