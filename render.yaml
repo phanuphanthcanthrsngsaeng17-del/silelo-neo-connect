@@ -19,6 +19,8 @@ services:
         sync: false
       - key: RUN_SECRET
         sync: false
+      - key: NEO_CONNECT_API_KEY
+        sync: false
       - key: APP_URL
         value: https://silelo-neo-connect.onrender.com
       - key: POLLINATIONS_MODEL

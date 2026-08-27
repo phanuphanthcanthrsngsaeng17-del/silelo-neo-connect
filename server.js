@@ -16,6 +16,7 @@ const { extractCodeBlocks, chatCodeRequested, validateChatCodeBlocks } = require
 const { isOwnerIdentity, ownerModeEnabled, requiresOwner } = require('./lib/owner-armor');
 const { getOpenRouterMode, normalizeChatModelMode } = require('./lib/model-switching');
 const { PLUGINS, listForUser, setEnabled } = require('./lib/plugins');
+const { gatewayUserFromRequest } = require('./lib/gateway-auth');
 
 // 🛡️ Key Manager กลาง — ตรวจ/จัดการคีย์จากที่เดียว
 const ENV = require('./config/env');
@@ -1460,7 +1461,8 @@ function authCookieStr(payload) {
 function clearAuthCookie() { return 'nc_auth=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0; Secure'; }
 function getAuthUser(req) {
   const m = /(?:^|;\s*)nc_auth=([^;]+)/.exec(req.headers.cookie || '');
-  return m ? verifyToken(decodeURIComponent(m[1])) : null;
+  const cookieUser = m ? verifyToken(decodeURIComponent(m[1])) : null;
+  return cookieUser || gatewayUserFromRequest(req);
 }
 function clientIp(req) {
   return String(req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown').split(',')[0].trim().slice(0, 80);
