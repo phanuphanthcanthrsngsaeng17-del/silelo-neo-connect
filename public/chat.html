@@ -1821,7 +1821,7 @@ body.theme-dola #inp { border-radius: 16px; }
   </div>
   <div class="inputbar">
     <input type="file" id="imgFile" accept="image/*" hidden>
-    <input type="file" id="allFile" accept="image/png,image/jpeg,image/webp,image/gif,application/pdf,text/plain,text/markdown,application/json" multiple hidden>
+    <input type="file" id="allFile" accept=".zip,application/zip,application/x-zip-compressed,image/png,image/jpeg,image/webp,image/gif,application/pdf,text/plain,text/markdown,application/json" multiple hidden>
     <div class="composer-tools" role="toolbar" aria-label="เครื่องมือแชต">
       <button class="icon-btn ptt" id="pttBtn" title="🎤 พูดแล้วส่ง (กดค้าง)" aria-label="พูดแล้วส่ง">🎤</button>
       <button class="icon-btn chat-call-inline" id="chatCallFab" title="📞 โทรหาสลี่" aria-label="โทรหาสลี่">📞</button>
@@ -2589,11 +2589,11 @@ body.theme-dola #inp { border-radius: 16px; }
           signal: AbortSignal.timeout(55000)
         });
         const j = await r.json();
-        if (j.reply) { if (processPanel && processPanel._finish) processPanel._finish(j); const mb = addMsg('assistant', j.reply, Date.now(), null, (j.verified !== undefined && j.superRun) ? { verified: j.verified, superRun: j.superRun } : null); notifyMsg(j.reply); scheduleReminder(j.reply); toast('⚡ ' + (j.provider === 'mock' ? 'BACKUP MODE' : j.provider.toUpperCase() + ' · ' + j.model)); speak(j.reply);
+        if (j.reply && j.error !== 'NO_PROVIDER_AVAILABLE' && j.provider !== 'none') { if (processPanel && processPanel._finish) processPanel._finish(j); const mb = addMsg('assistant', j.reply, Date.now(), null, (j.verified !== undefined && j.superRun) ? { verified: j.verified, superRun: j.superRun } : null); notifyMsg(j.reply); scheduleReminder(j.reply); const providerLabel = j.provider ? String(j.provider).toUpperCase() : 'AI'; toast('⚡ ' + providerLabel + (j.model ? ' · ' + j.model : '')); speak(j.reply);
           if (j.provider === 'web' || j.provider === 'preview' || j.provider === 'ide') { try { SM.show('preview'); } catch (e) {} }
           if (j.provider === 'web' && mb) { const bb = mb.querySelector('.bubble'); if (bb) { const pb = document.createElement('button'); pb.className = 'preview-jump'; pb.innerHTML = '👁 ดูเว็บ Live'; pb.onclick = function () { try { SM.show('preview'); } catch (e) {} }; bb.appendChild(pb); } }
         }
-        else { if (processPanel && processPanel._finish) processPanel._finish({ trace: [{ n: 'เซิร์ฟเวอร์ไม่ส่งคำตอบ', s: 'err', ms: 0 }], provider: 'gateway', model: 'error' }); toast('⚠️ ' + (j.error || 'NO REPLY')); }
+        else { if (processPanel && processPanel._finish) processPanel._finish({ trace: j.trace || [{ n: j.error === 'NO_PROVIDER_AVAILABLE' ? 'ไม่มี provider ที่ตอบได้จริง' : 'เซิร์ฟเวอร์ไม่ส่งคำตอบ', s: 'err', ms: 0 }], provider: j.provider || 'gateway', model: j.model || 'error' }); toast('⚠️ ' + (j.reply || j.error || 'NO REPLY')); }
       }
     } catch (e) { if (processPanel && processPanel._finish) processPanel._finish({ trace: [{ n: 'เชื่อมต่อ gateway ไม่สำเร็จ', s: 'err', ms: Date.now() - window.__procShownAt }], provider: 'gateway', model: 'unreachable' }); toast('⚠️ SERVER UNREACHABLE'); }
     typing.style.display = 'none';
@@ -2933,6 +2933,19 @@ body.theme-dola #inp { border-radius: 16px; }
     if (!f) return;
     const ext = extOf(f.name);
     if (f.type.startsWith('image/')) { try { const dt = new DataTransfer(); dt.items.add(f); imgFile.files = dt.files; imgFile.dispatchEvent(new Event('change')); } catch (e) { toast('❌ แนบรูปไม่สำเร็จ'); } return; }
+    if (ext === 'zip' || f.type === 'application/zip' || f.type === 'application/x-zip-compressed') {
+      toast('🗜️ กำลังตรวจ ZIP อย่างปลอดภัย...');
+      try {
+        const uploaded = await uploadChatFile(f);
+        const r = await fetch('/api/files/unzip', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: uploaded.id }) });
+        const j = await r.json().catch(() => ({}));
+        if (!r.ok || !j.ok) throw new Error(j.error || 'ZIP_READ_FAILED');
+        const list = (j.entries || []).slice(0, 80).map(x => '• ' + x.name + ' (' + Math.ceil(Number(x.size || 0) / 1024) + 'KB)').join('\\n');
+        const prompt = '🗜️ [ZIP: ' + f.name + ' · ' + (j.entries || []).length + ' รายการ · แตกไฟล์จริงที่ ' + (j.root || 'workspace') + ']\n\n' + (list || '(ไม่มีไฟล์)') + '\n\nช่วยวิเคราะห์โครงสร้าง ZIP นี้จากรายการไฟล์ โดยระบุสิ่งที่ทำได้จริงและสิ่งที่ต้องตั้งค่า';
+        inp.value = prompt; autoGrow(); send();
+      } catch (e) { toast('❌ แตก/อ่าน ZIP ไม่สำเร็จ: ' + e.message); }
+      return;
+    }
     toast('📖 กำลังอ่าน ' + f.name + '...');
     let text = '';
     try {
@@ -2956,7 +2969,7 @@ body.theme-dola #inp { border-radius: 16px; }
   const allFile = document.getElementById('allFile');
   const addMenuGroups = [
     { label: 'ไฟล์และพื้นที่ทำงาน', items: [
-      { id: 'files', icon: '📎', title: 'เพิ่มไฟล์ในเครื่อง', note: 'PNG, JPEG, WebP, GIF, PDF, TXT, MD, JSON · สูงสุด 3MB/ไฟล์', state: 'พร้อมใช้' },
+      { id: 'files', icon: '📎', title: 'เพิ่มไฟล์ในเครื่อง', note: 'ZIP, PNG, JPEG, WebP, GIF, PDF, TXT, MD, JSON · สูงสุด 3MB/ไฟล์', state: 'พร้อมใช้' },
       { id: 'recent-files', icon: '📄', title: 'ไฟล์ล่าสุด', note: 'แสดงไฟล์ที่อัปโหลดใน session ปัจจุบัน', state: 'พร้อมใช้' },
       { id: 'recent-work', icon: '☷', title: 'งานล่าสุด', note: 'เปิดหน้าจอการทำงานและเครื่องมือที่มีอยู่', state: 'พร้อมใช้' },
       { id: 'skills', icon: '🧩', title: 'ทักษะและปลั๊กอิน', note: 'ตรวจ catalog และสิทธิ์จากระบบของคุณ', state: 'พร้อมใช้' },

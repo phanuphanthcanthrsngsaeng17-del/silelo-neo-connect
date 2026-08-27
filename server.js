@@ -9,6 +9,7 @@
    TTS: msedge-tts (ฟรี)
    ============================================================ */
 const express = require('express');
+const AdmZip = require('adm-zip');
 const path = require('path');
 const fs = require('fs');
 const os = require('os');
@@ -889,17 +890,15 @@ async function hfChat(messages, extSignal, opts) {
   return null;
 }
 
-/* Mock สำรอง (โซ่ล้มหมด) — ตอบตามคำถาม ไม่โชว์ข้อความเทคนิค */
-function aiMockReply(roomId, question) {
-  const q = String(question || '').trim().replace(/\s+/g, ' ');
-  const short = q.length > 70 ? q.slice(0, 70) + '…' : q;
-  const feel = 'ครูได้รับคำถาม "{{Q}}" แล้วครับ ✅ ตอนนี้สมอง AI หลังบ้านพักชั่วคราว (โควต้าฟรีเต็ม) — รอ 1-2 นาทีแล้วส่งใหม่ ครูจะตอบเต็มรูปแบบให้ครับ 💡'
-  return feel.replace('{{Q}}', short);
+/* Provider unavailable — ห้ามแสดงข้อความจำลองเป็นคำตอบจาก AI */
+function providerUnavailableReply() {
+  return '⚠️ ยังไม่ได้รับคำตอบจากโมเดลจริงครับ ขณะนี้ provider ไม่พร้อมหรือยังไม่ได้ตั้งค่า API key กรุณาตรวจสถานะระบบและตั้งค่า provider ก่อนลองใหม่';
 }
 
 /* ---------------- ระบบตอบแชทหลัก ---------------- */
 // 🔗 v1.20 — สลี่อ่านลิงก์/โค้ดได้จริง (CodingFleet style 100%)
 const MAX_URL_TEXT = 40000;
+const MAX_CHAT_TEXT = 50000;
 async function fetchTextRaw(url, timeoutMs = 12000) {
   const ctl = new AbortController();
   const t = setTimeout(() => ctl.abort(), timeoutMs);
@@ -990,7 +989,7 @@ async function askRoomAI(roomId, question, history, memory, unrestricted, intel,
         msgs.push({ role: m.role === 'assistant' ? 'assistant' : 'user', content: String(m.content).slice(0, 4000) });
     }
   }
-  msgs.push({ role: 'user', content: String(question).slice(0, 12000) });
+  msgs.push({ role: 'user', content: String(question).slice(0, MAX_CHAT_TEXT) });
 
   // 🟢 สมองหลัก: Gemini Flash — ลองก่อนเสมอ (ถ้าติดขัด ค่อยตกไป RACE)
   // 🔍 ถ้าพี่นุถามเรื่อง ตรวจ/สถานะ/ระบบ/โค้ด/บั๊ก/log/ทำงานยังไง → สลี่รู้จริง (v1.21 เข้าใจระบบตัวเอง 100%)
@@ -1025,8 +1024,8 @@ async function askRoomAI(roomId, question, history, memory, unrestricted, intel,
   const step = (n, s, extra) => { trace.push(Object.assign({ n, s, ms: Date.now() - tStart }, extra || {})); ACTIVE_TRACE.steps = trace.slice(); };
   const ok = (r, n) => { step(n, 'ok', { provider: r.provider, model: r.model }); r.trace = trace; attachSuper(r); ACTIVE_TRACE.steps = trace.slice(); return r; };
   const mockReply = () => {
-    step('🔁 Mock fallback (ทุก AI ไม่ว่าง)', 'ok', { provider: 'mock' });
-    const r = { provider: 'mock', model: 'offline', reply: aiMockReply(roomId, question) };
+    step('⚠️ Provider ไม่พร้อม', 'failed', { provider: 'none', model: 'unavailable' });
+    const r = { ok: false, error: 'NO_PROVIDER_AVAILABLE', provider: 'none', model: 'unavailable', reply: providerUnavailableReply() };
     r.trace = trace; attachSuper(r); ACTIVE_TRACE.steps = trace.slice();
     return r;
   };
@@ -1149,7 +1148,7 @@ async function askRoomAI(roomId, question, history, memory, unrestricted, intel,
     step('🔁 DeepSeek', 'fail');
     if (tooLate()) return mockReply();
 
-    logAI('chain', '⚠️ ทั้งหมดล้ม → mock');
+    logAI('chain', '⚠️ ทั้งหมดล้ม → provider unavailable (ไม่ใช้ mock)');
     return mockReply();
   } finally { chainTimer.clear(); }
 }
@@ -1677,7 +1676,9 @@ app.post('/api/plugins/:pluginId/toggle', requireAuth, (req, res) => {
 
 // 📎 Secure file/image upload: bounded JSON payload, authenticated, no arbitrary path
 const UPLOAD_MAX_BYTES = 3 * 1024 * 1024;
-const UPLOAD_MIME = new Set(['image/png', 'image/jpeg', 'image/webp', 'image/gif', 'application/pdf', 'text/plain', 'text/markdown', 'application/json']);
+const ZIP_MAX_ENTRIES = 200;
+const ZIP_MAX_TOTAL_BYTES = 20 * 1024 * 1024;
+const UPLOAD_MIME = new Set(['image/png', 'image/jpeg', 'image/webp', 'image/gif', 'application/pdf', 'text/plain', 'text/markdown', 'application/json', 'application/zip', 'application/x-zip-compressed']);
 const UPLOAD_DIR = path.join(os.tmpdir(), 'neo-connect-uploads');
 const uploadedFiles = new Map();
 try { fs.mkdirSync(UPLOAD_DIR, { recursive: true, mode: 0o700 }); } catch (_) {}
@@ -1702,6 +1703,38 @@ app.post('/api/files/upload', requireAuth, (req, res) => {
   } catch (e) { res.status(400).json({ ok: false, error: 'UPLOAD_FAILED' }); }
 });
 // รูปขนาดใหญ่ใช้ binary body โดยตรง เพื่อไม่ขยายเป็น base64 และไม่ชน JSON 5MB
+app.post('/api/files/unzip', requireAuth, (req, res) => {
+  try {
+    const id = String(req.body?.id || '');
+    const file = uploadedFiles.get(id);
+    if (!file || file.owner !== String(req.authUser.u || '')) return res.status(404).json({ ok: false, error: 'FILE_NOT_FOUND' });
+    if (!/\.zip$/i.test(file.name) && !['application/zip', 'application/x-zip-compressed'].includes(file.type)) return res.status(415).json({ ok: false, error: 'NOT_ZIP' });
+    const zip = new AdmZip(file.path);
+    const entries = zip.getEntries();
+    if (entries.length > ZIP_MAX_ENTRIES) return res.status(413).json({ ok: false, error: 'ZIP_TOO_MANY_ENTRIES', maxEntries: ZIP_MAX_ENTRIES });
+    let total = 0;
+    const safeEntries = [];
+    const ownerKey = crypto.createHash('sha256').update(String(req.authUser.u || 'user')).digest('hex').slice(0, 24);
+    const outputRoot = path.join(WORKSPACE, 'uploads', ownerKey, id);
+    const workspaceBase = path.resolve(WORKSPACE);
+    fs.mkdirSync(outputRoot, { recursive: true, mode: 0o700 });
+    for (const entry of entries) {
+      const name = String(entry.entryName || '').replace(/\\\\/g, '/');
+      if (!name || name.endsWith('/')) continue;
+      if (name.startsWith('/') || name.split('/').includes('..') || /^[A-Za-z]:/.test(name)) return res.status(400).json({ ok: false, error: 'ZIP_UNSAFE_PATH' });
+      const size = Number(entry.header?.size || 0);
+      if (size > 5 * 1024 * 1024) return res.status(413).json({ ok: false, error: 'ZIP_ENTRY_TOO_LARGE', maxBytes: 5 * 1024 * 1024 });
+      total += size;
+      if (total > ZIP_MAX_TOTAL_BYTES) return res.status(413).json({ ok: false, error: 'ZIP_TOO_LARGE', maxBytes: ZIP_MAX_TOTAL_BYTES });
+      const destination = path.resolve(outputRoot, name);
+      if (!destination.startsWith(workspaceBase + path.sep)) return res.status(400).json({ ok: false, error: 'ZIP_UNSAFE_PATH' });
+      fs.mkdirSync(path.dirname(destination), { recursive: true, mode: 0o700 });
+      fs.writeFileSync(destination, entry.getData(), { mode: 0o600 });
+      safeEntries.push({ name: name.slice(0, 240), size });
+    }
+    res.json({ ok: true, fileId: id, entries: safeEntries, totalBytes: total, extracted: true, root: path.relative(workspaceBase, outputRoot) });
+  } catch (e) { res.status(400).json({ ok: false, error: 'ZIP_READ_FAILED' }); }
+});
 app.post('/api/images/upload', requireAuth, express.raw({ type: ['image/png', 'image/jpeg', 'image/webp', 'image/gif'], limit: '50mb' }), (req, res) => {
   try {
     const type = String(req.headers['content-type'] || '').split(';')[0].toLowerCase();
@@ -3101,7 +3134,7 @@ app.get('/api/sandbox/tree', (req, res) => {
 });
 async function buildWebApp(task) {
   const sys = 'คุณคือ Web Builder ระดับสูง สร้างเว็บไซต์ HTML ไฟล์เดียว (self-contained: CSS+JS ในไฟล์เดียว ไม่มี external lib ยกเว้น CDN ที่จำเป็น) สวยงาม ทันสมัย โต้ตอบได้ ตอบเฉพาะโค้ด HTML เต็มไฟล์ภายในเครื่องหมาย ```html ... ``` เท่านั้น ห้ามพูดอะไรนอกเหนือจากโค้ด';
-  const msgs = [{ role: 'system', content: sys }, { role: 'user', content: 'สร้างเว็บ: ' + String(task).slice(0, 2000) }];
+  const msgs = [{ role: 'system', content: sys }, { role: 'user', content: 'สร้างเว็บ: ' + String(task).slice(0, MAX_CHAT_TEXT) }];
   const t0 = Date.now();
   const calls = [
     { name: 'groq', fn: () => groqChat(msgs) },
