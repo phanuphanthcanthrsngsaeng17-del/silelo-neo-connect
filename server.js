@@ -28,11 +28,13 @@ try { ENV.validate(); } catch (e) { console.warn('[KeyManager] validate error:',
 
 const app = express();
 app.use(express.json({ limit: '5mb' }));
+// Chunk uploads use an 8MB in-memory window; the full file is streamed to disk.
+const CHUNK_UPLOAD_LIMIT = '8mb';
 app.use((req, res, next) => {
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('X-Frame-Options', 'SAMEORIGIN');
   res.setHeader('Referrer-Policy', 'same-origin');
-  res.setHeader('Permissions-Policy', 'camera=(), microphone=()');
+  res.setHeader('Permissions-Policy', 'camera=(self), microphone=(self), display-capture=(self)');
   next();
 });
 app.use(express.static(path.join(__dirname, 'public')));
@@ -1305,6 +1307,20 @@ function ttsCacheGet(k) { const v = ttsCache.get(k); if (v) { ttsCache.delete(k)
 function ttsCacheSet(k, buf) { if (ttsCache.size >= TTS_CACHE_MAX) ttsCache.delete(ttsCache.keys().next().value); ttsCache.set(k, buf); }
 /* ElevenLabs (optional) - ตั้ง ELEVENLABS_API_KEY (+ELEVENLABS_VOICE_ID) เพื่อโคลนเสียงสลี่จริง
    เสียงพรีเมียม: premwadee/achara → Alice (หญิง), niwat → Eric (ชาย) — ไม่มี key ใช้ msedge อัตโนมัติ */
+const OPENAI_TTS_VOICES = {
+  coral: 'coral', marin: 'marin', cedar: 'cedar', alloy: 'alloy', ash: 'ash', echo: 'echo', fable: 'fable', nova: 'nova', onyx: 'onyx', sage: 'sage'
+};
+const OPENAI_TTS_STYLES = { coral: 'warm and friendly', marin: 'calm and reassuring', cedar: 'clear and confident', alloy: 'neutral and balanced', ash: 'bright and energetic', echo: 'deep and steady', fable: 'expressive storyteller', nova: 'gentle and encouraging', onyx: 'professional and composed', sage: 'precise and thoughtful' };
+async function openaiTtsOnce(text, voice, rate) {
+  const key = process.env.OPENAI_API_KEY || '';
+  const model = process.env.OPENAI_TTS_MODEL || 'gpt-4o-mini-tts';
+  const selected = OPENAI_TTS_VOICES[voice];
+  if (!key || !selected) return null;
+  try {
+    const r = await fetch('https://api.openai.com/v1/audio/speech', { method: 'POST', headers: { Authorization: 'Bearer ' + key, 'Content-Type': 'application/json' }, body: JSON.stringify({ model, voice: selected, input: text, instructions: `Speak in a ${OPENAI_TTS_STYLES[voice]} style at ${Math.min(2, Math.max(0.5, parseFloat(rate) || 1))}x speed.`, response_format: 'mp3' }), signal: AbortSignal.timeout(20000) });
+    return r.ok ? Buffer.from(await r.arrayBuffer()) : null;
+  } catch (_) { return null; }
+}
 const ELEVEN_VOICE_IDS = {
   silelo: 'Xb7hH8MSUJpSbSDYk0k2',   // Alice
   premwadee: 'Xb7hH8MSUJpSbSDYk0k2', // Alice
@@ -1367,7 +1383,8 @@ async function ttsOneChunk(txt, voice, voiceName, rate) {
   /* 🇹🇭 เสียงไทยแท้ 100%: msedge ไทย → Google ไทย → ElevenLabs (เฉพาะข้อความอังกฤษล้วน) → ฉุกเฉิน */
   const isThaiText = /[\u0E00-\u0E7F]/.test(txt);
   let buf = null;
-  buf = await msedgeTtsOnce(txt, voiceName || 'th-TH-PremwadeeNeural', rate);
+  if (OPENAI_TTS_VOICES[voice]) buf = await openaiTtsOnce(txt, voice, rate);
+  if (!buf) buf = await msedgeTtsOnce(txt, voiceName || 'th-TH-PremwadeeNeural', rate);
   if (!buf) buf = await googleTtsBuf(txt).catch(() => null);
   if (!buf && !isThaiText) buf = await elevenLabsTtsBuf(txt, voice);
   if (!buf) buf = await googleTtsBuf(txt).catch(() => null);
@@ -1743,8 +1760,10 @@ app.post('/api/plugins/:pluginId/toggle', requireAuth, (req, res) => {
 });
 
 // 📎 Secure file/image upload: bounded JSON payload, authenticated, no arbitrary path
-const UPLOAD_MAX_BYTES = 3 * 1024 * 1024;
+const UPLOAD_MAX_BYTES = 3 * 1024 * 1024 * 1024;
 const UPLOAD_MIME = new Set(['image/png', 'image/jpeg', 'image/webp', 'image/gif', 'application/pdf', 'text/plain', 'text/markdown', 'application/json']);
+const UPLOAD_CHUNK_BYTES = 8 * 1024 * 1024;
+const fileUploadSessions = new Map();
 const UPLOAD_DIR = path.join(os.tmpdir(), 'neo-connect-uploads');
 const uploadedFiles = new Map();
 try { fs.mkdirSync(UPLOAD_DIR, { recursive: true, mode: 0o700 }); } catch (_) {}
@@ -1789,15 +1808,97 @@ app.use('/api/images/upload', (err, req, res, next) => {
   if (err?.type === 'entity.too.large' || err?.status === 413) return res.status(413).json({ ok: false, error: 'IMAGE_TOO_LARGE', maxBytes: 50 * 1024 * 1024 });
   return next(err);
 });
+// Large files: resumable sequential chunks, any MIME/type, bounded memory.
+app.post('/api/files/init', requireAuth, (req, res) => {
+  try {
+    const body = req.body || {};
+    const name = path.basename(String(body.name || 'upload.bin')).replace(/[\\\x00-\x1f\x7f]/g, '').slice(0, 180) || 'upload.bin';
+    const type = String(body.type || 'application/octet-stream').split(';')[0].toLowerCase().slice(0, 160) || 'application/octet-stream';
+    const size = Number(body.size);
+    if (!Number.isSafeInteger(size) || size <= 0 || size > UPLOAD_MAX_BYTES) return res.status(413).json({ ok: false, error: 'FILE_TOO_LARGE', maxBytes: UPLOAD_MAX_BYTES });
+    const id = crypto.randomBytes(18).toString('hex');
+    const owner = String(req.authUser.u || '');
+    const userDir = path.join(UPLOAD_DIR, crypto.createHash('sha256').update(owner || 'user').digest('hex').slice(0, 24));
+    fs.mkdirSync(userDir, { recursive: true, mode: 0o700 });
+    const filePath = path.join(userDir, id + '.part');
+    fs.closeSync(fs.openSync(filePath, 'wx', 0o600));
+    fileUploadSessions.set(id, { id, owner, name, type, size, received: 0, filePath, createdAt: Date.now() });
+    res.json({ ok: true, upload: { id, chunkBytes: UPLOAD_CHUNK_BYTES, received: 0, size } });
+  } catch (e) { res.status(400).json({ ok: false, error: 'UPLOAD_INIT_FAILED' }); }
+});
+app.put('/api/files/chunk/:id', requireAuth, express.raw({ type: '*/*', limit: CHUNK_UPLOAD_LIMIT }), (req, res) => {
+  try {
+    const session = fileUploadSessions.get(String(req.params.id || ''));
+    if (!session || session.owner !== String(req.authUser.u || '')) return res.status(404).json({ ok: false, error: 'UPLOAD_NOT_FOUND' });
+    const bytes = Buffer.isBuffer(req.body) ? req.body : Buffer.alloc(0);
+    const offset = Number(req.headers['x-upload-offset']);
+    if (!Number.isSafeInteger(offset) || offset !== session.received || !bytes.length || bytes.length > UPLOAD_CHUNK_BYTES || offset + bytes.length > session.size) return res.status(400).json({ ok: false, error: 'INVALID_CHUNK', expectedOffset: session.received });
+    fs.appendFileSync(session.filePath, bytes, { mode: 0o600 });
+    session.received += bytes.length;
+    res.json({ ok: true, received: session.received, size: session.size });
+  } catch (e) { res.status(400).json({ ok: false, error: 'CHUNK_UPLOAD_FAILED' }); }
+});
+app.post('/api/files/complete/:id', requireAuth, (req, res) => {
+  try {
+    const id = String(req.params.id || '');
+    const session = fileUploadSessions.get(id);
+    if (!session || session.owner !== String(req.authUser.u || '')) return res.status(404).json({ ok: false, error: 'UPLOAD_NOT_FOUND' });
+    if (session.received !== session.size) return res.status(409).json({ ok: false, error: 'UPLOAD_INCOMPLETE', received: session.received, size: session.size });
+    const finalPath = session.filePath.slice(0, -5);
+    fs.renameSync(session.filePath, finalPath);
+    uploadedFiles.set(id, { path: finalPath, name: session.name, type: session.type, size: session.size, owner: session.owner });
+    fileUploadSessions.delete(id);
+    const shareToken = signToken({ typ: 'file-share', id, owner: session.owner, exp: Date.now() + 7 * 24 * 3600 * 1000 });
+    const editUrl = `${APP_URL}/file-editor.html?id=${encodeURIComponent(id)}&token=${encodeURIComponent(shareToken)}`;
+    res.json({ ok: true, file: { id, name: session.name, type: session.type, size: session.size, url: '/api/files/' + id, editUrl } });
+  } catch (e) { res.status(400).json({ ok: false, error: 'UPLOAD_COMPLETE_FAILED' }); }
+});
+app.post('/api/files/:id/share', requireAuth, (req, res) => {
+  const file = uploadedFiles.get(String(req.params.id || ''));
+  if (!file || file.owner !== String(req.authUser.u || '')) return res.status(404).json({ ok: false, error: 'FILE_NOT_FOUND' });
+  const token = signToken({ typ: 'file-share', id: String(req.params.id), owner: file.owner, exp: Date.now() + 7 * 24 * 3600 * 1000 });
+  res.json({ ok: true, url: `${APP_URL}/file-editor.html?id=${encodeURIComponent(req.params.id)}&token=${encodeURIComponent(token)}`, expiresIn: 7 * 24 * 3600 });
+});
+function sharedFile(req) {
+  const token = verifyToken(req.query.token || req.headers['x-share-token']);
+  const file = token && token.typ === 'file-share' && token.id === String(req.params.id || '') ? uploadedFiles.get(token.id) : null;
+  return file && file.owner === token.owner ? { file, token } : null;
+}
+app.get('/api/files/share/:id', (req, res) => {
+  const shared = sharedFile(req);
+  if (!shared) return res.status(404).json({ ok: false, error: 'SHARE_LINK_INVALID' });
+  res.json({ ok: true, file: { id: req.params.id, name: shared.file.name, type: shared.file.type, size: shared.file.size, editable: /^text\//.test(shared.file.type) || /\.(txt|md|csv|json|log|js|ts|css|html|xml|yml|yaml|ini|sql|py|sh)$/i.test(shared.file.name) } });
+});
+app.get('/api/files/share/:id/content', (req, res) => {
+  const shared = sharedFile(req);
+  if (!shared) return res.status(404).json({ ok: false, error: 'SHARE_LINK_INVALID' });
+  res.type(shared.file.type && /^[\w.+-]+\/[\w.+-]+$/.test(shared.file.type) ? shared.file.type : 'application/octet-stream').sendFile(shared.file.path);
+});
+app.patch('/api/files/share/:id', express.json({ limit: '2mb' }), (req, res) => {
+  const shared = sharedFile(req);
+  if (!shared) return res.status(404).json({ ok: false, error: 'SHARE_LINK_INVALID' });
+  const file = shared.file;
+  const editable = /^text\//.test(file.type) || /\.(txt|md|csv|json|log|js|ts|css|html|xml|yml|yaml|ini|sql|py|sh)$/i.test(file.name);
+  const content = typeof req.body?.content === 'string' ? req.body.content : '';
+  if (!editable) return res.status(415).json({ ok: false, error: 'FILE_NOT_EDITABLE' });
+  if (Buffer.byteLength(content, 'utf8') > 2 * 1024 * 1024) return res.status(413).json({ ok: false, error: 'EDIT_TOO_LARGE', maxBytes: 2 * 1024 * 1024 });
+  fs.writeFileSync(file.path, content, { mode: 0o600 });
+  file.size = Buffer.byteLength(content, 'utf8');
+  res.json({ ok: true, size: file.size, updatedAt: new Date().toISOString() });
+});
 app.get('/api/files/recent', requireAuth, (req, res) => {
   const owner = String(req.authUser.u || '');
-  const files = Array.from(uploadedFiles.entries()).filter(([, file]) => file.owner === owner).slice(-12).reverse().map(([id, file]) => ({ id, name: file.name, type: file.type, size: file.size, url: '/api/files/' + id }));
+  const files = Array.from(uploadedFiles.entries()).filter(([, file]) => file.owner === owner).slice(-12).reverse().map(([id, file]) => {
+    const shareToken = signToken({ typ: 'file-share', id, owner, exp: Date.now() + 7 * 24 * 3600 * 1000 });
+    return { id, name: file.name, type: file.type, size: file.size, url: '/api/files/' + id, editUrl: `${APP_URL}/file-editor.html?id=${encodeURIComponent(id)}&token=${encodeURIComponent(shareToken)}` };
+  });
   res.json({ ok: true, files });
 });
 app.get('/api/files/:id', requireAuth, (req, res) => {
   const file = uploadedFiles.get(String(req.params.id || ''));
   if (!file || file.owner !== String(req.authUser.u || '')) return res.status(404).json({ ok: false, error: 'FILE_NOT_FOUND' });
-  res.type(file.type).set('Content-Disposition', `inline; filename*=UTF-8''${encodeURIComponent(file.name)}`).sendFile(file.path);
+  const safeType = file.type && /^[\w.+-]+\/[\w.+-]+$/.test(file.type) ? file.type : 'application/octet-stream';
+  res.type(safeType).set('Content-Disposition', `inline; filename*=UTF-8''${encodeURIComponent(file.name)}`).sendFile(file.path);
 });
 
 

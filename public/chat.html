@@ -1118,9 +1118,9 @@ body.theme-dola #inp { border-radius: 16px; }
   .app { max-width: 1240px; min-height: calc(100dvh - clamp(20px, 4vw, 52px)); border: 1px solid color-mix(in srgb, var(--accent) 20%, transparent); border-radius: 26px; background: color-mix(in srgb, var(--bg) 86%, transparent); box-shadow: 0 34px 100px rgba(0,0,0,.32), 0 0 80px color-mix(in srgb, var(--accent) 7%, transparent); overflow: hidden; }
   header { padding: 15px 24px; gap: 18px; background: linear-gradient(180deg, color-mix(in srgb, var(--panel) 96%, transparent), color-mix(in srgb, var(--panel-2) 88%, transparent)); }
   .hinfo h1 { font-size: 18px; letter-spacing: 2px; }
-  #msgs { padding: 30px clamp(34px, 7vw, 110px) 16px; gap: 18px; }
+  #msgs { padding: 18px clamp(22px, 5vw, 76px) 12px; gap: 10px; }
   .msg { max-width: min(760px, 78%); }
-  .bubble { padding: 15px 18px; font-size: 16px; line-height: 1.76; border-radius: 18px; clip-path: none !important; }
+  .bubble { padding: 10px 13px; font-size: 15px; line-height: 1.55; border-radius: 15px; clip-path: none !important; }
   .msg.user .bubble { border-radius: 18px 18px 6px 18px; }
   .msg.bot .bubble { border-radius: 18px 18px 18px 6px; }
   .img-msg { max-width: min(420px, 100%); max-height: 420px; border-radius: 14px; }
@@ -1852,6 +1852,16 @@ body.theme-dola #inp { border-radius: 16px; }
   <div class="voice-opt" data-voice="nanami"><span class="vicon">🇯🇵</span><span class="vname">Nanami</span><span class="vsub">JP หญิง</span></div>
   <div class="voice-opt" data-voice="sunhi"><span class="vicon">🇰🇷</span><span class="vname">Sun-Hi</span><span class="vsub">KR หญิง</span></div>
   <div class="voice-opt" data-voice="xiaoxiao"><span class="vicon">🇨🇳</span><span class="vname">Xiaoxiao</span><span class="vsub">CN หญิง</span></div>
+  <div class="voice-opt voice-new" data-voice="coral"><span class="vicon">🌸</span><span class="vname">Coral</span><span class="vsub">AI warm</span></div>
+  <div class="voice-opt voice-new" data-voice="marin"><span class="vicon">🌊</span><span class="vname">Marin</span><span class="vsub">AI calm</span></div>
+  <div class="voice-opt voice-new" data-voice="cedar"><span class="vicon">🌲</span><span class="vname">Cedar</span><span class="vsub">AI clear</span></div>
+  <div class="voice-opt voice-new" data-voice="alloy"><span class="vicon">◈</span><span class="vname">Alloy</span><span class="vsub">AI neutral</span></div>
+  <div class="voice-opt voice-new" data-voice="ash"><span class="vicon">⚡</span><span class="vname">Ash</span><span class="vsub">AI bright</span></div>
+  <div class="voice-opt voice-new" data-voice="echo"><span class="vicon">🔊</span><span class="vname">Echo</span><span class="vsub">AI deep</span></div>
+  <div class="voice-opt voice-new" data-voice="fable"><span class="vicon">📖</span><span class="vname">Fable</span><span class="vsub">AI story</span></div>
+  <div class="voice-opt voice-new" data-voice="nova"><span class="vicon">✨</span><span class="vname">Nova</span><span class="vsub">AI gentle</span></div>
+  <div class="voice-opt voice-new" data-voice="onyx"><span class="vicon">⬟</span><span class="vname">Onyx</span><span class="vsub">AI pro</span></div>
+  <div class="voice-opt voice-new" data-voice="sage"><span class="vicon">🌿</span><span class="vname">Sage</span><span class="vsub">AI precise</span></div>
   <div class="vrate">
     <div class="ttl">⚡ ความเร็ว</div>
     <div class="vrate-row">
@@ -2761,7 +2771,7 @@ body.theme-dola #inp { border-radius: 16px; }
       try { localStorage.setItem('nc_voice', voice); } catch (e) {}
       document.querySelectorAll('.voice-opt').forEach(x => x.classList.toggle('on', x === o));
       voicePop.classList.remove('show');
-      const names = { silelo: '💜 สลี่ออลา (เสียงสลี่)', auto: 'อัตโนมัติ (เร็วสุด)', premwadee: 'พรีมาวดี (หญิง อ่อนโยน)', niwat: 'นิวััฒน์ (ชาย)', achara: 'อัจฉรา (หญิง ทางการ)', aria: 'Aria (EN หญิง)', guy: 'Guy (EN ชาย)', sonia: 'Sonia (UK หญิง)', nanami: 'Nanami (JP หญิง)', sunhi: 'Sun-Hi (KR หญิง)', xiaoxiao: 'Xiaoxiao (CN หญิง)' };
+      const names = { silelo: '💜 สลี่ออลา (เสียงสลี่)', auto: 'อัตโนมัติ (เร็วสุด)', premwadee: 'พรีมาวดี (หญิง อ่อนโยน)', niwat: 'นิวััฒน์ (ชาย)', achara: 'อัจฉรา (หญิง ทางการ)', aria: 'Aria (EN หญิง)', guy: 'Guy (EN ชาย)', sonia: 'Sonia (UK หญิง)', nanami: 'Nanami (JP หญิง)', sunhi: 'Sun-Hi (KR หญิง)', xiaoxiao: 'Xiaoxiao (CN หญิง)', coral: 'Coral (อบอุ่น)', marin: 'Marin (สงบ)', cedar: 'Cedar (ชัดเจน)', alloy: 'Alloy (กลาง)', ash: 'Ash (สดใส)', echo: 'Echo (ทุ้ม)', fable: 'Fable (เล่าเรื่อง)', nova: 'Nova (นุ่มนวล)', onyx: 'Onyx (มืออาชีพ)', sage: 'Sage (แม่นยำ)' };
       toast('🎙️ เสียง: ' + (names[voice] || voice));
     };
   });
@@ -2821,18 +2831,26 @@ body.theme-dola #inp { border-radius: 16px; }
       img.src = url;
     });
   }
-  async function uploadChatFile(file, dataOverride) {
+  async function uploadChatFile(file) {
     if (!file) return null;
-    const data = dataOverride || await new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(String(reader.result || ''));
-      reader.onerror = () => reject(new Error('อ่านไฟล์สำหรับอัปโหลดไม่ได้'));
-      reader.readAsDataURL(file);
-    });
-    const r = await fetch('/api/files/upload', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: file.name, type: file.type || 'application/octet-stream', data }) });
-    const j = await r.json().catch(() => ({}));
-    if (!r.ok || !j.ok) throw new Error(j.error === 'FILE_TOO_LARGE' ? 'ไฟล์เกิน 3MB' : (j.message || j.error || 'อัปโหลดไม่สำเร็จ'));
-    return j.file;
+    const max = 3 * 1024 * 1024 * 1024;
+    if (!Number.isFinite(file.size) || file.size <= 0) throw new Error('ไฟล์ว่าง');
+    if (file.size > max) throw new Error('ไฟล์เกิน 3GB');
+    const initR = await fetch('/api/files/init', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: file.name, type: file.type || 'application/octet-stream', size: file.size }) });
+    const init = await initR.json().catch(() => ({}));
+    if (!initR.ok || !init.ok) throw new Error(init.error === 'FILE_TOO_LARGE' ? 'ไฟล์เกิน 3GB' : (init.error || 'เริ่มอัปโหลดไม่สำเร็จ'));
+    const id = init.upload.id, chunk = init.upload.chunkBytes || 8 * 1024 * 1024;
+    for (let offset = 0; offset < file.size; offset += chunk) {
+      const part = file.slice(offset, Math.min(offset + chunk, file.size));
+      const r = await fetch('/api/files/chunk/' + encodeURIComponent(id), { method: 'PUT', headers: { 'Content-Type': 'application/octet-stream', 'X-Upload-Offset': String(offset) }, body: part });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok || !j.ok) throw new Error(j.error || 'ส่งข้อมูลไฟล์ไม่สำเร็จ');
+      setTyping('📤 กำลังอัปโหลด ' + Math.round(j.received / file.size * 100) + '%');
+    }
+    const doneR = await fetch('/api/files/complete/' + encodeURIComponent(id), { method: 'POST' });
+    const done = await doneR.json().catch(() => ({}));
+    if (!doneR.ok || !done.ok) throw new Error(done.error || 'ปิดงานอัปโหลดไม่สำเร็จ');
+    return done.file;
   }
   function uploadLargeImage(file) {
     return new Promise((resolve, reject) => {
@@ -2902,6 +2920,11 @@ body.theme-dola #inp { border-radius: 16px; }
     for (const sn of wb.SheetNames.slice(0, 5)) { out += '## แผ่น: ' + sn + '\n' + XLSX.utils.sheet_to_csv(wb.Sheets[sn]) + '\n'; }
     return out;
   }
+  async function readFilePreview(f) {
+    const previewBytes = 128 * 1024;
+    const sample = await f.slice(0, previewBytes).text().catch(() => '');
+    return 'ไฟล์ขนาด ' + Math.ceil(f.size / 1024 / 1024) + 'MB · แสดงตัวอย่าง ' + Math.ceil(sample.length / 1024) + 'KB แรก\n\n' + sample;
+  }
   async function handleDroppedFile(f) {
     if (!f) return;
     const ext = extOf(f.name);
@@ -2909,16 +2932,17 @@ body.theme-dola #inp { border-radius: 16px; }
     toast('📖 กำลังอ่าน ' + f.name + '...');
     let text = '';
     try {
-      if (ext === 'pdf') text = await readPdf(f);
+      if (f.size > 25 * 1024 * 1024) text = await readFilePreview(f);
+      else if (ext === 'pdf') text = await readPdf(f);
       else if (ext === 'docx') text = await readDocx(f);
       else if (ext === 'xlsx' || ext === 'xls') text = await readXlsx(f);
       else if (TEXT_EXTS.has(ext) || (f.type && f.type.startsWith('text/'))) text = await f.text();
-      else { toast('❌ ไฟล์ .' + ext + ' ยังอ่านไม่ได้'); return; }
+      else text = 'ไฟล์ชนิด ' + (f.type || 'ไม่ทราบชนิด') + ' ถูกอัปโหลดแล้ว แต่ยังไม่มีตัวอ่านเนื้อหาอัตโนมัติ';
     } catch (e) { toast('❌ อ่านไฟล์ไม่สำเร็จ: ' + e.message); return; }
     if (!text || !text.trim()) { toast('⚠️ ไม่มีข้อความในไฟล์'); return; }
     let uploaded = null;
     try { uploaded = await uploadChatFile(f); toast('📤 อัปโหลดไฟล์แล้ว'); } catch (uploadError) { toast('⚠️ ไฟล์ยังไม่ถูกเก็บ: ' + uploadError.message); }
-    const q = '📎 [ไฟล์: ' + f.name + (uploaded ? ' · เก็บที่ ' + uploaded.url : '') + ']\n\n' + text.trim().slice(0, 9000) + '\n\nช่วยอ่านและสรุป/วิเคราะห์ไฟล์นี้ให้หน่อย (ภาษาไทย กระชับ เข้าใจง่าย)';
+    const q = '📎 [ไฟล์: ' + f.name + (uploaded ? ' · เก็บที่ ' + uploaded.url + (uploaded.editUrl ? ' · แก้ไขที่ ' + uploaded.editUrl : '') : '') + ']\n\n' + text.trim().slice(0, 9000) + '\n\nช่วยอ่านและสรุป/วิเคราะห์ไฟล์นี้ให้หน่อย (ภาษาไทย กระชับ เข้าใจง่าย)';
     inp.value = q; autoGrow();
     send();
   }
@@ -2929,7 +2953,7 @@ body.theme-dola #inp { border-radius: 16px; }
   const allFile = document.getElementById('allFile');
   const addMenuGroups = [
     { label: 'ไฟล์และพื้นที่ทำงาน', items: [
-      { id: 'files', icon: '📎', title: 'เพิ่มไฟล์ในเครื่อง', note: 'PNG, JPEG, WebP, GIF, PDF, TXT, MD, JSON · สูงสุด 3MB/ไฟล์', state: 'พร้อมใช้' },
+      { id: 'files', icon: '📎', title: 'เพิ่มไฟล์ในเครื่อง', note: 'ไฟล์ทุกชนิด · สูงสุด 3GB/ไฟล์', state: 'พร้อมใช้' },
       { id: 'recent-files', icon: '📄', title: 'ไฟล์ล่าสุด', note: 'แสดงไฟล์ที่อัปโหลดใน session ปัจจุบัน', state: 'พร้อมใช้' },
       { id: 'recent-work', icon: '☷', title: 'งานล่าสุด', note: 'เปิดหน้าจอการทำงานและเครื่องมือที่มีอยู่', state: 'พร้อมใช้' },
       { id: 'skills', icon: '🧩', title: 'ทักษะและปลั๊กอิน', note: 'ตรวจ catalog และสิทธิ์จากระบบของคุณ', state: 'พร้อมใช้' },
@@ -2966,7 +2990,7 @@ body.theme-dola #inp { border-radius: 16px; }
     if (id === 'recent-files') {
       const r = await fetch('/api/files/recent'); const j = await r.json().catch(() => ({}));
       if (!r.ok || !j.ok) return toast('🔒 เข้าสู่ระบบก่อนดูไฟล์ล่าสุด');
-      const lines = (j.files || []).map(file => '📄 ' + file.name + ' · ' + Math.ceil(file.size / 1024) + 'KB').join('\n');
+      const lines = (j.files || []).map(file => '📄 ' + file.name + ' · ' + Math.ceil(file.size / 1024) + 'KB\n🔗 แก้ไข/เปิด: ' + file.editUrl).join('\n');
       return addMsg('assistant', lines ? ('ไฟล์ล่าสุดใน session นี้\n\n' + lines) : 'ยังไม่มีไฟล์ที่อัปโหลดใน session นี้');
     }
     if (id === 'image-vision') return imgFile.click();
@@ -5269,7 +5293,7 @@ SM.register('liveops', {
         cards.innerHTML =
           card('◌', 'AI Trace', traceState, data.trace.state === 'live' ? 'กำลังทำงาน' : (data.trace.state === 'complete' ? 'จบล่าสุด' : 'ยังไม่มีงาน'), 'Trace ' + (data.trace.id ? 'พร้อมตรวจสอบ' : 'ยังไม่เริ่ม') + ' · ' + data.trace.stepCount + ' ขั้นตอน', traceColor) +
           card('↗', 'LINE Bridge', lineState, data.line.botConfigured ? 'Bot พร้อม' : (data.line.loginConfigured ? 'Login พร้อม' : 'รอตั้งค่า'), data.line.botConfigured ? 'ตรวจพบการตั้งค่า bot' : (data.line.loginConfigured ? 'ยังไม่มี bot bridge runtime' : 'ไม่มี LINE config ใน runtime'), lineColor) +
-          card('⌁', 'Upload', data.upload.state === 'ready' ? 'พร้อม' : data.upload.state, data.upload.recentCount + ' ไฟล์', 'รูปสูงสุด 50MB · ไฟล์สูงสุด 3MB', '#51e5a7') +
+          card('⌁', 'Upload', data.upload.state === 'ready' ? 'พร้อม' : data.upload.state, data.upload.recentCount + ' ไฟล์', 'รูปสูงสุด 50MB · ไฟล์ทุกชนิด · สูงสุด 3GB', '#51e5a7') +
           card('◈', 'Runtime', 'online', 'Node ' + data.runtime.node, 'Uptime ' + data.runtime.uptimeSeconds + ' วินาที · response ' + data.runtime.responseMs + 'ms', '#72baff');
         renderTrace(data.trace.stepCount, data.trace.state, data.trace.provider, data.trace.model);
         headline.textContent = data.trace.state === 'live' ? 'ระบบกำลังทำงาน' : 'ระบบพร้อมใช้งาน';
