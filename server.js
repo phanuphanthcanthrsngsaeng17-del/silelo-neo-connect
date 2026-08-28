@@ -19,6 +19,7 @@ const { PLUGINS, listForUser, setEnabled } = require('./lib/plugins');
 const { gatewayUserFromRequest } = require('./lib/gateway-auth');
 const { SERVICE_OPERATIONS, requestGateway, gatewayStatus } = require('./lib/integration-gateway');
 const { executeManusConnector, gatewayStatus: manusGatewayStatus } = require('./lib/manus-connector-gateway');
+const { intentSnapshot, registryStats, suggestIntentSkills } = require('./lib/intent-skills');
 
 // 🛡️ Key Manager กลาง — ตรวจ/จัดการคีย์จากที่เดียว
 const ENV = require('./config/env');
@@ -34,6 +35,22 @@ app.use((req, res, next) => {
   next();
 });
 app.use(express.static(path.join(__dirname, 'public')));
+
+// 🧭 AI Intent Mode — exposes the 500-skill allowlist without executing arbitrary actions.
+app.get('/api/intent-skills', requireAuth, (req, res) => {
+  const mode = String(req.query.mode || 'understand') === 'execute' ? 'execute' : 'understand';
+  const query = String(req.query.q || '').trim().slice(0, 1600);
+  const limit = Math.min(12, Math.max(1, Number(req.query.limit) || 6));
+  res.json({ ok: true, mode, query, stats: registryStats(), skills: suggestIntentSkills(query, mode, limit) });
+});
+
+app.post('/api/intent', requireAuth, (req, res) => {
+  const command = String(req.body && req.body.command || '').trim();
+  if (command.length < 3 || command.length > 1600) return res.status(400).json({ ok: false, error: 'คำสั่งต้องมีความยาว 3-1600 ตัวอักษร' });
+  const mode = req.body && req.body.mode === 'execute' ? 'execute' : 'understand';
+  res.json({ ok: true, ...intentSnapshot(command, mode, 6) });
+});
+
 app.get('/chat', (req, res) => {
   if (!getAuthUser(req)) return res.redirect('/');
   res.sendFile(path.join(__dirname, 'public', 'chat.html'));
@@ -2266,8 +2283,9 @@ async function runChatCodeBlocks(question) {
 
 app.post('/api/chat', requireAuth, async (req, res) => {
   try {
-    const { room, question, history, memory, unrestricted, modelMode } = req.body || {};
+    const { room, question, history, memory, unrestricted, modelMode, intentMode } = req.body || {};
     if (!question || !String(question).trim()) return res.status(400).json({ error: 'ข้อความว่าง' });
+    const intent = intentSnapshot(String(question), intentMode === 'execute' ? 'execute' : 'understand', 4);
     const roomId = ROOMS[room] ? room : 'private';
     const body = req.body || {};
     const codeBlocks = extractCodeBlocks(String(question));

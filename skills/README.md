@@ -26,6 +26,16 @@
 
 เมื่อเปิดหรืออัปเดต Pull Request workflow `.github/workflows/validate-silelo-skills.yml` จะเรียก `python scripts/validate_skills.py` โดยอัตโนมัติ งานตรวจใช้สิทธิ์ `contents: read` เท่านั้นและยกเลิกรันเก่าของ PR เดียวกันเมื่อมีการ push commit ใหม่ หากต้องการตรวจในเครื่อง ให้รันคำสั่งเดียวกันจาก root ของ repository
 
+## AI Intent Mode และ registry 500 Skill
+
+Neo-Connect มี registry ที่ `skills/intent-library/registry.json` จำนวน 500 รายการ แบ่งเป็น Intent Understand 250 รายการและ Intent Execute 250 รายการ แต่ละรายการมี `SKILL.md` ของตนเองและมี `id`, `category`, `intents`, `inputs`, `outputs` และข้อจำกัดที่ตรวจสอบได้
+
+- `POST /api/intent` รับ `{ command, mode }` และคืน Skill ที่แนะนำจาก allowlist
+- `GET /api/intent-skills?q=...&mode=understand|execute` ค้นรายการ Skill สำหรับผู้ใช้ที่ยืนยันตัวตน
+- Intent Understand วิเคราะห์และแนะนำเท่านั้น; Intent Execute ตั้งค่า `needsConfirmation` และห้ามรัน shell, อ่าน secret หรือส่งข้อมูลภายนอกโดยอัตโนมัติ
+
+การมี Skill ใน registry ไม่ได้หมายความว่าความสามารถภายนอกถูกเปิดใช้งาน ทุก action ต้องผ่าน route และ policy ของ Neo-Connect เดิม รวมถึง owner armor, authentication และ confirmation gate
+
 ## Chat code-block execution
 
 `/api/chat` รองรับการตรวจพบ fenced code block แต่จะรันก็ต่อเมื่อ client ส่ง `runCode: true` และเซิร์ฟเวอร์ตั้ง `CHAT_CODE_EXECUTION_ENABLED=on` เท่านั้น การมี markdown fence หรือ `super: true` เพียงอย่างเดียวจะไม่เปิด execution path ใหม่นี้ เพื่อไม่ให้ข้อความทั่วไปสั่งรันโค้ดโดยไม่ตั้งใจ
