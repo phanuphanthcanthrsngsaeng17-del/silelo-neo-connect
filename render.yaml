@@ -21,6 +21,12 @@ services:
         sync: false
       - key: NEO_CONNECT_API_KEY
         sync: false
+      - key: CONNECTOR_GATEWAY_URL
+        sync: false
+      - key: CONNECTOR_GATEWAY_TOKEN
+        sync: false
+      - key: CONNECTOR_GATEWAY_TIMEOUT_MS
+        value: "15000"
       - key: APP_URL
         value: https://silelo-neo-connect.onrender.com
       - key: POLLINATIONS_MODEL

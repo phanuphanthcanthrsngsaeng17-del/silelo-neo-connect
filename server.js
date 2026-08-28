@@ -17,6 +17,7 @@ const { isOwnerIdentity, ownerModeEnabled, requiresOwner } = require('./lib/owne
 const { getOpenRouterMode, normalizeChatModelMode } = require('./lib/model-switching');
 const { PLUGINS, listForUser, setEnabled } = require('./lib/plugins');
 const { gatewayUserFromRequest } = require('./lib/gateway-auth');
+const { SERVICE_OPERATIONS, requestGateway, gatewayStatus } = require('./lib/integration-gateway');
 
 // 🛡️ Key Manager กลาง — ตรวจ/จัดการคีย์จากที่เดียว
 const ENV = require('./config/env');
@@ -1498,6 +1499,30 @@ function requireAuth(req, res, next) {
 function isOwner(user) {
   return isOwnerIdentity(user, { ownerEmails: OWNER_EMAILS, ownerLineIds: OWNER_LINE_IDS, loginEmail: LOGIN_EMAIL });
 }
+
+// ===== External integration gateway =====
+// The app delegates to a real, separately configured gateway. It never fabricates provider results.
+app.get('/api/integrations/status', requireAuth, async (req, res) => {
+  const status = await gatewayStatus();
+  res.json({ ok: true, gateway: status, services: Object.keys(SERVICE_OPERATIONS) });
+});
+app.get('/api/integrations/capabilities', requireAuth, (req, res) => {
+  res.json({ ok: true, services: SERVICE_OPERATIONS, confirmationRequiredFor: Object.values(SERVICE_OPERATIONS).flatMap((ops) => ops.write) });
+});
+app.post('/api/integrations/execute', requireAuth, async (req, res) => {
+  const body = req.body && typeof req.body === 'object' ? req.body : {};
+  const service = String(body.service || '').trim();
+  const action = String(body.action || '').trim();
+  const payload = body.payload && typeof body.payload === 'object' ? body.payload : {};
+  const confirmed = body.confirmed === true;
+  if (!service || !action) return res.status(400).json({ ok: false, error: 'SERVICE_AND_ACTION_REQUIRED' });
+  const result = await requestGateway({ service, action, payload, confirmed, user: req.authUser?.e || req.authUser?.u || 'authenticated' });
+  if (!result.ok && result.error === 'CONFIRMATION_REQUIRED') {
+    return res.status(428).json({ ok: false, error: result.error, service: result.service, action: result.action, message: 'กรุณายืนยันก่อนดำเนินการที่มีผลต่อข้อมูลหรือส่งข้อความ' });
+  }
+  if (!result.ok) return res.status(result.status || 502).json(result);
+  res.status(result.status || 200).json(result);
+});
 function writeOwnerAudit(req, action, outcome) {
   const entry = { at: new Date().toISOString(), action, outcome, provider: String(req.authUser?.p || 'unknown'), owner: isOwner(req.authUser) };
   ownerAudit.unshift(entry);

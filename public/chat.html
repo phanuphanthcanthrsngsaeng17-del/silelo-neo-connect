@@ -1749,6 +1749,7 @@ body.theme-dola #inp { border-radius: 16px; }
       <button class="icon-btn coder-btn" id="coderBtn" title="🤖 โหมดเขียนโค้ด — สลี่เขียน+รันให้อัตโนมัติ">🤖</button>
       <button class="icon-btn" id="browserBtn" title="🌐 Browser Workspace — เปิดเว็บหรือ Preview">🌐</button>
       <button class="icon-btn" id="liveOpsBtn" title="📡 Live Operations — สถานะระบบจริง">📡</button>
+      <button class="icon-btn" id="integrationsBtn" title="🔌 Integrations — สถานะบริการที่เชื่อมต่อจริง">🔌</button>
       <button class="icon-btn" id="previewBtn" title="👁 Live Preview — ดูเว็บจาก workspace แบบ Bolt">👁</button>
       <button class="icon-btn" id="ideBtn" title="🗂 IDE — File Explorer + Editor + Terminal">🗂</button>
       <button class="icon-btn" id="themeBtn" title="เปลี่ยนธีม">🎨</button>
@@ -4937,6 +4938,47 @@ SM.register('chat', {
     if (msgs) msgs.scrollTop = msgs.scrollHeight;
   }
 });
+
+/* ── Real Integrations Screen ── */
+SM.register('integrations', {
+  title: '🔌 Integrations',
+  subtitle: 'บริการจริงผ่าน Connector Gateway',
+  init: async function(el) {
+    var body = el.querySelector('.silelo-screen-body');
+    if (!body) return;
+    body.innerHTML = '<div style="padding:16px;max-width:900px;margin:0 auto;width:100%">' +
+      '<div id="integrationGatewayState" style="padding:14px;border:1px solid color-mix(in srgb,var(--accent) 35%,transparent);border-radius:14px;background:var(--panel);margin-bottom:12px">กำลังตรวจสอบ gateway...</div>' +
+      '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:8px"><strong>บริการและความสามารถ</strong><button id="integrationRefresh" class="ct-btn">รีเฟรช</button></div>' +
+      '<div id="integrationCapabilities" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:8px"></div>' +
+      '<p style="margin-top:14px;color:var(--dim);font-size:12px;line-height:1.6">สถานะนี้มาจาก gateway จริงเท่านั้น หากยังไม่ได้ตั้งค่า URL/token ระบบจะแสดง “ต้องตั้งค่า” และจะไม่สร้างข้อมูลจำลอง</p>' +
+      '</div>';
+    async function load() {
+      var state = document.getElementById('integrationGatewayState');
+      var caps = document.getElementById('integrationCapabilities');
+      if (!state || !caps) return;
+      state.textContent = 'กำลังตรวจสอบ gateway จริง...';
+      try {
+        var pair = await Promise.all([fetch('/api/integrations/status'), fetch('/api/integrations/capabilities')]);
+        var sj = await pair[0].json().catch(function(){ return {}; });
+        var cj = await pair[1].json().catch(function(){ return {}; });
+        if (!pair[0].ok || !sj.ok) throw new Error(sj.message || sj.error || 'ต้องเข้าสู่ระบบ');
+        var g = sj.gateway || {};
+        state.innerHTML = '<b>Gateway:</b> ' + (g.state || 'unknown') + (g.status ? ' · HTTP ' + g.status : '') + (g.data && g.data.providers ? '<br><small>' + Object.entries(g.data.providers).map(function(x){return x[0]+': '+x[1];}).join(' · ') + '</small>' : '');
+        caps.innerHTML = Object.entries(cj.services || {}).map(function(entry) {
+          var name = entry[0], ops = entry[1];
+          return '<div style="padding:12px;border:1px solid rgba(255,255,255,.1);border-radius:12px;background:rgba(255,255,255,.03)"><b>' + name + '</b><div style="font-size:11px;color:var(--dim);margin-top:5px">อ่าน: ' + (ops.read || []).join(', ') + '</div><div style="font-size:11px;color:var(--dim);margin-top:4px">เขียน: ' + (ops.write || []).join(', ') + ' · ต้องยืนยัน</div></div>';
+        }).join('');
+      } catch (error) {
+        state.textContent = '⚠️ ' + (error.message || 'ตรวจสอบ gateway ไม่สำเร็จ');
+        caps.innerHTML = '';
+      }
+    }
+    document.getElementById('integrationRefresh').onclick = load;
+    await load();
+  }
+});
+var integrationsBtn = document.getElementById('integrationsBtn');
+if (integrationsBtn) integrationsBtn.onclick = function() { SM.show('integrations'); };
 
 /* ── IDE Screen ── */
 SM.register('ide', {
