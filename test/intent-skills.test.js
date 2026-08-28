@@ -22,4 +22,12 @@ const execute = intentSnapshot('สร้าง manifest สำหรับ PWA'
 assert.equal(execute.mode, 'execute');
 assert.equal(execute.needsConfirmation, true);
 assert.match(execute.executionPolicy, /allowlist-only/);
+
+for (const [command, expectedUnderstandId, expectedExecuteId] of [
+  ['แก้ database connection pool เต็ม', 'understand-troubleshooting-031-database', 'execute-troubleshooting-031-database'],
+  ['แก้ session หมดอายุเร็วเกินไป', 'understand-troubleshooting-051-authentication', 'execute-troubleshooting-051-authentication'],
+]) {
+  assert.equal(suggestIntentSkills(command, 'understand', 1)[0].id, expectedUnderstandId);
+  assert.equal(suggestIntentSkills(command, 'execute', 1)[0].id, expectedExecuteId);
+}
 console.log('intent skill registry tests passed');
