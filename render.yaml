@@ -21,6 +21,8 @@ services:
         sync: false
       - key: NEO_CONNECT_API_KEY
         sync: false
+      - key: MANUS_API_KEY
+        sync: false
       - key: CONNECTOR_GATEWAY_URL
         sync: false
       - key: CONNECTOR_GATEWAY_TOKEN

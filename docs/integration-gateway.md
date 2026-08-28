@@ -23,7 +23,9 @@
 
 ## Contract ของ upstream gateway
 
-Gateway ต้องมี `GET /v1/status` และ `POST /v1/integrations/:service/:action` รับ header `Authorization: Bearer <token>` และ JSON body `{ "payload": { ... } }` ผลสำเร็จควรคืน JSON ที่อธิบายผลจริงของผู้ให้บริการ ส่วนความผิดพลาดควรคืน HTTP status ที่เหมาะสมและฟิลด์ `error`
+Gateway ต้องมี `GET /v1/status` และ `POST /v1/integrations/:service/:action` รับ header `Authorization: Bearer <token>` และ JSON body `{ "payload": { ... }, "confirmed": false }` ผลสำเร็จควรคืน JSON ที่อธิบายผลจริงของผู้ให้บริการ ส่วนความผิดพลาดควรคืน HTTP status ที่เหมาะสมและฟิลด์ `error`
+
+โปรเจ็กต์มี self-hosted gateway ใน `server.js` แล้ว โดย gateway นี้เรียก Manus API v2 ด้วย `MANUS_API_KEY`, ส่ง connector UUID ของ Gmail/Google Calendar/Google Workspace และ poll ผลลัพธ์จนจบ การเรียกคำสั่งเขียนจะถูกป้องกันด้วย confirmation สองชั้น และไม่คืนค่า secret ให้ client
 
 บริการที่ allowlist ไว้ ได้แก่ Gmail, Google Calendar, Google Drive, Google Docs, Google Sheets, Google Slides, LINE, Messenger, WhatsApp, Instagram, Reddit และ Shopify การมีชื่ออยู่ใน allowlist ไม่ได้หมายความว่าเชื่อมต่อสำเร็จ ระบบจะแสดงผลสำเร็จต่อผู้ใช้ก็ต่อเมื่อ upstream ตอบกลับจริงเท่านั้น
 
@@ -34,7 +36,8 @@ Gateway ต้องมี `GET /v1/status` และ `POST /v1/integrations/:se
 ตั้งค่า secret เหล่านี้ใน Render Environment Variables:
 
 ```text
-CONNECTOR_GATEWAY_URL=https://your-real-gateway.example
+MANUS_API_KEY=<manus-api-key-with-connector-access>
+CONNECTOR_GATEWAY_URL=https://silelo-neo-connect.onrender.com
 CONNECTOR_GATEWAY_TOKEN=<server-only-secret>
 CONNECTOR_GATEWAY_TIMEOUT_MS=15000
 ```

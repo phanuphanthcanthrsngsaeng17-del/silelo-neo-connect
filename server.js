@@ -18,6 +18,7 @@ const { getOpenRouterMode, normalizeChatModelMode } = require('./lib/model-switc
 const { PLUGINS, listForUser, setEnabled } = require('./lib/plugins');
 const { gatewayUserFromRequest } = require('./lib/gateway-auth');
 const { SERVICE_OPERATIONS, requestGateway, gatewayStatus } = require('./lib/integration-gateway');
+const { executeManusConnector, gatewayStatus: manusGatewayStatus } = require('./lib/manus-connector-gateway');
 
 // 🛡️ Key Manager กลาง — ตรวจ/จัดการคีย์จากที่เดียว
 const ENV = require('./config/env');
@@ -1496,6 +1497,29 @@ function requireAuth(req, res, next) {
   req.authUser = user;
   next();
 }
+function requireConnectorGatewayToken(req, res, next) {
+  const expected = String(process.env.CONNECTOR_GATEWAY_TOKEN || '');
+  const received = String(req.headers.authorization || '').replace(/^Bearer\\s+/i, '');
+  if (!expected || !received || expected.length !== received.length || !crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(received))) {
+    return res.status(401).json({ ok: false, error: 'GATEWAY_UNAUTHORIZED' });
+  }
+  next();
+}
+
+// ===== Self-hosted real gateway backed by Manus API v2 =====
+app.get('/v1/status', requireConnectorGatewayToken, async (req, res) => {
+  const status = await manusGatewayStatus();
+  res.status(status.state === 'error' ? 502 : 200).json(status);
+});
+app.post('/v1/integrations/:service/:action', requireConnectorGatewayToken, async (req, res) => {
+  const result = await executeManusConnector({
+    service: req.params.service,
+    action: req.params.action,
+    payload: req.body?.payload && typeof req.body.payload === 'object' ? req.body.payload : {},
+    confirmed: req.body?.confirmed === true,
+  });
+  res.status(result.status || (result.ok ? 200 : 502)).json(result);
+});
 function isOwner(user) {
   return isOwnerIdentity(user, { ownerEmails: OWNER_EMAILS, ownerLineIds: OWNER_LINE_IDS, loginEmail: LOGIN_EMAIL });
 }

@@ -59,7 +59,7 @@ test("forwards a read operation to the configured gateway without exposing token
     path: "/v1/integrations/gmail/search_messages",
     auth: "Bearer server-secret",
     user: "user@example.com",
-    body: { payload: { q: "is:unread", max_results: 2 } },
+    body: { payload: { q: "is:unread", max_results: 2 }, confirmed: false },
   });
   assert.equal(JSON.stringify(result).includes("server-secret"), false);
 });
