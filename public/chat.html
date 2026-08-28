@@ -5458,11 +5458,54 @@ SM.register('github', {
     var body = el.querySelector('.silelo-screen-body');
     if (!body) return;
     body.innerHTML =
-      '<div style="margin-bottom:16px;">' +
-        '<input type="text" id="ghSearch" placeholder="ค้นหา repo หรือ user..." ' +
-          'style="width:100%;padding:10px 14px;border-radius:10px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04);color:var(--txt);font-size:14px;outline:none;">' +
+      '<div style="margin-bottom:14px;padding:12px;border:1px solid rgba(255,255,255,.08);border-radius:12px;background:rgba(255,255,255,.03);">' +
+        '<div style="font-weight:700;margin-bottom:8px;">🐙 Repository Workspace</div>' +
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">' +
+          '<input type="text" id="ghOwner" value="phanuphanthcanthrsngsaeng17-del" placeholder="owner" style="padding:9px;border-radius:8px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04);color:var(--txt);">' +
+          '<input type="text" id="ghRepoName" value="silelo-neo-connect" placeholder="repo" style="padding:9px;border-radius:8px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04);color:var(--txt);">' +
+        '</div>' +
+        '<div style="display:flex;gap:8px;margin-top:8px;align-items:center;">' +
+          '<select id="ghRef" style="flex:1;padding:9px;border-radius:8px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04);color:var(--txt);"><option value="main">main</option></select>' +
+          '<button class="ct-btn" id="ghLoad">โหลด Repo</button>' +
+          '<button class="ct-btn" id="ghDiff">Diff</button>' +
+        '</div>' +
+        '<div id="ghRepoMeta" style="margin-top:8px;color:var(--dim);font-size:12px;"></div>' +
       '</div>' +
+      '<div style="margin-bottom:14px;">' +
+        '<input type="text" id="ghSearch" placeholder="ค้นหา repo หรือ user..." style="width:100%;padding:10px 14px;border-radius:10px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04);color:var(--txt);font-size:14px;outline:none;">' +
+      '</div>' +
+      '<div id="ghTree" style="margin-bottom:14px;"></div>' +
+      '<pre id="ghFile" style="display:none;max-height:420px;overflow:auto;white-space:pre-wrap;padding:12px;border-radius:10px;background:rgba(0,0,0,.28);font-size:12px;"></pre>' +
       '<div id="ghResults"></div>';
+
+    function ghParams(extra) {
+      var p = new URLSearchParams({ owner: document.getElementById('ghOwner').value.trim(), repo: document.getElementById('ghRepoName').value.trim(), ref: document.getElementById('ghRef').value });
+      Object.keys(extra || {}).forEach(function(k) { p.set(k, extra[k]); });
+      return p.toString();
+    }
+    function ghMsg(text, bad) { var meta = document.getElementById('ghRepoMeta'); if (meta) { meta.textContent = text; meta.style.color = bad ? '#ff7b7b' : 'var(--dim)'; } }
+    async function ghLoadRepo() {
+      var tree = document.getElementById('ghTree');
+      ghMsg('กำลังโหลดข้อมูลจาก GitHub...');
+      if (tree) tree.innerHTML = '<div style="color:var(--dim);">กำลังโหลด tree...</div>';
+      try {
+        var qs = ghParams({});
+        var rr = await fetch('/api/github/repo?' + qs); var rj = await rr.json();
+        if (!rr.ok || !rj.ok) throw new Error(rj.error || 'โหลด repository ไม่สำเร็จ');
+        var repo = rj.repo; ghMsg((repo.full_name || '') + ' · ' + (repo.default_branch || '') + ' · ' + (repo.language || 'ไม่ระบุ'));
+        var requestedRef = document.getElementById('ghRef').value || repo.default_branch || 'main';
+        var br = await fetch('/api/github/branches?' + qs); var bj = await br.json();
+        var select = document.getElementById('ghRef');
+        if (bj.ok && select) { select.innerHTML = bj.branches.map(function(b) { return '<option value="' + String(b.name).replace(/"/g, '&quot;') + '">' + String(b.name).replace(/</g, '&lt;') + '</option>'; }).join(''); select.value = bj.branches.some(function(b) { return b.name === requestedRef; }) ? requestedRef : (repo.default_branch || 'main'); }
+        var tr = await fetch('/api/github/tree?' + ghParams({ ref: select ? select.value : 'main' })); var tj = await tr.json();
+        if (!tr.ok || !tj.ok) throw new Error(tj.error || 'โหลดไฟล์ไม่สำเร็จ');
+        if (tree) tree.innerHTML = '<div style="font-weight:700;margin-bottom:6px;">📁 Files (' + tj.tree.length + ')</div>' + tj.tree.filter(function(x) { return x.type === 'blob'; }).slice(0, 160).map(function(x) { return '<button class="screen-gh-repo" data-gh-file="' + encodeURIComponent(x.path) + '" style="width:100%;text-align:left;"><span class="screen-gh-repo-icon">📄</span><span class="screen-gh-repo-name">' + x.path.replace(/</g, '&lt;') + '</span></button>'; }).join('');
+        if (tree) tree.querySelectorAll('[data-gh-file]').forEach(function(btn) { btn.addEventListener('click', async function() { var path = decodeURIComponent(btn.getAttribute('data-gh-file')); var fr = await fetch('/api/github/file?' + ghParams({ path: path })); var fj = await fr.json(); var pre = document.getElementById('ghFile'); if (pre) { pre.style.display = 'block'; pre.textContent = fj.ok && fj.file ? '📄 ' + fj.file.path + '\\n\\n' + (fj.file.content || '(binary or empty file)') : '❌ ' + (fj.error || 'อ่านไฟล์ไม่ได้'); } }); });
+      } catch (e) { ghMsg('❌ ' + e.message, true); if (tree) tree.innerHTML = ''; }
+    }
+    document.getElementById('ghLoad').addEventListener('click', ghLoadRepo);
+    document.getElementById('ghRef').addEventListener('change', ghLoadRepo);
+    document.getElementById('ghDiff').addEventListener('click', async function() { var from = prompt('เปรียบเทียบจาก branch', 'main'); var to = document.getElementById('ghRef').value; if (!from || !to || from === to) return; var r = await fetch('/api/github/compare?' + ghParams({ from: from, to: to })); var j = await r.json(); var pre = document.getElementById('ghFile'); if (pre) { pre.style.display = 'block'; pre.textContent = j.ok ? ('Diff ' + from + ' → ' + to + '\\n' + j.files.map(function(f) { return f.status + ' ' + f.filename + ' (+' + f.additions + ' -' + f.deletions + ')\\n' + (f.patch || ''); }).join('\\n\\n')) : '❌ ' + (j.error || 'ดู diff ไม่ได้'); } });
 
     /* Search */
     var searchTimer;

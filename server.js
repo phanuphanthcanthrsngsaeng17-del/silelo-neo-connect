@@ -20,6 +20,7 @@ const { gatewayUserFromRequest } = require('./lib/gateway-auth');
 const { SERVICE_OPERATIONS, requestGateway, gatewayStatus } = require('./lib/integration-gateway');
 const { executeManusConnector, gatewayStatus: manusGatewayStatus } = require('./lib/manus-connector-gateway');
 const { intentSnapshot, registryStats, suggestIntentSkills } = require('./lib/intent-skills');
+const githubRepo = require('./lib/github-repo');
 
 // 🛡️ Key Manager กลาง — ตรวจ/จัดการคีย์จากที่เดียว
 const ENV = require('./config/env');
@@ -2280,6 +2281,49 @@ async function runChatCodeBlocks(question) {
   for (const block of blocks) results.push(await executeCode(block.src, block.lang));
   return { blocks, results };
 }
+
+/* ============ 🐙 GITHUB REPOSITORY INTEGRATION ============ */
+function githubApiError(res, err) {
+  const status = Number(err && err.status) || 502;
+  const safe = String(err && err.message || 'GitHub request failed').slice(0, 240);
+  return res.status(status >= 400 && status < 600 ? status : 502).json({ ok: false, error: safe });
+}
+function githubInput(req) {
+  return { owner: req.query.owner, repo: req.query.repo, ref: req.query.ref };
+}
+app.get('/api/github/config', requireAuth, (req, res) => {
+  const c = githubRepo.config();
+  res.json({ ok: true, configured: Boolean(c.token), owner: c.owner, repo: c.repo, writeEnabled: Boolean(c.token) });
+});
+app.get('/api/github/repo', requireAuth, async (req, res) => {
+  try { const d = await githubRepo.getRepo(githubInput(req)); res.json({ ok: true, repo: d }); } catch (e) { githubApiError(res, e); }
+});
+app.get('/api/github/tree', requireAuth, async (req, res) => {
+  try { const d = await githubRepo.getTree(githubInput(req)); res.json({ ok: true, tree: (d.tree || []).map(x => ({ path: x.path, type: x.type, size: x.size || 0 })) }); } catch (e) { githubApiError(res, e); }
+});
+app.get('/api/github/file', requireAuth, async (req, res) => {
+  try { if (!req.query.path) return res.status(400).json({ ok: false, error: 'path is required' }); const d = await githubRepo.getFile({ ...githubInput(req), path: req.query.path }); res.json({ ok: true, file: { name: d.name, path: d.path, sha: d.sha, size: d.size, html_url: d.html_url, content: d.content } }); } catch (e) { githubApiError(res, e); }
+});
+app.get('/api/github/branches', requireAuth, async (req, res) => {
+  try { const d = await githubRepo.listBranches(githubInput(req)); res.json({ ok: true, branches: d.map(x => ({ name: x.name, protected: Boolean(x.protected), sha: x.commit && x.commit.sha })) }); } catch (e) { githubApiError(res, e); }
+});
+app.get('/api/github/commits', requireAuth, async (req, res) => {
+  try { const d = await githubRepo.listCommits(githubInput(req)); res.json({ ok: true, commits: d.map(x => ({ sha: x.sha, message: x.commit && x.commit.message, date: x.commit && x.commit.author && x.commit.author.date, url: x.html_url })) }); } catch (e) { githubApiError(res, e); }
+});
+app.get('/api/github/compare', requireAuth, async (req, res) => {
+  try { const d = await githubRepo.compare({ ...githubInput(req), from: req.query.from, to: req.query.to }); res.json({ ok: true, status: d.status, ahead_by: d.ahead_by, behind_by: d.behind_by, files: (d.files || []).map(x => ({ filename: x.filename, status: x.status, additions: x.additions, deletions: x.deletions, patch: x.patch || '' })) }); } catch (e) { githubApiError(res, e); }
+});
+function githubWriteInput(req) { return Object.assign({}, githubInput(req), req.body || {}); }
+function requireGithubToken(req, res, next) { if (!githubRepo.config().token) return res.status(503).json({ ok: false, error: 'GITHUB_TOKEN is not configured' }); next(); }
+app.post('/api/github/branches', requireAuth, requireOwner, requireGithubToken, async (req, res) => {
+  try { if (!req.body || !req.body.branch) return res.status(400).json({ ok: false, error: 'branch is required' }); const d = await githubRepo.createBranch(githubWriteInput(req)); res.json({ ok: true, branch: d }); } catch (e) { githubApiError(res, e); }
+});
+app.delete('/api/github/branches', requireAuth, requireOwner, requireGithubToken, async (req, res) => {
+  try { if (!req.body || !req.body.branch) return res.status(400).json({ ok: false, error: 'branch is required' }); await githubRepo.deleteBranch(githubWriteInput(req)); res.json({ ok: true }); } catch (e) { githubApiError(res, e); }
+});
+app.put('/api/github/file', requireAuth, requireOwner, requireGithubToken, async (req, res) => {
+  try { if (!req.body || !req.body.path) return res.status(400).json({ ok: false, error: 'path is required' }); const d = await githubRepo.writeFile(githubWriteInput(req)); res.json({ ok: true, commit: d.commit, content: d.content }); } catch (e) { githubApiError(res, e); }
+});
 
 app.post('/api/chat', requireAuth, async (req, res) => {
   try {

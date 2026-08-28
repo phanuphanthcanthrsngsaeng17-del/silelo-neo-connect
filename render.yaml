@@ -19,6 +19,12 @@ services:
         sync: false
       - key: RUN_SECRET
         sync: false
+      - key: GITHUB_TOKEN
+        sync: false
+      - key: GITHUB_OWNER
+        value: phanuphanthcanthrsngsaeng17-del
+      - key: GITHUB_REPO
+        value: silelo-neo-connect
       - key: NEO_CONNECT_API_KEY
         sync: false
       - key: MANUS_API_KEY
