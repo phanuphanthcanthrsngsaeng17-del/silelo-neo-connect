@@ -2355,7 +2355,7 @@ body.theme-dola #inp { border-radius: 16px; }
         <span class="whero-badge">📞 <b>โทรหา</b> พูดคุยได้</span>
         <span class="whero-badge">🧠 <b>จดจำ</b> บริบท</span>
         <span class="whero-badge">🧑‍💼 <b>ทีม 50</b> คน</span>
-        <span class="whero-badge">💻 <b>3 ห้อง</b> SLI · WORK · LAB</span>
+        <span class="whero-badge">💻 <b>ห้องเดียว</b> SLI · ห้องสลี่</span>
       </div>
       <div class="starter-grid2">
         ${starters.map(([ico, tx, sub]) => `
@@ -2529,7 +2529,7 @@ body.theme-dola #inp { border-radius: 16px; }
     // 🎨 วาดรูป
     const dp = extractDrawPrompt(q);
     if (dp) { await doDraw(dp); return; }
-    // 🔬 LAB AUTO — ห้องแล็บ พิมพ์ปุ๊บ ทำปั๊บ ไม่ต้องกดปุ่มอะไรเลย
+    // 🔬 SLI WORKSPACE AUTO — สลี่ช่วยลงมือทำตามคำสั่งในห้องเดียว
     // 🤖 CODER AGENT — เขียนโค้ด+รันอัตโนมัติ (โหมดเปิด)
     if (coderMode && isCodingTask(q)) { await callCoder(q); return; }
     // 🧑💼 ทีมงาน AI — @ชื่อ / ทีม / มอบหมาย / งานของ / สรุปงานทีม
@@ -3489,7 +3489,7 @@ body.theme-dola #inp { border-radius: 16px; }
     { id: 'a13', n: '🧪 ทดสอบ', r: 'QA', d: 'ทดสอบทุกฟีเจอร์ ก่อนเปิดใช้ ตรวจหาบัค', s: 'จับบัคเก่ง' },
     { id: 'a14', n: '💬 ไลน์', r: 'LINE API', d: 'เชื่อมต่อ LINE API ตอบแชท จัดการบอสไลน์', s: 'ตอบไลน์ไว' },
     { id: 'a15', n: '📡 สถานี', r: 'Network', d: 'จัดการการเชื่อมต่อ สัญญาณ ความเสถียร', s: 'สัญญาณนิ่ง' },
-    { id: 'a16', n: '🏛️ หอประชุม', r: 'Rooms', d: 'จัดการห้องสนทนา ห้องส่วนตัว ห้องแล็บ', s: 'ห้องเป็นระเบียบ' },
+    { id: 'a16', n: '🏛️ หอประชุม', r: 'Rooms', d: 'จัดการบริบทการสนทนาและห้องสลี่', s: 'ห้องเป็นระเบียบ' },
     { id: 'a17', n: '📊 จอร์', r: 'Dashboard/Stats', d: 'แดชบอร์ด สถิติ ความเร็ว การใช้งาน', s: 'เห็นเลขชัด' },
     { id: 'a18', n: '📝 คอนเทนต์', r: 'Content', d: 'จัดการเนื้อหา บทความ คู่มือ คำอธิบาย', s: 'เนื้อหาครบ' },
     { id: 'a19', n: '📂 ดาต้า', r: 'Data', d: 'จัดการข้อมูล สำรอง ย้ายข้อมูล ความปลอดภัย', s: 'ข้อมูลปลอดภัย' },
@@ -3605,7 +3605,7 @@ body.theme-dola #inp { border-radius: 16px; }
     { re: /ทดสอบ|test|บัค|bug|qa/, id: 'a13' },
     { re: /ไลน์|line api|webhook/, id: 'a14' },
     { re: /สถานี|สัญญาณ|เน็ต|network|เสถียร|เชื่อมต่อ/, id: 'a15' },
-    { re: /หอประชุม|ห้องสนทนา|ห้องส่วนตัว|ห้องแล็บ|ห้อง/, id: 'a16' },
+    { re: /หอประชุม|บริบทการสนทนา|ห้องส่วนตัว|ห้องสลี่|ห้อง/, id: 'a16' },
     { re: /จอร์|แดชบอร์ด|สถิติ|dashboard|ความเร็วระบบ/, id: 'a17' },
     { re: /คอนเทนต์|เนื้อหา|บทความ|คู่มือ/, id: 'a18' },
     { re: /ดาต้า|ข้อมูล|สำรอง|backup|ย้ายข้อมูล/, id: 'a19' },
@@ -4398,11 +4398,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     /* ---------- รายการแชทในไซด์บาร์ ---------- */
     const DOLA_CHATS = [
-      { icon: '🟤', name: 'โมลี่ครอบครัว', sub: 'ครอบครัว · เมื่อวาน', room: 'private' },
-      { icon: '🟡', name: 'หัวใจ', sub: 'ความรัก · 2 วันก่อน', room: 'work' },
-      { icon: '🫶', name: 'ฉันและสลี่AI...', sub: 'เพื่อนสนิท · สดๆ', room: 'lab' }
+      { icon: '💜', name: 'สลี่', sub: 'ผู้ช่วยส่วนตัว · ออนไลน์', room: 'private' }
     ];
-    const DOLA_ROOM_NAMES = { private: 'SLI', work: 'WORK', lab: 'LAB' };
+    const DOLA_ROOM_NAMES = { private: 'SLI' };
     let dolaActiveRoom = room;
     function renderChatList(q) {
       const list = $('dolaChatList');
@@ -4572,7 +4570,7 @@ document.addEventListener('DOMContentLoaded', () => {
         } else if (act === 'privacy') {
           showInfo('🔒 ความเป็นส่วนตัวและสิทธิ์', '<p>ข้อมูลแชทของคุณถูกเก็บไว้ในเครื่องคุณเอง (localStorage) และผ่านเซิร์ฟเวอร์เพื่อประมวลผลคำตอบเท่านั้น</p><ul><li>🔐 บทสนทนาส่วนตัว — ไม่แชร์กับใคร</li><li>🛡️ ไม่เก็บประวัติการค้นหา</li><li>🎙️ ไมโครโฟนใช้เฉพาะตอนกดโทร/พูด</li><li>📷 กล้องใช้เฉพาะตอนเปิดกล้องให้ AI ดู</li></ul><p>สิทธิ์ทั้งหมดสามารถเปิด-ปิดได้ที่เบราว์เซอร์ของคุณ</p>');
         } else if (act === 'help') {
-          showInfo('🚩 ความช่วยเหลือและข้อเสนอแนะ', '<p>พิมพ์คำสั่งเหล่านี้ได้เลย:</p><ul><li><b>@ชื่อทีม</b> — สั่งงาน AI ทีม 50 คน</li><li><b>มอบหมาย @ชื่อ งาน...</b> — มอบงานให้ AI</li><li><b>ติดตั้ง pandas</b> — รันโค้ด/ติดตั้งแพ็กเกจ (LAB)</li><li><b>เขียนเกมงู Python</b> — เขียน+รันโค้ดให้เลย</li><li><b>แชร์จอ / เปิดกล้อง</b> — ให้ AI มองเห็น</li><li><b>/research หัวข้อ</b> — 🧩 Blocks: วิจัย+สรุปรายงาน</li><li><b>/review โค้ด</b> — 🧩 Blocks: review ให้คะแนน/หา bug</li><li><b>/blocks &lt;agent&gt; ข้อความ</b> — 🧩 Blocks: เรียก agent ใดก็ได้</li><li><b>/blocks-guide คำถาม</b> — 🧩 Blocks: ถามเรื่อง Blocks Network</li></ul><p>พบปัญหา? พิมพ์บอกสลี่ได้เลย — หรือกด 🐱 Discord เพื่อคุยกับทีม</p>');
+          showInfo('🚩 ความช่วยเหลือและข้อเสนอแนะ', '<p>พิมพ์คำสั่งเหล่านี้ได้เลย:</p><ul><li><b>@ชื่อทีม</b> — สั่งงาน AI ทีม 50 คน</li><li><b>มอบหมาย @ชื่อ งาน...</b> — มอบงานให้ AI</li><li><b>ติดตั้ง pandas</b> — รันโค้ด/ติดตั้งแพ็กเกจในพื้นที่ทำงาน</li><li><b>เขียนเกมงู Python</b> — เขียน+รันโค้ดให้เลย</li><li><b>แชร์จอ / เปิดกล้อง</b> — ให้ AI มองเห็น</li><li><b>/research หัวข้อ</b> — 🧩 Blocks: วิจัย+สรุปรายงาน</li><li><b>/review โค้ด</b> — 🧩 Blocks: review ให้คะแนน/หา bug</li><li><b>/blocks &lt;agent&gt; ข้อความ</b> — 🧩 Blocks: เรียก agent ใดก็ได้</li><li><b>/blocks-guide คำถาม</b> — 🧩 Blocks: ถามเรื่อง Blocks Network</li></ul><p>พบปัญหา? พิมพ์บอกสลี่ได้เลย — หรือกด 🐱 Discord เพื่อคุยกับทีม</p>');
         } else if (act === 'about') {
           showInfo('ℹ️ เกี่ยวกับ CFBossnusilelo', '<p><b>CFBossnusilelo</b> คือผู้ช่วย AI ในเวอร์ชัน <b>Bossnusilelo</b> — สร้างโดยพี่นุ (bossnu) เพื่อดูแลและคุยกับสลี่ 🤖💜</p><p>เวอร์ชัน: <b>Neo-Connect v1.9+</b><br>โหมด: ห้อง ' + (R.name || 'SLI') + ' · ' + (R.tag || '') + '</p><p>ฟีเจอร์: แชท AI, โทรด้วยเสียง, จดจำบทสนทนา, ทีม AI 50 คน, เขียน+รันโค้ด, ดูภาพ, แชร์หน้าจอ</p><p>ทำโดย พี่นุ (bossnu) — โปรเจกต์ Silelo / Neo-Connect / Bossnusilelo Eye 💍</p>');
         } else if (act === 'discord') {

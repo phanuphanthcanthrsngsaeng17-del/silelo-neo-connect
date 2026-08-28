@@ -1,7 +1,7 @@
 {
   "name": "silelo-neo-connect",
   "version": "1.0.0",
-  "description": "SILELO Neo-Connect — 3 ห้องแชท Cyberpunk (สลี่ / คุณเวิร์ค / ดร.แล็บ)",
+  "description": "SILELO Neo-Connect — ห้องแชทส่วนตัวของสลี่บนสถาปัตยกรรม Cyberpunk",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",

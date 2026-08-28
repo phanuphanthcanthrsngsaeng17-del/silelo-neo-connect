@@ -1,6 +1,6 @@
 /* ============================================================
-   SILELO Neo-Connect — 3 ห้องแชท Cyberpunk
-   ห้อง: private (สลี่) / work (คุณเวิร์ค) / lab (ดร.แล็บ)
+   SILELO Neo-Connect — ห้องแชทส่วนตัวของสลี่
+   ห้อง: private (สลี่)
    AI chain: ⚡RACE[Groq 6 โมเดล vs Gemini 9 keys] → Cerebras → Ollama Cloud → Z.AI GLM → OpenRouter → Pollinations → mock
    v1.34: 👁 Live Preview (/web AI สร้างเว็บ + /preview iframe) | 🗂 IDE ในเบราว์เซอร์ (File Explorer + Editor + Terminal)
  — AI 5 ตัวทำงานพร้อมกัน | 🗄️ DB Sandbox (/db) — SQLite จริง | 🐙 GitHub Tool (/gh) — repo/user/search | 📤 Export แชท (JSON+TXT)
