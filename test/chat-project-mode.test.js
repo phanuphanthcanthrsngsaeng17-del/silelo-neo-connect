@@ -25,11 +25,14 @@ test('chat API rejects code blocks and /db commands without executing them', () 
 
 test('simulation controls are hidden while IDE remains available', () => {
   assert.match(chat, /#superBtn, #coderBtn, #previewBtn, #codeBtn/);
-  assert.match(chat, /id="ideBtn"/);
+  assert.match(chat, /id="ideBtn" title="🐙 GitHub Editor/);
+  assert.match(chat, /'ideBtn': 'github'/);
+  assert.doesNotMatch(chat, /'ideBtn': 'ide'/);
   assert.match(chat, /Git\/IDE only/);
   assert.match(chat, /ปิดการจำลองและการรันโค้ดจากห้องแชท/);
   assert.doesNotMatch(chat, /<span class="screen-help-key">🛠️ Code Tools<\/span>/);
   assert.doesNotMatch(chat, /<span class="screen-help-key">🗄️ DB Sandbox<\/span>/);
+  assert.doesNotMatch(chat, /'previewBtn': 'preview'/);
 });
 
 test('chat never asks the server to run code for a normal message', () => {

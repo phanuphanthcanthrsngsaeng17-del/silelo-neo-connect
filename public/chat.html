@@ -1754,7 +1754,7 @@ body.theme-dola #inp { border-radius: 16px; }
       <button class="icon-btn" id="liveOpsBtn" title="📡 Live Operations — สถานะระบบจริง">📡</button>
       <button class="icon-btn" id="integrationsBtn" title="🔌 Integrations — สถานะบริการที่เชื่อมต่อจริง">🔌</button>
       <button class="icon-btn" id="previewBtn" hidden aria-hidden="true" title="Preview ปิดจากห้องแชท">👁</button>
-      <button class="icon-btn" id="ideBtn" title="🗂 IDE — File Explorer + Editor + Terminal">🗂</button>
+      <button class="icon-btn" id="ideBtn" title="🐙 GitHub Editor — แก้ไฟล์โปรเจกต์จริง">🐙</button>
       <button class="icon-btn" id="themeBtn" title="เปลี่ยนธีม">🎨</button>
       <button class="icon-btn" id="puterBtn" title="🐋 DeepSeek ฟรีไม่จำกัด (Puter) — แตะเพื่อเชื่อม/สลับ">🐋</button>
       <button class="icon-btn" id="teamBtn" title="🧑💼 ทีมงาน AI 50 คน — พี่นุเป็นผู้จัดการ">🧑💼</button>
@@ -5899,8 +5899,8 @@ SM.register('help', {
       '<div class="screen-help-section">' +
         '<div class="screen-help-section-title">⌨️ ปุ่มลัด</div>' +
         '<div class="screen-help-item"><span class="screen-help-key">Ctrl+K</span><span class="screen-help-desc">เปิดค้นหาแชท</span></div>' +
-        '<div class="screen-help-item"><span class="screen-help-key">Ctrl+I</span><span class="screen-help-desc">เปิด IDE</span></div>' +
-        '<div class="screen-help-item"><span class="screen-help-key">Ctrl+P</span><span class="screen-help-desc">เปิด Preview</span></div>' +
+        '<div class="screen-help-item"><span class="screen-help-key">Ctrl+I</span><span class="screen-help-desc">เปิด GitHub Editor</span></div>' +
+        '<div class="screen-help-item"><span class="screen-help-key">Ctrl+P</span><span class="screen-help-desc">เปิด GitHub Editor</span></div>' +
         '<div class="screen-help-item"><span class="screen-help-key">Ctrl+D</span><span class="screen-help-desc">เปิด Deploy</span></div>' +
         '<div class="screen-help-item"><span class="screen-help-key">IDE / GitHub</span><span class="screen-help-desc">เปิดตัวแก้ไขโปรเจกต์จริง</span></div>' +
         '<div class="screen-help-item"><span class="screen-help-key">Ctrl+T</span><span class="screen-help-desc">เปิด Team AI</span></div>' +
@@ -5931,11 +5931,11 @@ SM.register('help', {
 /* ──── Wire up header buttons ──── */
 function initScreenNavigation() {
   var buttonMap = {
-    'ideBtn': 'ide',
-    'previewBtn': 'preview',
+    'ideBtn': 'github',
+    'previewBtn': 'github',
     'teamBtn': 'team',
-    'toolsBtn': 'tools',
-    'coderBtn': 'ide',
+    'toolsBtn': 'github',
+    'coderBtn': 'github',
     'browserBtn': 'browser',
     'liveOpsBtn': 'liveops',
     'themeBtn': 'settings',
