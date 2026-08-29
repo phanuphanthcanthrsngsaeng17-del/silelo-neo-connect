@@ -27,6 +27,10 @@ test('simulation controls are hidden while IDE remains available', () => {
   assert.match(chat, /#superBtn, #coderBtn, #previewBtn, #codeBtn/);
   assert.match(chat, /id="ideBtn" title="🐙 GitHub Editor/);
   assert.match(chat, /'ideBtn': 'github'/);
+  assert.match(chat, /ghEditor/);
+  assert.match(chat, /ghSaveFile/);
+  assert.match(chat, /ยืนยันเขียนไฟล์จริงและสร้าง commit บน GitHub/);
+  assert.match(chat, /fetch\('\/api\/github\/file'/);
   assert.doesNotMatch(chat, /'ideBtn': 'ide'/);
   assert.match(chat, /Git\/IDE only/);
   assert.match(chat, /ปิดการจำลองและการรันโค้ดจากห้องแชท/);
