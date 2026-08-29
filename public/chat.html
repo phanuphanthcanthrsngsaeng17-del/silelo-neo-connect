@@ -166,22 +166,33 @@
   .icon-btn.active { border-color: #ff3d00 !important; color: #fff !important; animation: rulepulse 1.2s ease-in-out infinite; }
   @keyframes rulepulse { 0%,100% { box-shadow: 0 0 6px rgba(255,61,0,.5); } 50% { box-shadow: 0 0 18px rgba(255,61,0,.9); } }
 
-  /* ===== จอมือถือ: ปุ่ม header เล็กลง ไม่ล้นจอ ===== */
+  /* ===== จอมือถือ: header เป็นแถบแท็บเลื่อนแนวนอน ไม่ล้นจอ ===== */
   @media (max-width: 560px) {
-    header { gap: 8px; padding: 8px 10px; }
+    header { gap: 8px; padding: 8px 10px 6px; flex-wrap: wrap; overflow: hidden; }
     .avatar-wrap { width: 40px; height: 40px; }
     .avatar { font-size: 20px; }
     .hinfo h1 { font-size: 13px; letter-spacing: 2px; }
-    .hbtns { gap: 4px; }
-    .icon-btn { width: 44px; height: 44px; font-size: 17px; border-radius: 10px; }
-    .back-btn { width: 44px; height: 44px; font-size: 17px; }
-    #callBtn { width: 46px; height: 46px; font-size: 20px; }
+    .hinfo { min-width: 0; }
+    .hbtns {
+      order: 5; flex: 0 0 100%; width: 100%; min-width: 0; max-width: 100%;
+      display: flex; gap: 6px; overflow-x: auto; overflow-y: hidden; padding: 4px 2px 6px;
+      scrollbar-width: thin; scrollbar-color: color-mix(in srgb, var(--accent) 55%, transparent) transparent;
+      -webkit-overflow-scrolling: touch; overscroll-behavior-x: contain; scroll-snap-type: x proximity;
+    }
+    .hbtns::-webkit-scrollbar { height: 3px; }
+    .hbtns::-webkit-scrollbar-thumb { background: color-mix(in srgb, var(--accent) 55%, transparent); border-radius: 99px; }
+    .hbtns > button { scroll-snap-align: start; }
+    .icon-btn { width: 42px; height: 42px; font-size: 17px; border-radius: 10px; }
+    .back-btn { width: 42px; height: 42px; font-size: 17px; }
+    #callBtn { width: 44px; height: 44px; font-size: 20px; }
     #statusDot { display: none; }
   }
   @media (max-width: 380px) {
-    .icon-btn { width: 44px; height: 44px; font-size: 17px; }
-    .hbtns { gap: 3px; }
-    header { padding: 8px 6px; gap: 6px; }
+    .icon-btn { width: 40px; height: 40px; font-size: 16px; }
+    .hbtns { gap: 5px; }
+    header { padding: 7px 6px 5px; gap: 6px; }
+    .back-btn { width: 40px; height: 40px; }
+    #callBtn { width: 42px; height: 42px; }
     .hinfo h1 { font-size: 12px; }
   }
 
