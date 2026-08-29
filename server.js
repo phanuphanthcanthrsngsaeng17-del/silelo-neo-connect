@@ -87,6 +87,10 @@ app.get('/chat', (req, res) => {
   if (!getAuthUser(req)) return res.redirect('/');
   res.sendFile(path.join(__dirname, 'public', 'chat.html'));
 });
+// Canonical compatibility path for the single Sli room.
+app.get(['/silelo-neo-connect', '/silelo-neo-connect/'], (req, res) => {
+  res.redirect('/chat?room=private');
+});
 const PORT = process.env.PORT || 3000;
 
 /* ---------------- 💭 จอคิด: กระบวนการคิด/คำนวณแบบเรียลไทม์ ----------------
