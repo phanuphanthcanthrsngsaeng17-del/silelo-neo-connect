@@ -22,7 +22,15 @@
     <section class="controls">
       <button id="mic" disabled>🎤 ไมค์</button><button id="camera" disabled>📷 กล้อง</button><button id="screen" disabled>🖥 แชร์จอ</button><button id="hangup" class="danger" disabled>วางสาย</button>
     </section>
-    <p class="note">การโทรใช้ WebRTC แบบ peer-to-peer; เซิร์ฟเวอร์นี้ทำหน้าที่ส่งสัญญาณเท่านั้น ห้องจำกัด 8 อุปกรณ์ต่อห้อง และอาจต้องใช้ TURN สำหรับบางเครือข่าย</p>
+    <section class="chat-card">
+      <div class="chat-title">💬 แชทในห้องโทร <span id="chat-state">รอการเชื่อมต่อ</span></div>
+      <div id="chat-messages" class="chat-messages" aria-live="polite"></div>
+      <form id="chat-form" class="chat-form">
+        <input id="chat-input" maxlength="2000" autocomplete="off" placeholder="พิมพ์ข้อความถึงผู้ร่วมสาย..." disabled>
+        <button id="chat-send" type="submit" disabled>ส่ง</button>
+      </form>
+    </section>
+    <p class="note">การโทรและแชทใช้ WebRTC แบบ peer-to-peer; เซิร์ฟเวอร์ทำหน้าที่ส่งสัญญาณเท่านั้น ห้องจำกัด 8 อุปกรณ์ต่อห้อง และอาจต้องใช้ TURN สำหรับบางเครือข่าย</p>
   </main>
   <script src="/call.js"></script>
 </body>
