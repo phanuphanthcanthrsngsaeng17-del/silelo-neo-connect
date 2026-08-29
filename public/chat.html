@@ -1567,7 +1567,9 @@ body.theme-dola #inp { border-radius: 16px; }
     color: var(--dim, #9b8cc0);
   }
 
-  /* ===== Team ===== */
+   .screen-settings-save-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.screen-settings-save{background:linear-gradient(135deg,#7c3aed,#c026d3);color:#fff;border:0;border-radius:10px;padding:10px 14px;font-weight:700;cursor:pointer}.screen-settings-save:disabled{opacity:.55;cursor:wait}.screen-password-card{display:grid;gap:8px;padding:12px;border:1px solid rgba(192,132,252,.18);border-radius:12px;background:rgba(255,255,255,.025)}.screen-password-card input{width:100%;background:rgba(0,0,0,.2);color:var(--txt,#fff);border:1px solid rgba(255,255,255,.12);border-radius:9px;padding:10px;outline:none}.screen-password-card input:focus{border-color:#c084fc}.screen-settings-item-desc.ok{color:#6ee7b7}
+
+   /* ===== Team ===== */
   .screen-team-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
@@ -5759,6 +5761,20 @@ SM.register('settings', {
           '</select>' +
         '</div>' +
       '</div>' +
+      '<div class="screen-settings-group screen-settings-save-group">' +
+        '<div class="screen-settings-group-title">💾 บันทึก</div>' +
+        '<div class="screen-settings-save-row"><button class="screen-settings-save" id="saveSettingsBtn" type="button">💾 บันทึกการตั้งค่า</button><span id="settingsSaveStatus" class="screen-settings-item-desc">บันทึกธีม ฟอนต์ เสียง ความจำ และโมเดลไว้ในเครื่องนี้</span></div>' +
+      '</div>' +
+      '<div class="screen-settings-group screen-password-group">' +
+        '<div class="screen-settings-group-title">🔐 เปลี่ยนรหัสผ่าน</div>' +
+        '<div class="screen-password-card">' +
+          '<input id="currentPassword" type="password" autocomplete="current-password" placeholder="รหัสผ่านเดิม">' +
+          '<input id="newPassword" type="password" autocomplete="new-password" placeholder="รหัสผ่านใหม่ อย่างน้อย 12 ตัวอักษร">' +
+          '<input id="confirmPassword" type="password" autocomplete="new-password" placeholder="ยืนยันรหัสผ่านใหม่">' +
+          '<button class="screen-settings-save" id="changePasswordBtn" type="button">🔑 เปลี่ยนรหัสผ่าน</button>' +
+          '<div id="passwordStatus" class="screen-settings-item-desc">รหัสผ่านจะไม่ถูกเก็บใน browser · หลังเปลี่ยนควรอัปเดตค่า ADMIN_PASSWORD_HASH ใน Render เพื่อให้ถาวร</div>' +
+        '</div>' +
+      '</div>' +
       '<div class="screen-settings-group">' +
         '<div class="screen-settings-group-title">🧩 ปลั๊กอินและ Agent</div>' +
         '<div class="screen-settings-item">' +
@@ -5795,6 +5811,23 @@ SM.register('settings', {
           '<button class="silelo-screen-back" type="button" data-settings-action="files">ดู policy</button>' +
         '</div>' +
       '</div>';
+
+    /* บันทึก settings และเปลี่ยนรหัสผ่าน */
+    var saveSettingsBtn = body.querySelector('#saveSettingsBtn');
+    if (saveSettingsBtn) saveSettingsBtn.addEventListener('click', function() {
+      var settings = { theme: body.querySelector('#setTheme')?.textContent || 'NEO', fontSize: body.querySelector('#fsVal')?.textContent || '15', model: body.querySelector('#setModel')?.value || 'auto', savedAt: new Date().toISOString() };
+      try { localStorage.setItem('nc_settings_saved', JSON.stringify(settings)); localStorage.setItem('nc_theme', settings.theme.toLowerCase()); localStorage.setItem('nc_fs', settings.fontSize); localStorage.setItem('nc_model', settings.model); } catch (e) {}
+      var status = body.querySelector('#settingsSaveStatus'); if (status) { status.textContent = 'บันทึกแล้ว ' + new Date().toLocaleTimeString(); status.classList.add('ok'); }
+      if (typeof toast === 'function') toast('💾 บันทึกการตั้งค่าแล้ว');
+    });
+    var changePasswordBtn = body.querySelector('#changePasswordBtn');
+    if (changePasswordBtn) changePasswordBtn.addEventListener('click', async function() {
+      var currentPassword = body.querySelector('#currentPassword')?.value || '', newPassword = body.querySelector('#newPassword')?.value || '', confirmPassword = body.querySelector('#confirmPassword')?.value || '', status = body.querySelector('#passwordStatus');
+      if (newPassword.length < 12) { if (status) status.textContent = 'รหัสผ่านใหม่ต้องมีอย่างน้อย 12 ตัวอักษร'; return; }
+      if (newPassword !== confirmPassword) { if (status) status.textContent = 'รหัสผ่านใหม่ไม่ตรงกัน'; return; }
+      changePasswordBtn.disabled = true; if (status) status.textContent = 'กำลังตรวจสอบ...';
+      try { var r = await fetch('/api/auth/change-password', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ currentPassword: currentPassword, newPassword: newPassword, confirmPassword: confirmPassword }) }); var j = await r.json().catch(function() { return {}; }); if (!r.ok || !j.ok) throw new Error(j.message || j.error || 'เปลี่ยนรหัสผ่านไม่สำเร็จ'); if (status) { status.textContent = 'เปลี่ยนรหัสผ่านแล้ว'; status.classList.add('ok'); } body.querySelector('#currentPassword').value = ''; body.querySelector('#newPassword').value = ''; body.querySelector('#confirmPassword').value = ''; if (typeof toast === 'function') toast('🔑 เปลี่ยนรหัสผ่านแล้ว'); } catch (e) { if (status) status.textContent = e.message; } finally { changePasswordBtn.disabled = false; }
+    });
 
     /* Wire up settings actions */
     body.querySelectorAll('[data-action]').forEach(function(item) {

@@ -1466,6 +1466,8 @@ const crypto = require('crypto');
 const AUTH_SECRET = process.env.AUTH_SECRET || (process.env.NODE_ENV === 'production' ? '' : 'nc-dev-secret');
 const LOGIN_EMAIL = String(process.env.ADMIN_EMAIL || '').trim().toLowerCase();
 const LOGIN_PASSWORD_HASH = String(process.env.ADMIN_PASSWORD_HASH || '').trim();
+let activePasswordHash = LOGIN_PASSWORD_HASH;
+let passwordVersion = 0;
 const LOGIN_MAX_ATTEMPTS = 8;
 const LOGIN_WINDOW_MS = 15 * 60 * 1000;
 const loginAttempts = new Map();
@@ -1490,12 +1492,13 @@ function verifyToken(token) {
     if (!sig || !b || sig !== expect) return null;
     const p = JSON.parse(Buffer.from(b, 'base64url').toString());
     if (p.exp && Date.now() > p.exp) return null;
+    if (p.p === 'password' && Number(p.pv || 0) !== passwordVersion) return null;
     return p;
   } catch (e) { return null; }
 }
 function authCookieStr(payload) {
   if (!AUTH_SECRET) throw new Error('AUTH_SECRET is not configured');
-  const token = signToken(Object.assign({ exp: Date.now() + 90 * 24 * 3600 * 1000 }, payload));
+  const token = signToken(Object.assign({ exp: Date.now() + 90 * 24 * 3600 * 1000 }, payload, payload.p === 'password' ? { pv: passwordVersion } : {}));
   return `nc_auth=${token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${90 * 24 * 3600}; Secure`;
 }
 function clearAuthCookie() { return 'nc_auth=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0; Secure'; }
@@ -1727,11 +1730,30 @@ app.post('/api/auth/login', (req, res) => {
   if (loginRateLimited(ip)) return res.status(429).json({ error: 'TOO_MANY_REQUESTS', message: 'ลองเข้าสู่ระบบใหม่ภายหลัง' });
   const email = String((req.body || {}).email || '').trim().toLowerCase().slice(0, 254);
   const password = String((req.body || {}).password || '').slice(0, 512);
-  const valid = Boolean(LOGIN_EMAIL && LOGIN_PASSWORD_HASH && email === LOGIN_EMAIL && passwordMatches(password, LOGIN_PASSWORD_HASH));
+  const valid = Boolean(LOGIN_EMAIL && activePasswordHash && email === LOGIN_EMAIL && passwordMatches(password, activePasswordHash));
   if (!valid) return res.status(401).json({ error: 'INVALID_CREDENTIALS', message: 'อีเมลหรือรหัสผ่านไม่ถูกต้อง' });
   if (!AUTH_SECRET) return res.status(503).json({ error: 'AUTH_NOT_CONFIGURED', message: 'ระบบยืนยันตัวตนยังตั้งค่าไม่ครบ' });
   res.setHeader('Set-Cookie', authCookieStr({ u: 'password:' + email, n: email, p: 'password', e: email }));
   res.json({ ok: true, name: email, provider: 'password' });
+});
+
+app.post('/api/auth/change-password', requireAuth, requireOwner, (req, res) => {
+  const user = req.authUser || {};
+  if (user.p !== 'password' || String(user.e || '').toLowerCase() !== LOGIN_EMAIL) return res.status(403).json({ ok: false, error: 'PASSWORD_ACCOUNT_REQUIRED', message: 'ต้องเข้าสู่ระบบด้วยบัญชีอีเมลและรหัสผ่านก่อน' });
+  const body = req.body || {};
+  const current = String(body.currentPassword || '').slice(0, 512);
+  const next = String(body.newPassword || '').slice(0, 512);
+  const confirm = String(body.confirmPassword || '').slice(0, 512);
+  if (!passwordMatches(current, activePasswordHash)) return res.status(401).json({ ok: false, error: 'CURRENT_PASSWORD_INVALID', message: 'รหัสผ่านเดิมไม่ถูกต้อง' });
+  if (next.length < 12) return res.status(400).json({ ok: false, error: 'PASSWORD_TOO_SHORT', message: 'รหัสผ่านใหม่ต้องมีอย่างน้อย 12 ตัวอักษร' });
+  if (next !== confirm) return res.status(400).json({ ok: false, error: 'PASSWORD_CONFIRM_MISMATCH', message: 'รหัสผ่านใหม่ไม่ตรงกัน' });
+  const salt = crypto.randomBytes(16);
+  const N = 16384, r = 8, p = 1;
+  const hash = crypto.scryptSync(next, salt, 64, { N, r, p, maxmem: 128 * N * r + 1024 });
+  activePasswordHash = `scrypt$${N}$${r}$${p}$${salt.toString('base64url')}$${hash.toString('base64url')}`;
+  passwordVersion += 1;
+  res.setHeader('Set-Cookie', [clearAuthCookie(), authCookieStr({ u: 'password:' + LOGIN_EMAIL, n: LOGIN_EMAIL, p: 'password', e: LOGIN_EMAIL })]);
+  res.json({ ok: true, message: 'เปลี่ยนรหัสผ่านแล้ว เซสชันเก่าถูกยกเลิก' });
 });
 
 app.post('/api/unlock', (req, res) => {
