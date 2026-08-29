@@ -43,6 +43,16 @@ test('chat never asks the server to run code for a normal message', () => {
   assert.match(chat, /const requestedCodeRun = false/);
 });
 
+test('project agent exposes a broad real-project skill registry', () => {
+  const agent = require('../lib/project-agent');
+  assert.equal(agent.PROJECT_SKILLS.length, 20);
+  for (const id of ['repo-status', 'file-read', 'file-search', 'project-plan', 'multi-file-edit', 'backend-api', 'database', 'authentication', 'testing', 'debugging', 'security-review', 'performance', 'git-diff-review', 'commit']) {
+    assert.ok(agent.PROJECT_SKILLS.some(skill => skill.id === id), id);
+  }
+  assert.match(server, /action === 'skills'/);
+  assert.match(server, /\/project skills/);
+});
+
 test('project agent is wired to real GitHub actions and keeps owner confirmation', () => {
   assert.match(server, /app\.post\('\/api\/project-agent', requireAuth, requireOwner, requireGithubToken/);
   assert.match(server, /action === 'status'/);

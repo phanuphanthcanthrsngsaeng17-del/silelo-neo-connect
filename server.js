@@ -24,6 +24,7 @@ const { executeManusConnector, gatewayStatus: manusGatewayStatus } = require('./
 const { intentSnapshot, registryStats, suggestIntentSkills } = require('./lib/intent-skills');
 const githubRepo = require('./lib/github-repo');
 const projectAgent = require('./lib/project-agent');
+const { PROJECT_SKILLS } = projectAgent;
 
 // 🛡️ Key Manager กลาง — ตรวจ/จัดการคีย์จากที่เดียว
 const ENV = require('./config/env');
@@ -2412,6 +2413,7 @@ app.post('/api/project-agent', requireAuth, requireOwner, requireGithubToken, as
     const body = req.body || {};
     const action = String(body.action || 'status').toLowerCase();
     const input = { owner: body.owner, repo: body.repo, ref: body.ref || 'main' };
+    if (action === 'skills') return res.json({ ok: true, action, skills: PROJECT_SKILLS });
     if (action === 'status') {
       const [repo, branches, commits] = await Promise.all([githubRepo.getRepo(input), githubRepo.listBranches(input), githubRepo.listCommits(input)]);
       return res.json({ ok: true, action, repo: { full_name: repo.full_name, default_branch: repo.default_branch, private: repo.private }, branches: branches.map(b => ({ name: b.name, protected: !!b.protected })), commits: commits.slice(0, 10).map(c => ({ sha: c.sha, message: c.commit && c.commit.message, date: c.commit && c.commit.author && c.commit.author.date })) });
@@ -2483,7 +2485,8 @@ app.post('/api/chat', requireAuth, async (req, res) => {
       const raw = (pm[1] || '').trim();
       const [sub, ...rest] = raw.split(/\s+/);
       const input = { ref: 'main' };
-      if (!sub) return chatJson(res, { reply: '🐙 **Project Agent · GitHub จริง**\n\n/project status — ดูสถานะ repo และ branch\n/project read <path> — อ่านไฟล์จริง\n/project plan <path1,path2> :: <งาน> — อ่านไฟล์และสร้างแผนแก้ไข\n\nทุกการแก้จริงต้องผ่าน GitHub Editor และยืนยันก่อน commit', provider: 'project-editor', model: 'help', room: roomId, t: Date.now() });
+      if (!sub) return chatJson(res, { reply: '🐙 **Project Agent · GitHub จริง**\n\n/project skills — ดูทักษะทั้งหมด\n/project status — ดูสถานะ repo และ branch\n/project read <path> — อ่านไฟล์จริง\n/project plan <path1,path2> :: <งาน> — อ่านไฟล์และสร้างแผนแก้ไข\n\nทุกการแก้จริงต้องผ่าน GitHub Editor และยืนยันก่อน commit', provider: 'project-editor', model: 'help', room: roomId, t: Date.now() });
+      if (sub.toLowerCase() === 'skills') return chatJson(res, { reply: '🧰 **Project Agent Skills (' + PROJECT_SKILLS.length + ')**\n\n' + PROJECT_SKILLS.map((s, i) => (i + 1) + '. `' + s.id + '` — ' + s.description).join('\n'), provider: 'project-editor', model: 'skills', room: roomId, t: Date.now() });
       if (sub.toLowerCase() === 'status') {
         const repo = await githubRepo.getRepo(input);
         const branches = await githubRepo.listBranches(input);
@@ -2503,7 +2506,7 @@ app.post('/api/chat', requireAuth, async (req, res) => {
         const ai = await fastChat([{ role: 'system', content: 'คุณเป็น project-agent สำหรับ GitHub จริง ตอบภาษาไทย กระชับ ห้ามรันโค้ด ห้ามใช้ sandbox และให้สรุปไฟล์ที่ควรแก้กับขั้นตอนทดสอบเท่านั้น' }, { role: 'user', content: projectAgent.buildPlanPrompt(task, files).replace('ตอบ JSON เท่านั้นในรูปแบบ:', 'ตอบเป็น Markdown พร้อมหัวข้อ แผนแก้ไข, ไฟล์ที่จะเปลี่ยน, และการทดสอบ:') }]);
         return chatJson(res, { reply: ai && ai.reply ? '🐙 **Project Plan จากไฟล์จริง**\n\n' + ai.reply.slice(0, 12000) + '\n\nถ้าต้องการให้แก้จริง ให้เปิด GitHub Editor ตรวจ diff แล้วกด Commit เมื่อพร้อม' : 'AI project-agent ไม่พร้อม', provider: 'project-editor', model: ai && ai.model || 'unavailable', room: roomId, t: Date.now() });
       }
-      return chatJson(res, { reply: 'ไม่รู้จักคำสั่ง project-agent: ใช้ `/project status`, `/project read <path>` หรือ `/project plan <path1,path2> :: <งาน>`', provider: 'project-editor', model: 'usage', room: roomId, t: Date.now() });
+      return chatJson(res, { reply: 'ไม่รู้จักคำสั่ง project-agent: ใช้ `/project skills`, `/project status`, `/project read <path>` หรือ `/project plan <path1,path2> :: <งาน>`', provider: 'project-editor', model: 'usage', room: roomId, t: Date.now() });
     }
     // Chat is project-editing only; /db never executes from the chat surface.
     const dm = /^\/db(?:\s+[\s\S]+)?$/i.exec(String(question).trim());
