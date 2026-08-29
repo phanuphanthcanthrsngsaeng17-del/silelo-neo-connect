@@ -7,6 +7,10 @@ services:
     startCommand: node server.js
     healthCheckPath: /health
     envVars:
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: OPENAI_TTS_MODEL
+        value: gpt-4o-mini-tts
       - key: GROQ_API_KEY
         sync: false
       - key: GEMINI_API_KEYS
@@ -19,6 +23,12 @@ services:
         sync: false
       - key: RUN_SECRET
         sync: false
+      - key: GITHUB_TOKEN
+        sync: false
+      - key: GITHUB_OWNER
+        value: phanuphanthcanthrsngsaeng17-del
+      - key: GITHUB_REPO
+        value: silelo-neo-connect
       - key: NEO_CONNECT_API_KEY
         sync: false
       - key: MANUS_API_KEY

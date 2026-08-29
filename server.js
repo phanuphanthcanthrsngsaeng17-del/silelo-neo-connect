@@ -9,11 +9,14 @@
    TTS: msedge-tts (ฟรี)
    ============================================================ */
 const express = require('express');
+const http = require('http');
+const WebSocket = require('ws');
 const path = require('path');
 const fs = require('fs');
 const os = require('os');
 const { extractCodeBlocks, chatCodeRequested, validateChatCodeBlocks } = require('./lib/chat-code-policy');
 const { isOwnerIdentity, ownerModeEnabled, requiresOwner } = require('./lib/owner-armor');
+const computerBrowser = require('./lib/computer-browser');
 const { getOpenRouterMode, normalizeChatModelMode } = require('./lib/model-switching');
 const { PLUGINS, listForUser, setEnabled } = require('./lib/plugins');
 const { gatewayUserFromRequest } = require('./lib/gateway-auth');
@@ -21,6 +24,10 @@ const { SERVICE_OPERATIONS, requestGateway, gatewayStatus } = require('./lib/int
 const { executeManusConnector, gatewayStatus: manusGatewayStatus } = require('./lib/manus-connector-gateway');
 const { intentSnapshot, registryStats, suggestIntentSkills } = require('./lib/intent-skills');
 const { listNotifications, createNotification, markNotificationRead, deleteNotification } = require('./lib/custom-notifications');
+const githubRepo = require('./lib/github-repo');
+const projectAgent = require('./lib/project-agent');
+const mediaPipeline = require('./lib/media-pipeline');
+const { PROJECT_SKILLS } = projectAgent;
 
 // 🛡️ Key Manager กลาง — ตรวจ/จัดการคีย์จากที่เดียว
 const ENV = require('./config/env');
@@ -28,16 +35,41 @@ try { ENV.validate(); } catch (e) { console.warn('[KeyManager] validate error:',
 
 const app = express();
 app.use(express.json({ limit: '5mb' }));
+// Chunk uploads use an 8MB in-memory window; the full file is streamed to disk.
+const CHUNK_UPLOAD_LIMIT = '8mb';
 app.use((req, res, next) => {
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('X-Frame-Options', 'SAMEORIGIN');
   res.setHeader('Referrer-Policy', 'same-origin');
-  res.setHeader('Permissions-Policy', 'camera=(), microphone=()');
+  res.setHeader('Permissions-Policy', 'camera=(self), microphone=(self), display-capture=(self)');
   next();
 });
 app.use(express.static(path.join(__dirname, 'public')));
+// Chat is Git/IDE-only: never execute or simulate code inside the chat process.
+const CHAT_DISABLED_SIMULATION_PATHS = ['/api/run', '/api/code', '/api/codetool', '/api/install', '/api/sandbox', '/api/db', '/db', '/preview'];
+app.use(CHAT_DISABLED_SIMULATION_PATHS, (req, res) => res.status(410).json({ ok: false, error: 'SANDBOX_DISABLED', message: 'การรันหรือจำลองถูกปิดจากห้องแชท กรุณาแก้ไฟล์จริงผ่าน Git/IDE' }));
 
 // 🧭 AI Intent Mode — exposes the 500-skill allowlist without executing arbitrary actions.
+// 🖥️ Computer 2569 — real Chromium session; no simulated screen or fake result.
+app.get('/api/computer/status', requireAuth, requireOwner, (req, res) => {
+  res.json({ ok: true, ...computerBrowser.status(String(req.authUser.u || req.authUser.e || 'owner')) });
+});
+app.post('/api/computer/action', requireAuth, requireOwner, async (req, res) => {
+  const body = req.body && typeof req.body === 'object' ? req.body : {};
+  const action = String(body.action || '').trim();
+  if (!['navigate', 'read', 'screenshot', 'click', 'type'].includes(action)) return res.status(400).json({ ok: false, error: 'COMPUTER_ACTION_NOT_ALLOWED' });
+  if (['click', 'type'].includes(action) && body.confirmed !== true) return res.status(409).json({ ok: false, error: 'CONFIRMATION_REQUIRED', message: 'ต้องยืนยันก่อนคลิกหรือกรอกข้อมูล' });
+  try {
+    const owner = String(req.authUser.u || req.authUser.e || 'owner');
+    const result = await computerBrowser.execute(owner, action, body);
+    res.json({ ok: true, action, ...result });
+  } catch (e) { res.status(503).json({ ok: false, error: 'COMPUTER_UNAVAILABLE', message: e.message }); }
+});
+app.post('/api/computer/stop', requireAuth, requireOwner, (req, res) => {
+  const owner = String(req.authUser.u || req.authUser.e || 'owner');
+  res.json({ ok: true, stopped: computerBrowser.stop(owner) });
+});
+
 app.get('/api/intent-skills', requireAuth, (req, res) => {
   const mode = String(req.query.mode || 'understand') === 'execute' ? 'execute' : 'understand';
   const query = String(req.query.q || '').trim().slice(0, 1600);
@@ -81,6 +113,10 @@ app.delete('/api/notifications/:id', requireAuth, (req, res) => {
 app.get('/chat', (req, res) => {
   if (!getAuthUser(req)) return res.redirect('/');
   res.sendFile(path.join(__dirname, 'public', 'chat.html'));
+});
+// Canonical compatibility path for the single Sli room.
+app.get(['/silelo-neo-connect', '/silelo-neo-connect/'], (req, res) => {
+  res.redirect('/chat?room=private');
 });
 const PORT = process.env.PORT || 3000;
 
@@ -1011,6 +1047,7 @@ const SUPER_PERSONA = `คุณคือ "Super CodingFleet" — AI operator �
 async function askRoomAI(roomId, question, history, memory, unrestricted, intel, superMode, modelMode) {
   const room = ROOMS[roomId] || ROOMS.private;
   let sys = room.sys;
+  sys += '\n\n[รูปแบบคำตอบเริ่มต้น: ตอบให้สั้นและได้ใจความ ใช้ภาษาไทย กระชับประมาณ 3-6 บรรทัดหรือ bullet สั้น ๆ ก่อน หากผู้ใช้ขอรายละเอียด/โค้ดจึงค่อยขยาย หลีกเลี่ยงการทวนคำถามและคำเกริ่นยาว]';
   if (superMode) sys = SUPER_PERSONA + '\n\n(⚡ SUPER MODE เปิดอยู่ — ปฏิบัติตามบทบาท Super CodingFleet)' + '\n\n' + sys;
   if (roomId === 'private') sys += '\n\n' + PROJECT_KNOWLEDGE + '\n\n' + CODINGFLEET_KNOWLEDGE;
   // 🌐 ข้อมูลสดทั่วโลก — ให้ AI ใช้ตอบแบบ "พระเจ้ารู้ทุกเรื่อง"
@@ -1331,6 +1368,20 @@ function ttsCacheGet(k) { const v = ttsCache.get(k); if (v) { ttsCache.delete(k)
 function ttsCacheSet(k, buf) { if (ttsCache.size >= TTS_CACHE_MAX) ttsCache.delete(ttsCache.keys().next().value); ttsCache.set(k, buf); }
 /* ElevenLabs (optional) - ตั้ง ELEVENLABS_API_KEY (+ELEVENLABS_VOICE_ID) เพื่อโคลนเสียงสลี่จริง
    เสียงพรีเมียม: premwadee/achara → Alice (หญิง), niwat → Eric (ชาย) — ไม่มี key ใช้ msedge อัตโนมัติ */
+const OPENAI_TTS_VOICES = {
+  coral: 'coral', marin: 'marin', cedar: 'cedar', alloy: 'alloy', ash: 'ash', echo: 'echo', fable: 'fable', nova: 'nova', onyx: 'onyx', sage: 'sage'
+};
+const OPENAI_TTS_STYLES = { coral: 'warm and friendly', marin: 'calm and reassuring', cedar: 'clear and confident', alloy: 'neutral and balanced', ash: 'bright and energetic', echo: 'deep and steady', fable: 'expressive storyteller', nova: 'gentle and encouraging', onyx: 'professional and composed', sage: 'precise and thoughtful' };
+async function openaiTtsOnce(text, voice, rate) {
+  const key = process.env.OPENAI_API_KEY || '';
+  const model = process.env.OPENAI_TTS_MODEL || 'gpt-4o-mini-tts';
+  const selected = OPENAI_TTS_VOICES[voice];
+  if (!key || !selected) return null;
+  try {
+    const r = await fetch('https://api.openai.com/v1/audio/speech', { method: 'POST', headers: { Authorization: 'Bearer ' + key, 'Content-Type': 'application/json' }, body: JSON.stringify({ model, voice: selected, input: text, instructions: `Speak in a ${OPENAI_TTS_STYLES[voice]} style at ${Math.min(2, Math.max(0.5, parseFloat(rate) || 1))}x speed.`, response_format: 'mp3' }), signal: AbortSignal.timeout(20000) });
+    return r.ok ? Buffer.from(await r.arrayBuffer()) : null;
+  } catch (_) { return null; }
+}
 const ELEVEN_VOICE_IDS = {
   silelo: 'Xb7hH8MSUJpSbSDYk0k2',   // Alice
   premwadee: 'Xb7hH8MSUJpSbSDYk0k2', // Alice
@@ -1393,34 +1444,8 @@ async function ttsOneChunk(txt, voice, voiceName, rate) {
   /* 🇹🇭 เสียงไทยแท้ 100%: msedge ไทย → Google ไทย → ElevenLabs (เฉพาะข้อความอังกฤษล้วน) → ฉุกเฉิน */
   const isThaiText = /[\u0E00-\u0E7F]/.test(txt);
   let buf = null;
-  buf = await msedgeTtsOnce(txt, voiceName || 'th-TH-PremwadeeNeural', rate);
-  if (!buf) buf = await googleTtsBuf(txt).catch(() => null);
-  if (!buf && !isThaiText) buf = await elevenLabsTtsBuf(txt, voice);
-  if (!buf) buf = await googleTtsBuf(txt).catch(() => null);
-  if (!buf) buf = await msedgeTtsOnce(txt, voiceName || 'th-TH-PremwadeeNeural');
-  if (!buf && !isThaiText) buf = await elevenLabsTtsBuf(txt, voice);
-  if (!buf) throw new Error('tts chunk fail');
-  ttsCacheSet(key, buf);
-  return buf;
-}
-async function msedgeTtsOnce(txt, voiceName, rate) {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'nctts-'));
-  const out = path.join(dir, 'v.mp3');
-  try {
-    await msedgeTtsFile(txt, out, voiceName, rate);
-    return fs.readFileSync(out);
-  } catch (e) { return null; }
-  finally { try { fs.rmSync(dir, { recursive: true, force: true }); } catch (e) {} }
-}
-/* TTS หนึ่งจังหวะพูด — google → msedge → google retry (cache แยกต่อ chunk) */
-async function ttsOneChunk(txt, voice, voiceName, rate) {
-  const key = (voice || 'silelo') + '|c|r' + (rate || 1) + '|' + txt;
-  const hit = ttsCacheGet(key);
-  if (hit) return hit;
-  /* 🇹🇭 เสียงไทยแท้ 100%: msedge ไทย → Google ไทย → ElevenLabs (เฉพาะข้อความอังกฤษล้วน) → ฉุกเฉิน */
-  const isThaiText = /[\u0E00-\u0E7F]/.test(txt);
-  let buf = null;
-  buf = await msedgeTtsOnce(txt, voiceName || 'th-TH-PremwadeeNeural', rate);
+  if (OPENAI_TTS_VOICES[voice]) buf = await openaiTtsOnce(txt, voice, rate);
+  if (!buf) buf = await msedgeTtsOnce(txt, voiceName || 'th-TH-PremwadeeNeural', rate);
   if (!buf) buf = await googleTtsBuf(txt).catch(() => null);
   if (!buf && !isThaiText) buf = await elevenLabsTtsBuf(txt, voice);
   if (!buf) buf = await googleTtsBuf(txt).catch(() => null);
@@ -1472,6 +1497,8 @@ const crypto = require('crypto');
 const AUTH_SECRET = process.env.AUTH_SECRET || (process.env.NODE_ENV === 'production' ? '' : 'nc-dev-secret');
 const LOGIN_EMAIL = String(process.env.ADMIN_EMAIL || '').trim().toLowerCase();
 const LOGIN_PASSWORD_HASH = String(process.env.ADMIN_PASSWORD_HASH || '').trim();
+let activePasswordHash = LOGIN_PASSWORD_HASH;
+let passwordVersion = 0;
 const LOGIN_MAX_ATTEMPTS = 8;
 const LOGIN_WINDOW_MS = 15 * 60 * 1000;
 const loginAttempts = new Map();
@@ -1496,12 +1523,13 @@ function verifyToken(token) {
     if (!sig || !b || sig !== expect) return null;
     const p = JSON.parse(Buffer.from(b, 'base64url').toString());
     if (p.exp && Date.now() > p.exp) return null;
+    if (p.p === 'password' && Number(p.pv || 0) !== passwordVersion) return null;
     return p;
   } catch (e) { return null; }
 }
 function authCookieStr(payload) {
   if (!AUTH_SECRET) throw new Error('AUTH_SECRET is not configured');
-  const token = signToken(Object.assign({ exp: Date.now() + 90 * 24 * 3600 * 1000 }, payload));
+  const token = signToken(Object.assign({ exp: Date.now() + 90 * 24 * 3600 * 1000 }, payload, payload.p === 'password' ? { pv: passwordVersion } : {}));
   return `nc_auth=${token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${90 * 24 * 3600}; Secure`;
 }
 function clearAuthCookie() { return 'nc_auth=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0; Secure'; }
@@ -1733,11 +1761,30 @@ app.post('/api/auth/login', (req, res) => {
   if (loginRateLimited(ip)) return res.status(429).json({ error: 'TOO_MANY_REQUESTS', message: 'ลองเข้าสู่ระบบใหม่ภายหลัง' });
   const email = String((req.body || {}).email || '').trim().toLowerCase().slice(0, 254);
   const password = String((req.body || {}).password || '').slice(0, 512);
-  const valid = Boolean(LOGIN_EMAIL && LOGIN_PASSWORD_HASH && email === LOGIN_EMAIL && passwordMatches(password, LOGIN_PASSWORD_HASH));
+  const valid = Boolean(LOGIN_EMAIL && activePasswordHash && email === LOGIN_EMAIL && passwordMatches(password, activePasswordHash));
   if (!valid) return res.status(401).json({ error: 'INVALID_CREDENTIALS', message: 'อีเมลหรือรหัสผ่านไม่ถูกต้อง' });
   if (!AUTH_SECRET) return res.status(503).json({ error: 'AUTH_NOT_CONFIGURED', message: 'ระบบยืนยันตัวตนยังตั้งค่าไม่ครบ' });
   res.setHeader('Set-Cookie', authCookieStr({ u: 'password:' + email, n: email, p: 'password', e: email }));
   res.json({ ok: true, name: email, provider: 'password' });
+});
+
+app.post('/api/auth/change-password', requireAuth, requireOwner, (req, res) => {
+  const user = req.authUser || {};
+  if (user.p !== 'password' || String(user.e || '').toLowerCase() !== LOGIN_EMAIL) return res.status(403).json({ ok: false, error: 'PASSWORD_ACCOUNT_REQUIRED', message: 'ต้องเข้าสู่ระบบด้วยบัญชีอีเมลและรหัสผ่านก่อน' });
+  const body = req.body || {};
+  const current = String(body.currentPassword || '').slice(0, 512);
+  const next = String(body.newPassword || '').slice(0, 512);
+  const confirm = String(body.confirmPassword || '').slice(0, 512);
+  if (!passwordMatches(current, activePasswordHash)) return res.status(401).json({ ok: false, error: 'CURRENT_PASSWORD_INVALID', message: 'รหัสผ่านเดิมไม่ถูกต้อง' });
+  if (next.length < 12) return res.status(400).json({ ok: false, error: 'PASSWORD_TOO_SHORT', message: 'รหัสผ่านใหม่ต้องมีอย่างน้อย 12 ตัวอักษร' });
+  if (next !== confirm) return res.status(400).json({ ok: false, error: 'PASSWORD_CONFIRM_MISMATCH', message: 'รหัสผ่านใหม่ไม่ตรงกัน' });
+  const salt = crypto.randomBytes(16);
+  const N = 16384, r = 8, p = 1;
+  const hash = crypto.scryptSync(next, salt, 64, { N, r, p, maxmem: 128 * N * r + 1024 });
+  activePasswordHash = `scrypt$${N}$${r}$${p}$${salt.toString('base64url')}$${hash.toString('base64url')}`;
+  passwordVersion += 1;
+  res.setHeader('Set-Cookie', [clearAuthCookie(), authCookieStr({ u: 'password:' + LOGIN_EMAIL, n: LOGIN_EMAIL, p: 'password', e: LOGIN_EMAIL })]);
+  res.json({ ok: true, message: 'เปลี่ยนรหัสผ่านแล้ว เซสชันเก่าถูกยกเลิก' });
 });
 
 app.post('/api/unlock', (req, res) => {
@@ -1769,8 +1816,10 @@ app.post('/api/plugins/:pluginId/toggle', requireAuth, (req, res) => {
 });
 
 // 📎 Secure file/image upload: bounded JSON payload, authenticated, no arbitrary path
-const UPLOAD_MAX_BYTES = 3 * 1024 * 1024;
+const UPLOAD_MAX_BYTES = 3 * 1024 * 1024 * 1024;
 const UPLOAD_MIME = new Set(['image/png', 'image/jpeg', 'image/webp', 'image/gif', 'application/pdf', 'text/plain', 'text/markdown', 'application/json']);
+const UPLOAD_CHUNK_BYTES = 8 * 1024 * 1024;
+const fileUploadSessions = new Map();
 const UPLOAD_DIR = path.join(os.tmpdir(), 'neo-connect-uploads');
 const uploadedFiles = new Map();
 try { fs.mkdirSync(UPLOAD_DIR, { recursive: true, mode: 0o700 }); } catch (_) {}
@@ -1815,17 +1864,137 @@ app.use('/api/images/upload', (err, req, res, next) => {
   if (err?.type === 'entity.too.large' || err?.status === 413) return res.status(413).json({ ok: false, error: 'IMAGE_TOO_LARGE', maxBytes: 50 * 1024 * 1024 });
   return next(err);
 });
+// Large files: resumable sequential chunks, any MIME/type, bounded memory.
+app.post('/api/files/init', requireAuth, (req, res) => {
+  try {
+    const body = req.body || {};
+    const name = path.basename(String(body.name || 'upload.bin')).replace(/[\\\x00-\x1f\x7f]/g, '').slice(0, 180) || 'upload.bin';
+    const type = String(body.type || 'application/octet-stream').split(';')[0].toLowerCase().slice(0, 160) || 'application/octet-stream';
+    const size = Number(body.size);
+    if (!Number.isSafeInteger(size) || size <= 0 || size > UPLOAD_MAX_BYTES) return res.status(413).json({ ok: false, error: 'FILE_TOO_LARGE', maxBytes: UPLOAD_MAX_BYTES });
+    const id = crypto.randomBytes(18).toString('hex');
+    const owner = String(req.authUser.u || '');
+    const userDir = path.join(UPLOAD_DIR, crypto.createHash('sha256').update(owner || 'user').digest('hex').slice(0, 24));
+    fs.mkdirSync(userDir, { recursive: true, mode: 0o700 });
+    const filePath = path.join(userDir, id + '.part');
+    fs.closeSync(fs.openSync(filePath, 'wx', 0o600));
+    fileUploadSessions.set(id, { id, owner, name, type, size, received: 0, filePath, createdAt: Date.now() });
+    res.json({ ok: true, upload: { id, chunkBytes: UPLOAD_CHUNK_BYTES, received: 0, size } });
+  } catch (e) { res.status(400).json({ ok: false, error: 'UPLOAD_INIT_FAILED' }); }
+});
+app.put('/api/files/chunk/:id', requireAuth, express.raw({ type: '*/*', limit: CHUNK_UPLOAD_LIMIT }), (req, res) => {
+  try {
+    const session = fileUploadSessions.get(String(req.params.id || ''));
+    if (!session || session.owner !== String(req.authUser.u || '')) return res.status(404).json({ ok: false, error: 'UPLOAD_NOT_FOUND' });
+    const bytes = Buffer.isBuffer(req.body) ? req.body : Buffer.alloc(0);
+    const offset = Number(req.headers['x-upload-offset']);
+    if (!Number.isSafeInteger(offset) || offset !== session.received || !bytes.length || bytes.length > UPLOAD_CHUNK_BYTES || offset + bytes.length > session.size) return res.status(400).json({ ok: false, error: 'INVALID_CHUNK', expectedOffset: session.received });
+    fs.appendFileSync(session.filePath, bytes, { mode: 0o600 });
+    session.received += bytes.length;
+    res.json({ ok: true, received: session.received, size: session.size });
+  } catch (e) { res.status(400).json({ ok: false, error: 'CHUNK_UPLOAD_FAILED' }); }
+});
+app.post('/api/files/complete/:id', requireAuth, (req, res) => {
+  try {
+    const id = String(req.params.id || '');
+    const session = fileUploadSessions.get(id);
+    if (!session || session.owner !== String(req.authUser.u || '')) return res.status(404).json({ ok: false, error: 'UPLOAD_NOT_FOUND' });
+    if (session.received !== session.size) return res.status(409).json({ ok: false, error: 'UPLOAD_INCOMPLETE', received: session.received, size: session.size });
+    const finalPath = session.filePath.slice(0, -5);
+    fs.renameSync(session.filePath, finalPath);
+    uploadedFiles.set(id, { path: finalPath, name: session.name, type: session.type, size: session.size, owner: session.owner });
+    fileUploadSessions.delete(id);
+    const shareToken = signToken({ typ: 'file-share', id, owner: session.owner, exp: Date.now() + 7 * 24 * 3600 * 1000 });
+    const editUrl = `${APP_URL}/file-editor.html?id=${encodeURIComponent(id)}&token=${encodeURIComponent(shareToken)}`;
+    res.json({ ok: true, file: { id, name: session.name, type: session.type, size: session.size, url: '/api/files/' + id, editUrl } });
+  } catch (e) { res.status(400).json({ ok: false, error: 'UPLOAD_COMPLETE_FAILED' }); }
+});
+app.post('/api/files/:id/share', requireAuth, (req, res) => {
+  const file = uploadedFiles.get(String(req.params.id || ''));
+  if (!file || file.owner !== String(req.authUser.u || '')) return res.status(404).json({ ok: false, error: 'FILE_NOT_FOUND' });
+  const token = signToken({ typ: 'file-share', id: String(req.params.id), owner: file.owner, exp: Date.now() + 7 * 24 * 3600 * 1000 });
+  res.json({ ok: true, url: `${APP_URL}/file-editor.html?id=${encodeURIComponent(req.params.id)}&token=${encodeURIComponent(token)}`, expiresIn: 7 * 24 * 3600 });
+});
+function sharedFile(req) {
+  const token = verifyToken(req.query.token || req.headers['x-share-token']);
+  const file = token && token.typ === 'file-share' && token.id === String(req.params.id || '') ? uploadedFiles.get(token.id) : null;
+  return file && file.owner === token.owner ? { file, token } : null;
+}
+app.get('/api/files/share/:id', (req, res) => {
+  const shared = sharedFile(req);
+  if (!shared) return res.status(404).json({ ok: false, error: 'SHARE_LINK_INVALID' });
+  res.json({ ok: true, file: { id: req.params.id, name: shared.file.name, type: shared.file.type, size: shared.file.size, editable: /^text\//.test(shared.file.type) || /\.(txt|md|csv|json|log|js|ts|css|html|xml|yml|yaml|ini|sql|py|sh)$/i.test(shared.file.name) } });
+});
+app.get('/api/files/share/:id/content', (req, res) => {
+  const shared = sharedFile(req);
+  if (!shared) return res.status(404).json({ ok: false, error: 'SHARE_LINK_INVALID' });
+  res.type(shared.file.type && /^[\w.+-]+\/[\w.+-]+$/.test(shared.file.type) ? shared.file.type : 'application/octet-stream').sendFile(shared.file.path);
+});
+app.patch('/api/files/share/:id', express.json({ limit: '2mb' }), (req, res) => {
+  const shared = sharedFile(req);
+  if (!shared) return res.status(404).json({ ok: false, error: 'SHARE_LINK_INVALID' });
+  const file = shared.file;
+  const editable = /^text\//.test(file.type) || /\.(txt|md|csv|json|log|js|ts|css|html|xml|yml|yaml|ini|sql|py|sh)$/i.test(file.name);
+  const content = typeof req.body?.content === 'string' ? req.body.content : '';
+  if (!editable) return res.status(415).json({ ok: false, error: 'FILE_NOT_EDITABLE' });
+  if (Buffer.byteLength(content, 'utf8') > 2 * 1024 * 1024) return res.status(413).json({ ok: false, error: 'EDIT_TOO_LARGE', maxBytes: 2 * 1024 * 1024 });
+  fs.writeFileSync(file.path, content, { mode: 0o600 });
+  file.size = Buffer.byteLength(content, 'utf8');
+  res.json({ ok: true, size: file.size, updatedAt: new Date().toISOString() });
+});
 app.get('/api/files/recent', requireAuth, (req, res) => {
   const owner = String(req.authUser.u || '');
-  const files = Array.from(uploadedFiles.entries()).filter(([, file]) => file.owner === owner).slice(-12).reverse().map(([id, file]) => ({ id, name: file.name, type: file.type, size: file.size, url: '/api/files/' + id }));
+  const files = Array.from(uploadedFiles.entries()).filter(([, file]) => file.owner === owner).slice(-12).reverse().map(([id, file]) => {
+    const shareToken = signToken({ typ: 'file-share', id, owner, exp: Date.now() + 7 * 24 * 3600 * 1000 });
+    return { id, name: file.name, type: file.type, size: file.size, url: '/api/files/' + id, editUrl: `${APP_URL}/file-editor.html?id=${encodeURIComponent(id)}&token=${encodeURIComponent(shareToken)}` };
+  });
   res.json({ ok: true, files });
 });
 app.get('/api/files/:id', requireAuth, (req, res) => {
   const file = uploadedFiles.get(String(req.params.id || ''));
   if (!file || file.owner !== String(req.authUser.u || '')) return res.status(404).json({ ok: false, error: 'FILE_NOT_FOUND' });
-  res.type(file.type).set('Content-Disposition', `inline; filename*=UTF-8''${encodeURIComponent(file.name)}`).sendFile(file.path);
+  const safeType = file.type && /^[\w.+-]+\/[\w.+-]+$/.test(file.type) ? file.type : 'application/octet-stream';
+  res.type(safeType).set('Content-Disposition', `inline; filename*=UTF-8''${encodeURIComponent(file.name)}`).sendFile(file.path);
 });
 
+
+/* ============ MEDIA PIPELINE — ดึงข้อมูล แตกไฟล์ และสร้างวิดีโอจริง ============ */
+app.post('/api/media', requireAuth, requireOwner, async (req, res) => {
+  try {
+    const body = req.body || {};
+    const action = String(body.action || '').toLowerCase();
+    const owner = String(req.authUser.u || '');
+    const userDir = path.join(UPLOAD_DIR, crypto.createHash('sha256').update(owner || 'user').digest('hex').slice(0, 24));
+    fs.mkdirSync(userDir, { recursive: true, mode: 0o700 });
+    if (action === 'fetch') {
+      const target = path.join(userDir, crypto.randomBytes(18).toString('hex') + '.download');
+      const fetched = await mediaPipeline.fetchRemote(body.url, target);
+      const name = path.basename(new URL(fetched.url).pathname).slice(0, 180) || 'download.bin';
+      const id = crypto.randomBytes(18).toString('hex');
+      uploadedFiles.set(id, { path: target, name, type: String(body.type || 'application/octet-stream'), size: fetched.size, owner });
+      return res.json({ ok: true, action, file: { id, name, size: fetched.size, url: '/api/files/' + id } });
+    }
+    const source = uploadedFiles.get(String(body.fileId || ''));
+    if (action === 'inventory' || action === 'extract') {
+      if (!source || source.owner !== owner) return res.status(404).json({ ok: false, error: 'FILE_NOT_FOUND' });
+      const listing = await mediaPipeline.listArchive(source.path);
+      if (action === 'inventory') return res.json({ ok: true, action, kind: listing.kind, entries: listing.entries });
+      const destination = path.join(userDir, crypto.randomBytes(18).toString('hex') + '-extracted');
+      return res.json({ ok: true, action, result: await mediaPipeline.extractArchive(source.path, destination) });
+    }
+    if (action === 'video') {
+      const ids = Array.isArray(body.fileIds) ? body.fileIds.slice(0, 300).map(String) : [];
+      const images = ids.map(id => uploadedFiles.get(id)).filter(f => f && f.owner === owner && /^image\//.test(f.type));
+      if (!images.length || images.length !== ids.length) return res.status(400).json({ ok: false, error: 'IMAGE_FILES_REQUIRED' });
+      const id = crypto.randomBytes(18).toString('hex');
+      const output = path.join(userDir, id + '.mp4');
+      const result = await mediaPipeline.renderVideo(images.map(f => f.path), output, { fps: body.fps, duration: body.duration });
+      uploadedFiles.set(id, { path: output, name: String(body.name || 'silelo-video.mp4').slice(0, 180), type: 'video/mp4', size: result.size, owner });
+      return res.json({ ok: true, action, video: { id, name: 'silelo-video.mp4', size: result.size, url: '/api/files/' + id }, render: result });
+    }
+    return res.status(400).json({ ok: false, error: 'unknown media action' });
+  } catch (e) { return res.status(400).json({ ok: false, error: e.message || 'MEDIA_PIPELINE_FAILED' }); }
+});
 
 // แชท
 
@@ -2308,6 +2477,90 @@ async function runChatCodeBlocks(question) {
   return { blocks, results };
 }
 
+/* ============ 🐙 GITHUB REPOSITORY INTEGRATION ============ */
+function githubApiError(res, err) {
+  const status = Number(err && err.status) || 502;
+  const safe = String(err && err.message || 'GitHub request failed').slice(0, 240);
+  return res.status(status >= 400 && status < 600 ? status : 502).json({ ok: false, error: safe });
+}
+function githubInput(req) {
+  return { owner: req.query.owner, repo: req.query.repo, ref: req.query.ref };
+}
+app.get('/api/github/config', requireAuth, (req, res) => {
+  const c = githubRepo.config();
+  res.json({ ok: true, configured: Boolean(c.token), owner: c.owner, repo: c.repo, writeEnabled: Boolean(c.token) });
+});
+app.get('/api/github/repo', requireAuth, async (req, res) => {
+  try { const d = await githubRepo.getRepo(githubInput(req)); res.json({ ok: true, repo: d }); } catch (e) { githubApiError(res, e); }
+});
+app.get('/api/github/tree', requireAuth, async (req, res) => {
+  try { const d = await githubRepo.getTree(githubInput(req)); res.json({ ok: true, tree: (d.tree || []).map(x => ({ path: x.path, type: x.type, size: x.size || 0 })) }); } catch (e) { githubApiError(res, e); }
+});
+app.get('/api/github/file', requireAuth, async (req, res) => {
+  try { if (!req.query.path) return res.status(400).json({ ok: false, error: 'path is required' }); const d = await githubRepo.getFile({ ...githubInput(req), path: req.query.path }); res.json({ ok: true, file: { name: d.name, path: d.path, sha: d.sha, size: d.size, html_url: d.html_url, content: d.content } }); } catch (e) { githubApiError(res, e); }
+});
+app.get('/api/github/branches', requireAuth, async (req, res) => {
+  try { const d = await githubRepo.listBranches(githubInput(req)); res.json({ ok: true, branches: d.map(x => ({ name: x.name, protected: Boolean(x.protected), sha: x.commit && x.commit.sha })) }); } catch (e) { githubApiError(res, e); }
+});
+app.get('/api/github/commits', requireAuth, async (req, res) => {
+  try { const d = await githubRepo.listCommits(githubInput(req)); res.json({ ok: true, commits: d.map(x => ({ sha: x.sha, message: x.commit && x.commit.message, date: x.commit && x.commit.author && x.commit.author.date, url: x.html_url })) }); } catch (e) { githubApiError(res, e); }
+});
+app.get('/api/github/compare', requireAuth, async (req, res) => {
+  try { const d = await githubRepo.compare({ ...githubInput(req), from: req.query.from, to: req.query.to }); res.json({ ok: true, status: d.status, ahead_by: d.ahead_by, behind_by: d.behind_by, files: (d.files || []).map(x => ({ filename: x.filename, status: x.status, additions: x.additions, deletions: x.deletions, patch: x.patch || '' })) }); } catch (e) { githubApiError(res, e); }
+});
+function githubWriteInput(req) { return Object.assign({}, githubInput(req), req.body || {}); }
+function requireGithubToken(req, res, next) { if (!githubRepo.config().token) return res.status(503).json({ ok: false, error: 'GITHUB_TOKEN is not configured' }); next(); }
+app.post('/api/github/branches', requireAuth, requireOwner, requireGithubToken, async (req, res) => {
+  try { if (!req.body || !req.body.branch) return res.status(400).json({ ok: false, error: 'branch is required' }); const d = await githubRepo.createBranch(githubWriteInput(req)); res.json({ ok: true, branch: d }); } catch (e) { githubApiError(res, e); }
+});
+app.delete('/api/github/branches', requireAuth, requireOwner, requireGithubToken, async (req, res) => {
+  try { if (!req.body || !req.body.branch) return res.status(400).json({ ok: false, error: 'branch is required' }); await githubRepo.deleteBranch(githubWriteInput(req)); res.json({ ok: true }); } catch (e) { githubApiError(res, e); }
+});
+app.put('/api/github/file', requireAuth, requireOwner, requireGithubToken, async (req, res) => {
+  try { if (!req.body || !req.body.path) return res.status(400).json({ ok: false, error: 'path is required' }); const d = await githubRepo.writeFile(githubWriteInput(req)); res.json({ ok: true, commit: d.commit, content: d.content }); } catch (e) { githubApiError(res, e); }
+});
+
+/* ============ PROJECT AGENT — GitHub จริง ไม่ใช้ sandbox ============ */
+app.post('/api/project-agent', requireAuth, requireOwner, requireGithubToken, async (req, res) => {
+  try {
+    const body = req.body || {};
+    const action = String(body.action || 'status').toLowerCase();
+    const input = { owner: body.owner, repo: body.repo, ref: body.ref || 'main' };
+    if (action === 'skills') return res.json({ ok: true, action, skills: PROJECT_SKILLS });
+    if (action === 'status') {
+      const [repo, branches, commits] = await Promise.all([githubRepo.getRepo(input), githubRepo.listBranches(input), githubRepo.listCommits(input)]);
+      return res.json({ ok: true, action, repo: { full_name: repo.full_name, default_branch: repo.default_branch, private: repo.private }, branches: branches.map(b => ({ name: b.name, protected: !!b.protected })), commits: commits.slice(0, 10).map(c => ({ sha: c.sha, message: c.commit && c.commit.message, date: c.commit && c.commit.author && c.commit.author.date })) });
+    }
+    if (action === 'read') {
+      const file = await githubRepo.getFile({ ...input, path: projectAgent.cleanPath(body.path) });
+      return res.json({ ok: true, action, file: { path: file.path, sha: file.sha, size: file.size, content: file.content, html_url: file.html_url } });
+    }
+    if (action === 'plan') {
+      const task = String(body.task || '').trim();
+      if (!task) return res.status(400).json({ ok: false, error: 'task is required' });
+      const requested = Array.isArray(body.paths) ? body.paths.slice(0, 8) : [];
+      if (!requested.length) return res.status(400).json({ ok: false, error: 'paths is required; ระบุไฟล์ที่ต้องการให้ agent อ่านก่อนแก้' });
+      const files = await Promise.all(requested.map(async p => { const f = await githubRepo.getFile({ ...input, path: projectAgent.cleanPath(p) }); return { path: f.path, content: f.content === null ? '(binary file; not editable)' : String(f.content).slice(0, 16000) }; }));
+      const ai = await fastChat([{ role: 'system', content: 'คุณเป็น project-agent สำหรับ repository จริง ตอบเฉพาะ JSON และห้ามรันโค้ดหรือใช้ sandbox' }, { role: 'user', content: projectAgent.buildPlanPrompt(task, files) }]);
+      if (!ai || !ai.reply) return res.status(503).json({ ok: false, error: 'AI project-agent ไม่พร้อม' });
+      return res.json({ ok: true, action, plan: projectAgent.parsePlan(ai.reply), sourceFiles: files.map(f => f.path), provider: ai.provider, model: ai.model });
+    }
+    if (action === 'apply') {
+      if (body.confirm !== true) return res.status(400).json({ ok: false, error: 'confirmation_required', message: 'ต้องยืนยันก่อนเขียนไฟล์จริงและสร้าง commit' });
+      if (!Array.isArray(body.files) || !body.files.length || body.files.length > 12) return res.status(400).json({ ok: false, error: 'files is required' });
+      const message = String(body.message || 'Update project files').trim().slice(0, 200);
+      const results = [];
+      for (const item of body.files) {
+        const pathName = projectAgent.cleanPath(item && item.path);
+        const content = String(item && item.content === undefined ? '' : item.content);
+        results.push({ path: pathName, result: await githubRepo.writeFile({ ...input, path: pathName, content, message }) });
+      }
+      return res.json({ ok: true, action, message, commits: results.map(x => ({ path: x.path, sha: x.result.commit && x.result.commit.sha, url: x.result.commit && x.result.commit.html_url })) });
+    }
+    return res.status(400).json({ ok: false, error: 'unknown action' });
+  } catch (e) { return githubApiError(res, e); }
+});
+
 app.post('/api/chat', requireAuth, async (req, res) => {
   try {
     const { room, question, history, memory, unrestricted, modelMode, intentMode } = req.body || {};
@@ -2317,14 +2570,7 @@ app.post('/api/chat', requireAuth, async (req, res) => {
     const body = req.body || {};
     const codeBlocks = extractCodeBlocks(String(question));
     if (codeBlocks.length && chatCodeRequested(body)) {
-      if (!CHAT_CODE_EXECUTION_ENABLED) {
-        return chatJson(res, { reply: '🧪 ตรวจพบบล็อกโค้ดแล้ว แต่การรันโค้ดจากห้องแชตยังปิดอยู่เพื่อความปลอดภัย — ใช้ LAB Console หรือเปิด CHAT_CODE_EXECUTION_ENABLED=on บนเซิร์ฟเวอร์ที่มี sandbox แยกจริงก่อน', provider: 'chat-code', model: 'disabled', room: roomId, t: Date.now(), verified: false });
-      }
-      const run = await runChatCodeBlocks(question);
-      if (run && run.disabled) return chatJson(res, { reply: '🧪 ไม่ได้รันโค้ด: ' + run.reason, provider: 'chat-code', model: 'blocked', room: roomId, t: Date.now(), verified: false });
-      const results = run.results || [];
-      const allPassed = results.length > 0 && results.every((item) => item.ok && item.code === 0);
-      return chatJson(res, { reply: chatCodeReply(run.blocks, results), provider: 'chat-code', model: 'bounded-exec', room: roomId, t: Date.now(), verified: allPassed, superRun: { blockCount: results.length, ok: allPassed, engine: results.map((item) => item.engine).join(',') } });
+      return chatJson(res, { reply: '🔒 ห้องแชทนี้ไม่รันหรือจำลองโค้ด — กรุณาเปิดไฟล์จริงใน IDE และบันทึกผ่าน GitHub/Git เพื่อให้ตรวจสอบการเปลี่ยนแปลงได้', provider: 'project-editor', model: 'disabled', room: roomId, t: Date.now(), verified: false });
     }
     // 💭 จอคิด: ผูก traceId จาก client (ถ้ามี) เพื่อให้ poll สถานะสดได้
     const _tid = String((req.body || {}).traceId || '') || (Date.now().toString(36) + Math.random().toString(36).slice(2, 8));
@@ -2345,22 +2591,39 @@ app.post('/api/chat', requireAuth, async (req, res) => {
       if (pa) return chatJson(res, Object.assign({ reply: pa.reply, provider: 'parallel', model: pa.model, room: roomId, t: Date.now() }, pa));
       return chatJson(res, { reply: '⚠️ ไม่มี AI ตัวไหนตอบได้ตอนนี้ (provider ทั้งหมดล้ม?) — ลองอีกสักครู่ หรือส่งผ่านแชทปกติ', provider: 'parallel', model: 'fail', room: roomId, t: Date.now() });
     }
-    // 🗄️ v1.33 DB SANDBOX — /db <SQL> — รัน SQL บน SQLite จริง
-    const dm = /^\/db(?:\s+([\s\S]+))?$/.exec(String(question).trim());
-    if (dm) {
-      const sql = (dm[1] || '').trim();
-      if (!sql) {
-        return chatJson(res, { reply: '🗄️ **DB SANDBOX (SQLite)** — รัน SQL ได้จริงบนเซิร์ฟเวอร์ ข้อมูลอยู่ได้ข้าม session\n\nพิมพ์: `/db <SQL>` เช่น\n• `/db SELECT 1`\n• `/db CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT, age INT)`\n• `/db INSERT INTO users (name, age) VALUES (\'พี่นุ\', 30)`\n• `/db SELECT * FROM users`\n\nตารางเริ่มต้น: `notes`, `kv` · บล็อก DROP/DELETE-ไม่มี-WHERE (กันพลาด) · รองรับ SELECT/INSERT/UPDATE/DELETE/CREATE/ALTER/PRAGMA', provider: 'db', model: 'help', room: roomId, t: Date.now() });
+    // 🐙 PROJECT AGENT — สั่งงานกับ GitHub repository จริงจากแชท
+    const pm = /^\/project(?:\s+([\s\S]+))?$/i.exec(String(question).trim());
+    if (pm) {
+      if (!isOwner(req.authUser)) return chatJson(res, { reply: 'คำสั่ง project-agent สงวนไว้สำหรับ owner ของ repository', provider: 'project-editor', model: 'owner-only', room: roomId, t: Date.now() });
+      const raw = (pm[1] || '').trim();
+      const [sub, ...rest] = raw.split(/\s+/);
+      const input = { ref: 'main' };
+      if (!sub) return chatJson(res, { reply: '🐙 **Project Agent · GitHub จริง**\n\n/project skills — ดูทักษะทั้งหมด\n/project status — ดูสถานะ repo และ branch\n/project read <path> — อ่านไฟล์จริง\n/project plan <path1,path2> :: <งาน> — อ่านไฟล์และสร้างแผนแก้ไข\n\nทุกการแก้จริงต้องผ่าน GitHub Editor และยืนยันก่อน commit', provider: 'project-editor', model: 'help', room: roomId, t: Date.now() });
+      if (sub.toLowerCase() === 'skills') return chatJson(res, { reply: '🧰 **Project Agent Skills (' + PROJECT_SKILLS.length + ')**\n\n' + PROJECT_SKILLS.map((s, i) => (i + 1) + '. `' + s.id + '` — ' + s.description).join('\n'), provider: 'project-editor', model: 'skills', room: roomId, t: Date.now() });
+      if (sub.toLowerCase() === 'status') {
+        const repo = await githubRepo.getRepo(input);
+        const branches = await githubRepo.listBranches(input);
+        return chatJson(res, { reply: '🐙 **' + repo.full_name + '**\nBranch หลัก: `' + (repo.default_branch || 'main') + '`\nสถานะ: เชื่อม GitHub จริงแล้ว\nBranch ที่พบ: ' + branches.map(b => '`' + b.name + '`').join(', '), provider: 'project-editor', model: 'github-live', room: roomId, t: Date.now() });
       }
-      const dr = await dbRunSql(sql);
-      if (dr.error) return chatJson(res, { reply: '🗄️ **DB ERROR** ⚠️\n`' + String(dr.error).slice(0, 300) + '`', provider: 'db', model: 'error', room: roomId, t: Date.now() });
-      const parts = (dr.rows || []).map(t => {
-        const head = '`' + t.columns.join(' | ') + '`';
-        const rows = t.values.slice(0, 20).map(v => '`' + v.map(x => x === null ? 'NULL' : String(x).slice(0, 60)).join(' | ') + '`').join('\n');
-        return head + (rows ? '\n' + rows : '') + (t.values.length > 20 ? '\n… และอีก ' + (t.values.length - 20) + ' แถว' : '');
-      }).join('\n\n');
-      return chatJson(res, { reply: '🗄️ **SQLite · ' + (dr.write ? 'WRITE ✓' : 'QUERY') + '** — ' + dr.timeMs + 'ms\n\n' + (parts || (dr.write ? '✅ ทำรายการสำเร็จ' : '(ไม่มีผลลัพธ์)')), provider: 'db', model: 'sqlite', room: roomId, t: Date.now() });
+      if (sub.toLowerCase() === 'read') {
+        const file = await githubRepo.getFile({ ...input, path: projectAgent.cleanPath(rest.join(' ')) });
+        if (file.content === null) return chatJson(res, { reply: '📄 `' + file.path + '` เป็น binary file จึงอ่านเป็นข้อความไม่ได้ แต่เปิดดูได้จาก GitHub: ' + (file.html_url || ''), provider: 'project-editor', model: 'github-live', room: roomId, t: Date.now() });
+        return chatJson(res, { reply: '📄 **' + file.path + '**\n\n```\n' + String(file.content).slice(0, 14000) + '\n```', provider: 'project-editor', model: 'github-live', room: roomId, t: Date.now() });
+      }
+      if (sub.toLowerCase() === 'plan') {
+        const split = rest.join(' ').split(/\s*::\s*/);
+        const paths = String(split[0] || '').split(',').map(x => x.trim()).filter(Boolean).slice(0, 8);
+        const task = String(split.slice(1).join(' :: ') || '').trim();
+        if (!paths.length || !task) return chatJson(res, { reply: 'รูปแบบ: `/project plan server.js,public/chat.html :: ลดช่องว่างแชท`', provider: 'project-editor', model: 'usage', room: roomId, t: Date.now() });
+        const files = await Promise.all(paths.map(async p => { const f = await githubRepo.getFile({ ...input, path: projectAgent.cleanPath(p) }); return { path: f.path, content: f.content === null ? '(binary)' : String(f.content).slice(0, 16000) }; }));
+        const ai = await fastChat([{ role: 'system', content: 'คุณเป็น project-agent สำหรับ GitHub จริง ตอบภาษาไทย กระชับ ห้ามรันโค้ด ห้ามใช้ sandbox และให้สรุปไฟล์ที่ควรแก้กับขั้นตอนทดสอบเท่านั้น' }, { role: 'user', content: projectAgent.buildPlanPrompt(task, files).replace('ตอบ JSON เท่านั้นในรูปแบบ:', 'ตอบเป็น Markdown พร้อมหัวข้อ แผนแก้ไข, ไฟล์ที่จะเปลี่ยน, และการทดสอบ:') }]);
+        return chatJson(res, { reply: ai && ai.reply ? '🐙 **Project Plan จากไฟล์จริง**\n\n' + ai.reply.slice(0, 12000) + '\n\nถ้าต้องการให้แก้จริง ให้เปิด GitHub Editor ตรวจ diff แล้วกด Commit เมื่อพร้อม' : 'AI project-agent ไม่พร้อม', provider: 'project-editor', model: ai && ai.model || 'unavailable', room: roomId, t: Date.now() });
+      }
+      return chatJson(res, { reply: 'ไม่รู้จักคำสั่ง project-agent: ใช้ `/project skills`, `/project status`, `/project read <path>` หรือ `/project plan <path1,path2> :: <งาน>`', provider: 'project-editor', model: 'usage', room: roomId, t: Date.now() });
     }
+    // Chat is project-editing only; /db never executes from the chat surface.
+    const dm = /^\/db(?:\s+[\s\S]+)?$/i.exec(String(question).trim());
+    if (dm) return chatJson(res, { reply: '🔒 คำสั่ง /db ถูกปิดจากห้องแชทแล้ว กรุณาเปิดฐานข้อมูลจริงใน IDE/เครื่องมือ Git ของโปรเจกต์และส่ง diff ที่ต้องการแก้', provider: 'project-editor', model: 'disabled', room: roomId, t: Date.now(), verified: false });
     // 🐙 v1.33 GITHUB TOOL — /gh <repo|user|คำค้น> — GitHub API จริง (ฟรี)
     const gm = /^\/gh(?:\s+([\s\S]+))?$/.exec(String(question).trim());
     if (gm) {
@@ -3238,9 +3501,39 @@ async function buildWebApp(task) {
   return best;
 }
 
+// WebRTC signaling: relay only room-scoped signaling messages; media remains P2P.
+const callRooms = new Map();
+function callRoomId(value) { return String(value || '').trim().replace(/[^A-Za-z0-9_-]/g, '').slice(0, 64); }
+function callSend(ws, payload) { if (ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(payload)); }
+function callBroadcast(room, payload, except) { for (const peer of room || []) if (peer !== except) callSend(peer, payload); }
+function removeCallPeer(ws) { const room = callRooms.get(ws.callRoom); if (!room) return; room.delete(ws); callBroadcast(room, { type: 'peer-left', peerId: ws.callPeerId }, ws); if (!room.size) callRooms.delete(ws.callRoom); }
+const callServer = http.createServer(app);
+const callWss = new WebSocket.Server({ server: callServer, path: '/ws/call', maxPayload: 256 * 1024 });
+callWss.on('connection', (ws) => {
+  ws.callPeerId = Math.random().toString(36).slice(2, 10);
+  ws.on('message', (raw) => {
+    let msg; try { msg = JSON.parse(String(raw)); } catch (_) { return callSend(ws, { type: 'error', error: 'invalid message' }); }
+    if (msg.type === 'join') {
+      const roomId = callRoomId(msg.roomId); if (roomId.length < 4) return callSend(ws, { type: 'error', error: 'invalid room' });
+      if (ws.callRoom) removeCallPeer(ws);
+      let room = callRooms.get(roomId); if (!room) { room = new Set(); callRooms.set(roomId, room); }
+      if (room.size >= 8) return callSend(ws, { type: 'error', error: 'room is full' });
+      ws.callRoom = roomId; room.add(ws);
+      callSend(ws, { type: 'joined', peerId: ws.callPeerId, roomId, peers: [...room].filter(p => p !== ws).map(p => p.callPeerId) });
+      callBroadcast(room, { type: 'peer-joined', peerId: ws.callPeerId }, ws); return;
+    }
+    const room = callRooms.get(ws.callRoom); if (!room) return callSend(ws, { type: 'error', error: 'join a room first' });
+    if (['offer', 'answer', 'ice'].includes(msg.type) && msg.to) {
+      const target = [...room].find(p => p.callPeerId === String(msg.to));
+      if (target) callSend(target, { type: msg.type, from: ws.callPeerId, data: msg.data });
+    }
+  });
+  ws.on('close', () => removeCallPeer(ws));
+});
+
 // Vercel-ready: export app สำหรับ serverless, listen เฉพาะตอนรันตรง (local/Railway)
 if (require.main === module) {
-  app.listen(PORT, () => console.log('⚡ SILELO Neo-Connect running on port ' + PORT));
+  callServer.listen(PORT, () => console.log('⚡ SILELO Neo-Connect running on port ' + PORT));
 }
 
 /* ============ 🌐 WEB SEARCH (live — DuckDuckGo HTML, ฟรีไม่ต้อง key) ============ */

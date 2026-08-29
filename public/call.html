@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SILELO WebRTC Call</title>
+  <link rel="stylesheet" href="/call.css">
+</head>
+<body>
+  <main class="call-app">
+    <header class="call-header">
+      <div><h1>📹 SILELO Call</h1><p id="status">สร้างห้องหรือเข้าร่วมห้องเพื่อเริ่มต้น</p></div>
+      <a class="back" href="/chat">กลับไปแชท</a>
+    </header>
+    <section class="join-card">
+      <input id="room" maxlength="64" placeholder="รหัสห้อง เช่น SILELO123">
+      <button id="create">สร้างห้อง</button>
+      <button id="join">เข้าร่วม</button>
+      <button id="copy" disabled>คัดลอกลิงก์</button>
+    </section>
+    <section id="videos" class="videos" aria-live="polite"></section>
+    <section class="controls">
+      <button id="mic" disabled>🎤 ไมค์</button><button id="camera" disabled>📷 กล้อง</button><button id="screen" disabled>🖥 แชร์จอ</button><button id="hangup" class="danger" disabled>วางสาย</button>
+    </section>
+    <section class="chat-card">
+      <div class="chat-title">💬 แชทในห้องโทร <span id="chat-state">รอการเชื่อมต่อ</span></div>
+      <div id="chat-messages" class="chat-messages" aria-live="polite"></div>
+      <form id="chat-form" class="chat-form">
+        <input id="chat-input" maxlength="2000" autocomplete="off" placeholder="พิมพ์ข้อความถึงผู้ร่วมสาย..." disabled>
+        <button id="chat-send" type="submit" disabled>ส่ง</button>
+      </form>
+    </section>
+    <p class="note">การโทรและแชทใช้ WebRTC แบบ peer-to-peer; เซิร์ฟเวอร์ทำหน้าที่ส่งสัญญาณเท่านั้น ห้องจำกัด 8 อุปกรณ์ต่อห้อง และอาจต้องใช้ TURN สำหรับบางเครือข่าย</p>
+  </main>
+  <script src="/call.js"></script>
+</body>
+</html>

@@ -166,22 +166,33 @@
   .icon-btn.active { border-color: #ff3d00 !important; color: #fff !important; animation: rulepulse 1.2s ease-in-out infinite; }
   @keyframes rulepulse { 0%,100% { box-shadow: 0 0 6px rgba(255,61,0,.5); } 50% { box-shadow: 0 0 18px rgba(255,61,0,.9); } }
 
-  /* ===== จอมือถือ: ปุ่ม header เล็กลง ไม่ล้นจอ ===== */
+  /* ===== จอมือถือ: header เป็นแถบแท็บเลื่อนแนวนอน ไม่ล้นจอ ===== */
   @media (max-width: 560px) {
-    header { gap: 8px; padding: 8px 10px; }
+    header { gap: 8px; padding: 8px 10px 6px; flex-wrap: wrap; overflow: hidden; }
     .avatar-wrap { width: 40px; height: 40px; }
     .avatar { font-size: 20px; }
     .hinfo h1 { font-size: 13px; letter-spacing: 2px; }
-    .hbtns { gap: 4px; }
-    .icon-btn { width: 44px; height: 44px; font-size: 17px; border-radius: 10px; }
-    .back-btn { width: 44px; height: 44px; font-size: 17px; }
-    #callBtn { width: 46px; height: 46px; font-size: 20px; }
+    .hinfo { min-width: 0; }
+    .hbtns {
+      order: 5; flex: 0 0 100%; width: 100%; min-width: 0; max-width: 100%;
+      display: flex; gap: 6px; overflow-x: auto; overflow-y: hidden; padding: 4px 2px 6px;
+      scrollbar-width: thin; scrollbar-color: color-mix(in srgb, var(--accent) 55%, transparent) transparent;
+      -webkit-overflow-scrolling: touch; overscroll-behavior-x: contain; scroll-snap-type: x proximity;
+    }
+    .hbtns::-webkit-scrollbar { height: 3px; }
+    .hbtns::-webkit-scrollbar-thumb { background: color-mix(in srgb, var(--accent) 55%, transparent); border-radius: 99px; }
+    .hbtns > button { scroll-snap-align: start; }
+    .icon-btn { width: 42px; height: 42px; font-size: 17px; border-radius: 10px; }
+    .back-btn { width: 42px; height: 42px; font-size: 17px; }
+    #callBtn { width: 44px; height: 44px; font-size: 20px; }
     #statusDot { display: none; }
   }
   @media (max-width: 380px) {
-    .icon-btn { width: 44px; height: 44px; font-size: 17px; }
-    .hbtns { gap: 3px; }
-    header { padding: 8px 6px; gap: 6px; }
+    .icon-btn { width: 40px; height: 40px; font-size: 16px; }
+    .hbtns { gap: 5px; }
+    header { padding: 7px 6px 5px; gap: 6px; }
+    .back-btn { width: 40px; height: 40px; }
+    #callBtn { width: 42px; height: 42px; }
     .hinfo h1 { font-size: 12px; }
   }
 
@@ -689,6 +700,8 @@ header::after { height: 1px; background: linear-gradient(90deg, transparent, rgb
 
 /* ---------- Messages ---------- */
 #msgs { padding: 14px 18px 90px; gap: 12px; }
+/* Git/IDE-only chat surface: hide simulation and local-run controls. */
+#superBtn, #coderBtn, #previewBtn, #codeBtn, #toolsBtn, #chatRunBtn, #codeTools { display: none !important; }
 .msg { max-width: 84%; }
 .msg.user .bubble {
   background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 88%, #312e81), color-mix(in srgb, var(--accent) 55%, #7c3aed));
@@ -1118,9 +1131,9 @@ body.theme-dola #inp { border-radius: 16px; }
   .app { max-width: 1240px; min-height: calc(100dvh - clamp(20px, 4vw, 52px)); border: 1px solid color-mix(in srgb, var(--accent) 20%, transparent); border-radius: 26px; background: color-mix(in srgb, var(--bg) 86%, transparent); box-shadow: 0 34px 100px rgba(0,0,0,.32), 0 0 80px color-mix(in srgb, var(--accent) 7%, transparent); overflow: hidden; }
   header { padding: 15px 24px; gap: 18px; background: linear-gradient(180deg, color-mix(in srgb, var(--panel) 96%, transparent), color-mix(in srgb, var(--panel-2) 88%, transparent)); }
   .hinfo h1 { font-size: 18px; letter-spacing: 2px; }
-  #msgs { padding: 30px clamp(34px, 7vw, 110px) 16px; gap: 18px; }
+  #msgs { padding: 18px clamp(22px, 5vw, 76px) 12px; gap: 10px; }
   .msg { max-width: min(760px, 78%); }
-  .bubble { padding: 15px 18px; font-size: 16px; line-height: 1.76; border-radius: 18px; clip-path: none !important; }
+  .bubble { padding: 10px 13px; font-size: 15px; line-height: 1.55; border-radius: 15px; clip-path: none !important; }
   .msg.user .bubble { border-radius: 18px 18px 6px 18px; }
   .msg.bot .bubble { border-radius: 18px 18px 18px 6px; }
   .img-msg { display: block; max-width: min(420px, 100%); max-height: 420px; width: auto; height: auto; object-fit: contain; border-radius: 14px; background: rgba(0,0,0,.12); }
@@ -1556,7 +1569,9 @@ body.theme-dola #inp { border-radius: 16px; }
     color: var(--dim, #9b8cc0);
   }
 
-  /* ===== Team ===== */
+   .screen-settings-save-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.screen-settings-save{background:linear-gradient(135deg,#7c3aed,#c026d3);color:#fff;border:0;border-radius:10px;padding:10px 14px;font-weight:700;cursor:pointer}.screen-settings-save:disabled{opacity:.55;cursor:wait}.screen-password-card{display:grid;gap:8px;padding:12px;border:1px solid rgba(192,132,252,.18);border-radius:12px;background:rgba(255,255,255,.025)}.screen-password-card input{width:100%;background:rgba(0,0,0,.2);color:var(--txt,#fff);border:1px solid rgba(255,255,255,.12);border-radius:9px;padding:10px;outline:none}.screen-password-card input:focus{border-color:#c084fc}.screen-settings-item-desc.ok{color:#6ee7b7}
+
+   /* ===== Team ===== */
   .screen-team-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
@@ -1717,6 +1732,51 @@ body.theme-dola #inp { border-radius: 16px; }
     .screen-ide-sidebar { max-height: 25vh; }
   }
 </style>
+<style id="manus-reference-ui">
+  /* Manus-style reference UI: mobile-first, fluid width, no fixed desktop canvas */
+  :root { --ref-bg:#111111; --ref-panel:#1c1c1c; --ref-card:#292b33; --ref-line:#303039; --ref-text:#f1f1f1; --ref-muted:#aaaab3; --ref-green:#54d13d; }
+  html, body { background:var(--ref-bg) !important; color:var(--ref-text); }
+  body { min-width:0 !important; }
+  .app { width:min(100%, 760px) !important; max-width:760px !important; min-height:100dvh; margin:0 auto !important; background:var(--ref-bg) !important; border:0 !important; border-radius:0 !important; box-shadow:none !important; overflow:hidden; }
+  .app > header { position:sticky; top:0; z-index:30; min-height:76px; padding:12px 18px 10px !important; background:rgba(27,27,27,.97) !important; border-bottom:1px solid #272727 !important; backdrop-filter:blur(18px); }
+  .hinfo h1 { font-size:clamp(19px,4vw,25px) !important; letter-spacing:-.3px; }
+  .hinfo .status { color:#a9a9b0 !important; font-size:11px !important; }
+  .hbtns { gap:6px !important; max-width:48vw; overflow-x:auto; scrollbar-width:none; }
+  .hbtns::-webkit-scrollbar { display:none; }
+  .hbtns .icon-btn, .hbtns .call-top { background:transparent !important; border:0 !important; box-shadow:none !important; font-size:20px; }
+  #msgs { width:100%; box-sizing:border-box; padding:18px clamp(16px,5vw,38px) 150px !important; gap:14px !important; background:var(--ref-bg) !important; }
+  .msg { max-width:100% !important; width:100%; }
+  .msg.user { display:flex; justify-content:flex-end; }
+  .msg.user .bubble { max-width:min(78%, 520px); padding:13px 17px !important; border-radius:21px 21px 6px 21px !important; background:#3a3a3d !important; border:1px solid #46464a !important; color:#f7f7f7 !important; font-size:16px !important; line-height:1.45 !important; }
+  .msg.bot { display:block; }
+  .msg.bot .bubble { max-width:100%; padding:0 !important; background:transparent !important; border:0 !important; color:#eeeeef !important; font-size:16px !important; line-height:1.62 !important; }
+  .msg.bot .bubble::first-line { font-weight:600; }
+  .bubble pre, .msg pre { margin:12px 0 !important; padding:17px 15px !important; border-radius:9px !important; background:#292c35 !important; color:#e5e7eb !important; border:0 !important; font-size:14px !important; line-height:1.65 !important; overflow:auto; }
+  .bubble code { color:#e7e8ee !important; }
+  .msg .meta { color:#888890 !important; margin-top:7px; }
+  .typing { margin:0 clamp(16px,5vw,38px) 12px !important; }
+  .modelbar { margin:0 clamp(16px,5vw,38px) 10px !important; border:0 !important; background:transparent !important; }
+  .inputbar { position:fixed !important; z-index:40; left:50%; bottom:max(12px, env(safe-area-inset-bottom)); transform:translateX(-50%); width:min(calc(100% - 32px), 700px); min-height:76px; box-sizing:border-box; padding:12px 15px 10px !important; border:1px solid #3a3a3d !important; border-radius:28px !important; background:#2a2a2b !important; box-shadow:0 10px 30px rgba(0,0,0,.38) !important; display:flex !important; flex-direction:column-reverse; gap:8px; }
+  #inp { width:100% !important; min-height:32px; max-height:110px; padding:0 2px !important; background:transparent !important; border:0 !important; color:#fff !important; font-size:16px !important; line-height:1.4; }
+  #inp::placeholder { color:#b9b9bd !important; opacity:1; }
+  .composer-tools { width:100%; justify-content:space-between !important; order:initial !important; padding:0 !important; }
+  .composer-tools .icon-btn { width:36px !important; height:36px !important; border:0 !important; background:transparent !important; font-size:20px !important; }
+  .composer-tools .send { width:45px !important; height:45px !important; border-radius:50% !important; background:#fff !important; color:#111 !important; font-size:23px !important; }
+  .composer-tools .ptt, .composer-tools .chat-call-inline { display:none !important; }
+  .add-sheet-panel { border-radius:24px 24px 0 0 !important; }
+  @media (min-width: 761px) {
+    .app { min-height:100vh; }
+    .app > header { padding-left:28px !important; padding-right:28px !important; }
+    #msgs { padding-left:clamp(28px,8vw,80px) !important; padding-right:clamp(28px,8vw,80px) !important; }
+    .inputbar { bottom:20px; }
+  }
+  @media (max-width: 380px) {
+    .app > header { padding-left:10px !important; padding-right:10px !important; }
+    #msgs { padding-left:12px !important; padding-right:12px !important; }
+    .hinfo h1 { font-size:18px !important; }
+    .msg.user .bubble, .msg.bot .bubble { font-size:15px !important; }
+  }
+</style>
 </head>
 <body>
 <div class="bgfx">
@@ -1742,18 +1802,20 @@ body.theme-dola #inp { border-radius: 16px; }
     </div>
     <div class="hbtns">
       <button class="call-top" id="callBtn" title="โทรหาสลี่ออลา">📞</button>
+      <button class="icon-btn" id="rtcBtn" title="โทรเสียง/วิดีโอและแชร์หน้าจอ">📹</button>
+      <button class="icon-btn" id="computerBtn" title="Computer 2569 — เปิดเว็บจริงของสลี่">🖥️</button>
       <button class="icon-btn" id="voiceBtn" title="เลือกเสียง">🎙️</button>
       <button class="icon-btn" id="soundBtn" title="เปิด/ปิดเสียงสลี่">🔊</button>
       <button class="icon-btn" id="memBtn" title="🧠 จดจำ · ดับเบิลคลิก = เปิดสมุดโน้ต">🧠</button>
-      <button class="icon-btn" id="toolsBtn" title="🧭️ เครื่องมือโค้ด (CodingFleet style): สร้าง/แปลง/อธิบาย/ปรับปรุง/คอมเมนต์/Unit Test/ไดอแกรม/Refactor">🧭️</button>
+      <button class="icon-btn" id="toolsBtn" aria-hidden="true" hidden title="เครื่องมือโค้ดถูกปิด ใช้ IDE/GitHub แก้ไฟล์จริง">🧭️</button>
       <button class="icon-btn" id="ruleBtn" title="โหมดไร้กฎ — ไม่มีข้อจำกัด">⚡</button>
       <button class="icon-btn" id="superBtn" title="⚡ SUPER MODE — Super CodingFleet: AI operator ระดับสูง ทำงานจริง ตรวจจริง">🚀</button>
       <button class="icon-btn coder-btn" id="coderBtn" title="🤖 โหมดเขียนโค้ด — สลี่เขียน+รันให้อัตโนมัติ">🤖</button>
-      <button class="icon-btn" id="browserBtn" title="🌐 Browser Workspace — เปิดเว็บหรือ Preview">🌐</button>
+      <button class="icon-btn" id="browserBtn" hidden aria-hidden="true" title="Browser Workspace ปิดจากห้องแชท">🌐</button>
       <button class="icon-btn" id="liveOpsBtn" title="📡 Live Operations — สถานะระบบจริง">📡</button>
       <button class="icon-btn" id="integrationsBtn" title="🔌 Integrations — สถานะบริการที่เชื่อมต่อจริง">🔌</button>
-      <button class="icon-btn" id="previewBtn" title="👁 Live Preview — ดูเว็บจาก workspace แบบ Bolt">👁</button>
-      <button class="icon-btn" id="ideBtn" title="🗂 IDE — File Explorer + Editor + Terminal">🗂</button>
+      <button class="icon-btn" id="previewBtn" hidden aria-hidden="true" title="Preview ปิดจากห้องแชท">👁</button>
+      <button class="icon-btn" id="ideBtn" title="🐙 GitHub Editor — แก้ไฟล์โปรเจกต์จริง">🐙</button>
       <button class="icon-btn" id="themeBtn" title="เปลี่ยนธีม">🎨</button>
       <button class="icon-btn" id="puterBtn" title="🐋 DeepSeek ฟรีไม่จำกัด (Puter) — แตะเพื่อเชื่อม/สลับ">🐋</button>
       <button class="icon-btn" id="teamBtn" title="🧑💼 ทีมงาน AI 50 คน — พี่นุเป็นผู้จัดการ">🧑💼</button>
@@ -1783,7 +1845,7 @@ body.theme-dola #inp { border-radius: 16px; }
     </select>
     <span class="modelbar-hint" id="modelHint"></span>
   </div>
-  <div id="codeTools" style="display:none;flex-wrap:wrap;gap:6px;padding:6px 10px;background:rgba(10,16,32,.85);border-top:1px solid rgba(167,139,250,.25);">
+  <div id="codeTools" aria-hidden="true" style="display:none!important;">
     <button class="ct-btn" data-mode="create" title="เขียนโค้ดใหม่ แล้วรันให้ทันที">🐍 สร้าง</button>
     <button class="ct-btn" data-mode="convert" title="แปลงโค้ดข้ามภาษา 60+">🔄 แปลง</button>
     <button class="ct-btn" data-mode="explain" title="อธิบายโค้ดทีละส่วน ภาษาไทย">📖 อธิบาย</button>
@@ -1802,8 +1864,8 @@ body.theme-dola #inp { border-radius: 16px; }
       <button class="icon-btn chat-call-inline" id="chatCallFab" title="📞 โทรหาสลี่" aria-label="โทรหาสลี่">📞</button>
       <button class="icon-btn" id="imgBtn" title="เพิ่มลงในแชท" aria-haspopup="dialog" aria-controls="addSheet" aria-label="เพิ่มลงในแชท">✚</button>
       <button class="send" id="sendBtn" title="ส่ง" aria-label="ส่งข้อความ">➤</button>
-      <button class="icon-btn" id="chatRunBtn" title="▶ รัน code block ในแชต (ต้องกดเปิดเอง)" aria-label="รัน code block ในแชต">▶</button>
-      <button class="icon-btn" id="codeBtn" title="💻 Lab Console" aria-label="Lab Console">💻</button>
+      <button class="icon-btn" id="chatRunBtn" aria-hidden="true" hidden title="การรันโค้ดในแชทถูกปิด" aria-label="การรันโค้ดในแชทถูกปิด">▶</button>
+      <button class="icon-btn" id="codeBtn" hidden aria-hidden="true" title="Lab Console ปิดจากห้องแชท" aria-label="Lab Console ปิดจากห้องแชท">💻</button>
     </div>
     <textarea id="inp" rows="1" placeholder="พิมพ์ข้อความ..." enterkeyhint="send"></textarea>
   </div>
@@ -1854,6 +1916,16 @@ body.theme-dola #inp { border-radius: 16px; }
   <div class="voice-opt" data-voice="nanami"><span class="vicon">🇯🇵</span><span class="vname">Nanami</span><span class="vsub">JP หญิง</span></div>
   <div class="voice-opt" data-voice="sunhi"><span class="vicon">🇰🇷</span><span class="vname">Sun-Hi</span><span class="vsub">KR หญิง</span></div>
   <div class="voice-opt" data-voice="xiaoxiao"><span class="vicon">🇨🇳</span><span class="vname">Xiaoxiao</span><span class="vsub">CN หญิง</span></div>
+  <div class="voice-opt voice-new" data-voice="coral"><span class="vicon">🌸</span><span class="vname">Coral</span><span class="vsub">AI warm</span></div>
+  <div class="voice-opt voice-new" data-voice="marin"><span class="vicon">🌊</span><span class="vname">Marin</span><span class="vsub">AI calm</span></div>
+  <div class="voice-opt voice-new" data-voice="cedar"><span class="vicon">🌲</span><span class="vname">Cedar</span><span class="vsub">AI clear</span></div>
+  <div class="voice-opt voice-new" data-voice="alloy"><span class="vicon">◈</span><span class="vname">Alloy</span><span class="vsub">AI neutral</span></div>
+  <div class="voice-opt voice-new" data-voice="ash"><span class="vicon">⚡</span><span class="vname">Ash</span><span class="vsub">AI bright</span></div>
+  <div class="voice-opt voice-new" data-voice="echo"><span class="vicon">🔊</span><span class="vname">Echo</span><span class="vsub">AI deep</span></div>
+  <div class="voice-opt voice-new" data-voice="fable"><span class="vicon">📖</span><span class="vname">Fable</span><span class="vsub">AI story</span></div>
+  <div class="voice-opt voice-new" data-voice="nova"><span class="vicon">✨</span><span class="vname">Nova</span><span class="vsub">AI gentle</span></div>
+  <div class="voice-opt voice-new" data-voice="onyx"><span class="vicon">⬟</span><span class="vname">Onyx</span><span class="vsub">AI pro</span></div>
+  <div class="voice-opt voice-new" data-voice="sage"><span class="vicon">🌿</span><span class="vname">Sage</span><span class="vsub">AI precise</span></div>
   <div class="vrate">
     <div class="ttl">⚡ ความเร็ว</div>
     <div class="vrate-row">
@@ -2503,7 +2575,7 @@ body.theme-dola #inp { border-radius: 16px; }
     } catch (e) {}
   }
   let sending = false;
-  let runCodeNext = false;
+  let runCodeNext = false; // retained for state compatibility; chat execution is disabled server-side
   const chatRunBtn = document.getElementById('chatRunBtn');
   function syncChatRunBtn() {
     if (!chatRunBtn) return;
@@ -2522,7 +2594,7 @@ body.theme-dola #inp { border-radius: 16px; }
     if (sending) { toast('⏳ รอสลี่ตอบก่อนน้า... เดี๋ยวส่งต่อให้'); return; }
     const q = inp.value.trim();
     if (!q) return;
-    const requestedCodeRun = runCodeNext;
+    const requestedCodeRun = false;
     runCodeNext = false;
     syncChatRunBtn();
     addMsg('user', q);
@@ -2680,12 +2752,18 @@ body.theme-dola #inp { border-radius: 16px; }
   let speakToken = 0;
   function stopSpeaking() {
     speakToken++;
-    try { if (audio) audio.pause(); } catch (e) {}
+    try { if (audio) { audio.pause(); audio.currentTime = 0; } } catch (e) {}
     if (window.speechSynthesis) { try { speechSynthesis.cancel(); } catch (e) {} }
+    pendingSpeak = null;
   }
   function speak(text) {
-    const myToken = ++speakToken;
-    const run = speakChain.then(() => _speak(text, myToken));
+    /* คำตอบใหม่ต้องเริ่มทันที ไม่รอคิวเก่าที่อาจยาวหลายประโยค */
+    speakToken++;
+    const myToken = speakToken;
+    try { if (audio) { audio.pause(); audio.currentTime = 0; } } catch (e) {}
+    if (window.speechSynthesis) { try { speechSynthesis.cancel(); } catch (e) {} }
+    pendingSpeak = null;
+    const run = Promise.resolve().then(() => _speak(text, myToken));
     speakChain = run.catch(() => {});
     return run;
   }
@@ -2755,7 +2833,11 @@ body.theme-dola #inp { border-radius: 16px; }
 
     /* ===== 🎙️ เลือกเสียง ===== */
   const voicePop = document.getElementById('voicePop');
-  document.getElementById('voiceBtn').onclick = () => {
+  const voiceBtn = document.getElementById('voiceBtn');
+  const voiceLabels = { silelo: 'สลี่', auto: 'อัตโนมัติ', premwadee: 'พรีมาวดี', niwat: 'นิวัฒน์', achara: 'อัจฉรา', aria: 'Aria', guy: 'Guy', sonia: 'Sonia', nanami: 'Nanami', sunhi: 'Sun-Hi', xiaoxiao: 'Xiaoxiao', coral: 'Coral', marin: 'Marin', cedar: 'Cedar', alloy: 'Alloy', ash: 'Ash', echo: 'Echo', fable: 'Fable', nova: 'Nova', onyx: 'Onyx', sage: 'Sage' };
+  function syncVoiceUi() { if (voiceBtn) { voiceBtn.title = '🎙️ เสียงปัจจุบัน: ' + (voiceLabels[voice] || voice) + ' — กดเพื่อเลือก'; voiceBtn.setAttribute('aria-label', voiceBtn.title); } }
+  syncVoiceUi();
+  voiceBtn.onclick = () => {
     voicePop.classList.toggle('show');
     document.querySelectorAll('.voice-opt').forEach(o => o.classList.toggle('on', o.dataset.voice === voice));
     syncRateUi();
@@ -2766,8 +2848,11 @@ body.theme-dola #inp { border-radius: 16px; }
       try { localStorage.setItem('nc_voice', voice); } catch (e) {}
       document.querySelectorAll('.voice-opt').forEach(x => x.classList.toggle('on', x === o));
       voicePop.classList.remove('show');
-      const names = { silelo: '💜 สลี่ออลา (เสียงสลี่)', auto: 'อัตโนมัติ (เร็วสุด)', premwadee: 'พรีมาวดี (หญิง อ่อนโยน)', niwat: 'นิวััฒน์ (ชาย)', achara: 'อัจฉรา (หญิง ทางการ)', aria: 'Aria (EN หญิง)', guy: 'Guy (EN ชาย)', sonia: 'Sonia (UK หญิง)', nanami: 'Nanami (JP หญิง)', sunhi: 'Sun-Hi (KR หญิง)', xiaoxiao: 'Xiaoxiao (CN หญิง)' };
-      toast('🎙️ เสียง: ' + (names[voice] || voice));
+      const names = { silelo: '💜 สลี่ออลา (เสียงสลี่)', auto: 'อัตโนมัติ (เร็วสุด)', premwadee: 'พรีมาวดี (หญิง อ่อนโยน)', niwat: 'นิวััฒน์ (ชาย)', achara: 'อัจฉรา (หญิง ทางการ)', aria: 'Aria (EN หญิง)', guy: 'Guy (EN ชาย)', sonia: 'Sonia (UK หญิง)', nanami: 'Nanami (JP หญิง)', sunhi: 'Sun-Hi (KR หญิง)', xiaoxiao: 'Xiaoxiao (CN หญิง)', coral: 'Coral (อบอุ่น)', marin: 'Marin (สงบ)', cedar: 'Cedar (ชัดเจน)', alloy: 'Alloy (กลาง)', ash: 'Ash (สดใส)', echo: 'Echo (ทุ้ม)', fable: 'Fable (เล่าเรื่อง)', nova: 'Nova (นุ่มนวล)', onyx: 'Onyx (มืออาชีพ)', sage: 'Sage (แม่นยำ)' };
+      syncVoiceUi();
+      toast('🎙️ เลือกเสียง: ' + (names[voice] || voice));
+      /* พรีวิวสั้น ๆ เพื่อยืนยันว่าเสียงที่เลือกใช้งานได้ */
+      if (soundOn) speak('เลือกเสียง ' + (names[voice] || voice) + ' แล้วครับ');
     };
   });
   /* ===== ⚡ ความเร็วเสียง (0.5x - 2.0x) ===== */
@@ -2826,18 +2911,26 @@ body.theme-dola #inp { border-radius: 16px; }
       img.src = url;
     });
   }
-  async function uploadChatFile(file, dataOverride) {
+  async function uploadChatFile(file) {
     if (!file) return null;
-    const data = dataOverride || await new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(String(reader.result || ''));
-      reader.onerror = () => reject(new Error('อ่านไฟล์สำหรับอัปโหลดไม่ได้'));
-      reader.readAsDataURL(file);
-    });
-    const r = await fetch('/api/files/upload', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: file.name, type: file.type || 'application/octet-stream', data }) });
-    const j = await r.json().catch(() => ({}));
-    if (!r.ok || !j.ok) throw new Error(j.error === 'FILE_TOO_LARGE' ? 'ไฟล์เกิน 3MB' : (j.message || j.error || 'อัปโหลดไม่สำเร็จ'));
-    return j.file;
+    const max = 3 * 1024 * 1024 * 1024;
+    if (!Number.isFinite(file.size) || file.size <= 0) throw new Error('ไฟล์ว่าง');
+    if (file.size > max) throw new Error('ไฟล์เกิน 3GB');
+    const initR = await fetch('/api/files/init', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: file.name, type: file.type || 'application/octet-stream', size: file.size }) });
+    const init = await initR.json().catch(() => ({}));
+    if (!initR.ok || !init.ok) throw new Error(init.error === 'FILE_TOO_LARGE' ? 'ไฟล์เกิน 3GB' : (init.error || 'เริ่มอัปโหลดไม่สำเร็จ'));
+    const id = init.upload.id, chunk = init.upload.chunkBytes || 8 * 1024 * 1024;
+    for (let offset = 0; offset < file.size; offset += chunk) {
+      const part = file.slice(offset, Math.min(offset + chunk, file.size));
+      const r = await fetch('/api/files/chunk/' + encodeURIComponent(id), { method: 'PUT', headers: { 'Content-Type': 'application/octet-stream', 'X-Upload-Offset': String(offset) }, body: part });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok || !j.ok) throw new Error(j.error || 'ส่งข้อมูลไฟล์ไม่สำเร็จ');
+      setTyping('📤 กำลังอัปโหลด ' + Math.round(j.received / file.size * 100) + '%');
+    }
+    const doneR = await fetch('/api/files/complete/' + encodeURIComponent(id), { method: 'POST' });
+    const done = await doneR.json().catch(() => ({}));
+    if (!doneR.ok || !done.ok) throw new Error(done.error || 'ปิดงานอัปโหลดไม่สำเร็จ');
+    return done.file;
   }
   function uploadLargeImage(file) {
     return new Promise((resolve, reject) => {
@@ -2907,6 +3000,11 @@ body.theme-dola #inp { border-radius: 16px; }
     for (const sn of wb.SheetNames.slice(0, 5)) { out += '## แผ่น: ' + sn + '\n' + XLSX.utils.sheet_to_csv(wb.Sheets[sn]) + '\n'; }
     return out;
   }
+  async function readFilePreview(f) {
+    const previewBytes = 128 * 1024;
+    const sample = await f.slice(0, previewBytes).text().catch(() => '');
+    return 'ไฟล์ขนาด ' + Math.ceil(f.size / 1024 / 1024) + 'MB · แสดงตัวอย่าง ' + Math.ceil(sample.length / 1024) + 'KB แรก\n\n' + sample;
+  }
   async function handleDroppedFile(f) {
     if (!f) return;
     const ext = extOf(f.name);
@@ -2914,16 +3012,17 @@ body.theme-dola #inp { border-radius: 16px; }
     toast('📖 กำลังอ่าน ' + f.name + '...');
     let text = '';
     try {
-      if (ext === 'pdf') text = await readPdf(f);
+      if (f.size > 25 * 1024 * 1024) text = await readFilePreview(f);
+      else if (ext === 'pdf') text = await readPdf(f);
       else if (ext === 'docx') text = await readDocx(f);
       else if (ext === 'xlsx' || ext === 'xls') text = await readXlsx(f);
       else if (TEXT_EXTS.has(ext) || (f.type && f.type.startsWith('text/'))) text = await f.text();
-      else { toast('❌ ไฟล์ .' + ext + ' ยังอ่านไม่ได้'); return; }
+      else text = 'ไฟล์ชนิด ' + (f.type || 'ไม่ทราบชนิด') + ' ถูกอัปโหลดแล้ว แต่ยังไม่มีตัวอ่านเนื้อหาอัตโนมัติ';
     } catch (e) { toast('❌ อ่านไฟล์ไม่สำเร็จ: ' + e.message); return; }
     if (!text || !text.trim()) { toast('⚠️ ไม่มีข้อความในไฟล์'); return; }
     let uploaded = null;
     try { uploaded = await uploadChatFile(f); toast('📤 อัปโหลดไฟล์แล้ว'); } catch (uploadError) { toast('⚠️ ไฟล์ยังไม่ถูกเก็บ: ' + uploadError.message); }
-    const q = '📎 [ไฟล์: ' + f.name + (uploaded ? ' · เก็บที่ ' + uploaded.url : '') + ']\n\n' + text.trim().slice(0, 9000) + '\n\nช่วยอ่านและสรุป/วิเคราะห์ไฟล์นี้ให้หน่อย (ภาษาไทย กระชับ เข้าใจง่าย)';
+    const q = '📎 [ไฟล์: ' + f.name + (uploaded ? ' · เก็บที่ ' + uploaded.url + (uploaded.editUrl ? ' · แก้ไขที่ ' + uploaded.editUrl : '') : '') + ']\n\n' + text.trim().slice(0, 9000) + '\n\nช่วยอ่านและสรุป/วิเคราะห์ไฟล์นี้ให้หน่อย (ภาษาไทย กระชับ เข้าใจง่าย)';
     inp.value = q; autoGrow();
     send();
   }
@@ -2934,7 +3033,7 @@ body.theme-dola #inp { border-radius: 16px; }
   const allFile = document.getElementById('allFile');
   const addMenuGroups = [
     { label: 'ไฟล์และพื้นที่ทำงาน', items: [
-      { id: 'files', icon: '📎', title: 'เพิ่มไฟล์ในเครื่อง', note: 'PNG, JPEG, WebP, GIF, PDF, TXT, MD, JSON · สูงสุด 3MB/ไฟล์', state: 'พร้อมใช้' },
+      { id: 'files', icon: '📎', title: 'เพิ่มไฟล์ในเครื่อง', note: 'ไฟล์ทุกชนิด · สูงสุด 3GB/ไฟล์', state: 'พร้อมใช้' },
       { id: 'recent-files', icon: '📄', title: 'ไฟล์ล่าสุด', note: 'แสดงไฟล์ที่อัปโหลดใน session ปัจจุบัน', state: 'พร้อมใช้' },
       { id: 'recent-work', icon: '☷', title: 'งานล่าสุด', note: 'เปิดหน้าจอการทำงานและเครื่องมือที่มีอยู่', state: 'พร้อมใช้' },
       { id: 'skills', icon: '🧩', title: 'ทักษะและปลั๊กอิน', note: 'ตรวจ catalog และสิทธิ์จากระบบของคุณ', state: 'พร้อมใช้' },
@@ -2971,7 +3070,7 @@ body.theme-dola #inp { border-radius: 16px; }
     if (id === 'recent-files') {
       const r = await fetch('/api/files/recent'); const j = await r.json().catch(() => ({}));
       if (!r.ok || !j.ok) return toast('🔒 เข้าสู่ระบบก่อนดูไฟล์ล่าสุด');
-      const lines = (j.files || []).map(file => '📄 ' + file.name + ' · ' + Math.ceil(file.size / 1024) + 'KB').join('\n');
+      const lines = (j.files || []).map(file => '📄 ' + file.name + ' · ' + Math.ceil(file.size / 1024) + 'KB\n🔗 แก้ไข/เปิด: ' + file.editUrl).join('\n');
       return addMsg('assistant', lines ? ('ไฟล์ล่าสุดใน session นี้\n\n' + lines) : 'ยังไม่มีไฟล์ที่อัปโหลดใน session นี้');
     }
     if (id === 'image-vision') return imgFile.click();
@@ -3413,6 +3512,10 @@ body.theme-dola #inp { border-radius: 16px; }
   };
 
   callBtn.onclick = startCall;
+  const rtcBtn = document.getElementById('rtcBtn');
+  if (rtcBtn) rtcBtn.onclick = () => { window.location.href = '/call.html'; };
+  const computerBtn = document.getElementById('computerBtn');
+  if (computerBtn) computerBtn.onclick = () => { window.location.href = '/computer.html'; };
   if (chatCallFab) chatCallFab.onclick = startCall;
   hangBtn.onclick = endCall;
 
@@ -5274,7 +5377,7 @@ SM.register('liveops', {
         cards.innerHTML =
           card('◌', 'AI Trace', traceState, data.trace.state === 'live' ? 'กำลังทำงาน' : (data.trace.state === 'complete' ? 'จบล่าสุด' : 'ยังไม่มีงาน'), 'Trace ' + (data.trace.id ? 'พร้อมตรวจสอบ' : 'ยังไม่เริ่ม') + ' · ' + data.trace.stepCount + ' ขั้นตอน', traceColor) +
           card('↗', 'LINE Bridge', lineState, data.line.botConfigured ? 'Bot พร้อม' : (data.line.loginConfigured ? 'Login พร้อม' : 'รอตั้งค่า'), data.line.botConfigured ? 'ตรวจพบการตั้งค่า bot' : (data.line.loginConfigured ? 'ยังไม่มี bot bridge runtime' : 'ไม่มี LINE config ใน runtime'), lineColor) +
-          card('⌁', 'Upload', data.upload.state === 'ready' ? 'พร้อม' : data.upload.state, data.upload.recentCount + ' ไฟล์', 'รูปสูงสุด 50MB · ไฟล์สูงสุด 3MB', '#51e5a7') +
+          card('⌁', 'Upload', data.upload.state === 'ready' ? 'พร้อม' : data.upload.state, data.upload.recentCount + ' ไฟล์', 'รูปสูงสุด 50MB · ไฟล์ทุกชนิด · สูงสุด 3GB', '#51e5a7') +
           card('◈', 'Runtime', 'online', 'Node ' + data.runtime.node, 'Uptime ' + data.runtime.uptimeSeconds + ' วินาที · response ' + data.runtime.responseMs + 'ms', '#72baff');
         renderTrace(data.trace.stepCount, data.trace.state, data.trace.provider, data.trace.model);
         headline.textContent = data.trace.state === 'live' ? 'ระบบกำลังทำงาน' : 'ระบบพร้อมใช้งาน';
@@ -5463,11 +5566,54 @@ SM.register('github', {
     var body = el.querySelector('.silelo-screen-body');
     if (!body) return;
     body.innerHTML =
-      '<div style="margin-bottom:16px;">' +
-        '<input type="text" id="ghSearch" placeholder="ค้นหา repo หรือ user..." ' +
-          'style="width:100%;padding:10px 14px;border-radius:10px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04);color:var(--txt);font-size:14px;outline:none;">' +
+      '<div style="margin-bottom:14px;padding:12px;border:1px solid rgba(255,255,255,.08);border-radius:12px;background:rgba(255,255,255,.03);">' +
+        '<div style="font-weight:700;margin-bottom:8px;">🐙 Repository Workspace</div>' +
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">' +
+          '<input type="text" id="ghOwner" value="phanuphanthcanthrsngsaeng17-del" placeholder="owner" style="padding:9px;border-radius:8px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04);color:var(--txt);">' +
+          '<input type="text" id="ghRepoName" value="silelo-neo-connect" placeholder="repo" style="padding:9px;border-radius:8px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04);color:var(--txt);">' +
+        '</div>' +
+        '<div style="display:flex;gap:8px;margin-top:8px;align-items:center;">' +
+          '<select id="ghRef" style="flex:1;padding:9px;border-radius:8px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04);color:var(--txt);"><option value="main">main</option></select>' +
+          '<button class="ct-btn" id="ghLoad">โหลด Repo</button>' +
+          '<button class="ct-btn" id="ghDiff">Diff</button>' +
+        '</div>' +
+        '<div id="ghRepoMeta" style="margin-top:8px;color:var(--dim);font-size:12px;"></div>' +
       '</div>' +
+      '<div style="margin-bottom:14px;">' +
+        '<input type="text" id="ghSearch" placeholder="ค้นหา repo หรือ user..." style="width:100%;padding:10px 14px;border-radius:10px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04);color:var(--txt);font-size:14px;outline:none;">' +
+      '</div>' +
+      '<div id="ghTree" style="margin-bottom:14px;"></div>' +
+      '<pre id="ghFile" style="display:none;max-height:420px;overflow:auto;white-space:pre-wrap;padding:12px;border-radius:10px;background:rgba(0,0,0,.28);font-size:12px;"></pre>' +
       '<div id="ghResults"></div>';
+
+    function ghParams(extra) {
+      var p = new URLSearchParams({ owner: document.getElementById('ghOwner').value.trim(), repo: document.getElementById('ghRepoName').value.trim(), ref: document.getElementById('ghRef').value });
+      Object.keys(extra || {}).forEach(function(k) { p.set(k, extra[k]); });
+      return p.toString();
+    }
+    function ghMsg(text, bad) { var meta = document.getElementById('ghRepoMeta'); if (meta) { meta.textContent = text; meta.style.color = bad ? '#ff7b7b' : 'var(--dim)'; } }
+    async function ghLoadRepo() {
+      var tree = document.getElementById('ghTree');
+      ghMsg('กำลังโหลดข้อมูลจาก GitHub...');
+      if (tree) tree.innerHTML = '<div style="color:var(--dim);">กำลังโหลด tree...</div>';
+      try {
+        var qs = ghParams({});
+        var rr = await fetch('/api/github/repo?' + qs); var rj = await rr.json();
+        if (!rr.ok || !rj.ok) throw new Error(rj.error || 'โหลด repository ไม่สำเร็จ');
+        var repo = rj.repo; ghMsg((repo.full_name || '') + ' · ' + (repo.default_branch || '') + ' · ' + (repo.language || 'ไม่ระบุ'));
+        var requestedRef = document.getElementById('ghRef').value || repo.default_branch || 'main';
+        var br = await fetch('/api/github/branches?' + qs); var bj = await br.json();
+        var select = document.getElementById('ghRef');
+        if (bj.ok && select) { select.innerHTML = bj.branches.map(function(b) { return '<option value="' + String(b.name).replace(/"/g, '&quot;') + '">' + String(b.name).replace(/</g, '&lt;') + '</option>'; }).join(''); select.value = bj.branches.some(function(b) { return b.name === requestedRef; }) ? requestedRef : (repo.default_branch || 'main'); }
+        var tr = await fetch('/api/github/tree?' + ghParams({ ref: select ? select.value : 'main' })); var tj = await tr.json();
+        if (!tr.ok || !tj.ok) throw new Error(tj.error || 'โหลดไฟล์ไม่สำเร็จ');
+        if (tree) tree.innerHTML = '<div style="font-weight:700;margin-bottom:6px;">📁 Files (' + tj.tree.length + ')</div>' + tj.tree.filter(function(x) { return x.type === 'blob'; }).slice(0, 160).map(function(x) { return '<button class="screen-gh-repo" data-gh-file="' + encodeURIComponent(x.path) + '" style="width:100%;text-align:left;"><span class="screen-gh-repo-icon">📄</span><span class="screen-gh-repo-name">' + x.path.replace(/</g, '&lt;') + '</span></button>'; }).join('');
+        if (tree) tree.querySelectorAll('[data-gh-file]').forEach(function(btn) { btn.addEventListener('click', async function() { var path = decodeURIComponent(btn.getAttribute('data-gh-file')); var fr = await fetch('/api/github/file?' + ghParams({ path: path })); var fj = await fr.json(); var pre = document.getElementById('ghFile'); if (!pre) return; pre.style.display = 'block'; if (!fj.ok || !fj.file) { pre.textContent = '❌ ' + (fj.error || 'อ่านไฟล์ไม่ได้'); return; } if (fj.file.content === null) { pre.textContent = '📄 ' + fj.file.path + '\n\n(binary file — เปิดดูได้จาก GitHub แต่แก้ผ่าน editor นี้ไม่ได้)'; return; } pre.innerHTML = '<div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;flex-wrap:wrap"><strong>📄 ' + escHtml(fj.file.path) + '</strong><input id="ghCommitMsg" value="Update ' + escAttr(fj.file.path) + '" style="flex:1;min-width:220px;padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.04);color:var(--txt)"><button class="ct-btn" id="ghSaveFile">💾 Commit ไป GitHub</button></div><textarea id="ghEditor" spellcheck="false" style="width:100%;min-height:360px;padding:12px;border-radius:10px;border:1px solid rgba(255,255,255,.12);background:rgba(0,0,0,.3);color:var(--txt);font:12px/1.55 ui-monospace,monospace;white-space:pre;resize:vertical"></textarea>'; var ed = document.getElementById('ghEditor'); ed.value = fj.file.content || ''; document.getElementById('ghSaveFile').onclick = async function() { if (!confirm('ยืนยันเขียนไฟล์จริงและสร้าง commit บน GitHub?')) return; var save = document.getElementById('ghSaveFile'); save.disabled = true; save.textContent = '⏳ กำลัง commit...'; try { var wr = await fetch('/api/github/file', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ owner: document.getElementById('ghOwner').value.trim(), repo: document.getElementById('ghRepoName').value.trim(), ref: document.getElementById('ghRef').value, path: fj.file.path, message: document.getElementById('ghCommitMsg').value.trim() || ('Update ' + fj.file.path), content: ed.value }) }); var wj = await wr.json().catch(function() { return {}; }); if (!wr.ok || !wj.ok) throw new Error(wj.error || 'commit ไม่สำเร็จ'); save.textContent = '✅ Commit แล้ว'; ghMsg('บันทึก ' + fj.file.path + ' ไป GitHub แล้ว', false); } catch (e) { save.disabled = false; save.textContent = '💾 Commit ไป GitHub'; ghMsg('❌ ' + e.message, true); } }; }); });
+      } catch (e) { ghMsg('❌ ' + e.message, true); if (tree) tree.innerHTML = ''; }
+    }
+    document.getElementById('ghLoad').addEventListener('click', ghLoadRepo);
+    document.getElementById('ghRef').addEventListener('change', ghLoadRepo);
+    document.getElementById('ghDiff').addEventListener('click', async function() { var from = prompt('เปรียบเทียบจาก branch', 'main'); var to = document.getElementById('ghRef').value; if (!from || !to || from === to) return; var r = await fetch('/api/github/compare?' + ghParams({ from: from, to: to })); var j = await r.json(); var pre = document.getElementById('ghFile'); if (pre) { pre.style.display = 'block'; pre.textContent = j.ok ? ('Diff ' + from + ' → ' + to + '\\n' + j.files.map(function(f) { return f.status + ' ' + f.filename + ' (+' + f.additions + ' -' + f.deletions + ')\\n' + (f.patch || ''); }).join('\\n\\n')) : '❌ ' + (j.error || 'ดู diff ไม่ได้'); } });
 
     /* Search */
     var searchTimer;
@@ -5665,6 +5811,20 @@ SM.register('settings', {
           '</select>' +
         '</div>' +
       '</div>' +
+      '<div class="screen-settings-group screen-settings-save-group">' +
+        '<div class="screen-settings-group-title">💾 บันทึก</div>' +
+        '<div class="screen-settings-save-row"><button class="screen-settings-save" id="saveSettingsBtn" type="button">💾 บันทึกการตั้งค่า</button><span id="settingsSaveStatus" class="screen-settings-item-desc">บันทึกธีม ฟอนต์ เสียง ความจำ และโมเดลไว้ในเครื่องนี้</span></div>' +
+      '</div>' +
+      '<div class="screen-settings-group screen-password-group">' +
+        '<div class="screen-settings-group-title">🔐 เปลี่ยนรหัสผ่าน</div>' +
+        '<div class="screen-password-card">' +
+          '<input id="currentPassword" type="password" autocomplete="current-password" placeholder="รหัสผ่านเดิม">' +
+          '<input id="newPassword" type="password" autocomplete="new-password" placeholder="รหัสผ่านใหม่ อย่างน้อย 12 ตัวอักษร">' +
+          '<input id="confirmPassword" type="password" autocomplete="new-password" placeholder="ยืนยันรหัสผ่านใหม่">' +
+          '<button class="screen-settings-save" id="changePasswordBtn" type="button">🔑 เปลี่ยนรหัสผ่าน</button>' +
+          '<div id="passwordStatus" class="screen-settings-item-desc">รหัสผ่านจะไม่ถูกเก็บใน browser · หลังเปลี่ยนควรอัปเดตค่า ADMIN_PASSWORD_HASH ใน Render เพื่อให้ถาวร</div>' +
+        '</div>' +
+      '</div>' +
       '<div class="screen-settings-group">' +
         '<div class="screen-settings-group-title">🧩 ปลั๊กอินและ Agent</div>' +
         '<div class="screen-settings-item">' +
@@ -5701,6 +5861,23 @@ SM.register('settings', {
           '<button class="silelo-screen-back" type="button" data-settings-action="files">ดู policy</button>' +
         '</div>' +
       '</div>';
+
+    /* บันทึก settings และเปลี่ยนรหัสผ่าน */
+    var saveSettingsBtn = body.querySelector('#saveSettingsBtn');
+    if (saveSettingsBtn) saveSettingsBtn.addEventListener('click', function() {
+      var settings = { theme: body.querySelector('#setTheme')?.textContent || 'NEO', fontSize: body.querySelector('#fsVal')?.textContent || '15', model: body.querySelector('#setModel')?.value || 'auto', savedAt: new Date().toISOString() };
+      try { localStorage.setItem('nc_settings_saved', JSON.stringify(settings)); localStorage.setItem('nc_theme', settings.theme.toLowerCase()); localStorage.setItem('nc_fs', settings.fontSize); localStorage.setItem('nc_model', settings.model); } catch (e) {}
+      var status = body.querySelector('#settingsSaveStatus'); if (status) { status.textContent = 'บันทึกแล้ว ' + new Date().toLocaleTimeString(); status.classList.add('ok'); }
+      if (typeof toast === 'function') toast('💾 บันทึกการตั้งค่าแล้ว');
+    });
+    var changePasswordBtn = body.querySelector('#changePasswordBtn');
+    if (changePasswordBtn) changePasswordBtn.addEventListener('click', async function() {
+      var currentPassword = body.querySelector('#currentPassword')?.value || '', newPassword = body.querySelector('#newPassword')?.value || '', confirmPassword = body.querySelector('#confirmPassword')?.value || '', status = body.querySelector('#passwordStatus');
+      if (newPassword.length < 12) { if (status) status.textContent = 'รหัสผ่านใหม่ต้องมีอย่างน้อย 12 ตัวอักษร'; return; }
+      if (newPassword !== confirmPassword) { if (status) status.textContent = 'รหัสผ่านใหม่ไม่ตรงกัน'; return; }
+      changePasswordBtn.disabled = true; if (status) status.textContent = 'กำลังตรวจสอบ...';
+      try { var r = await fetch('/api/auth/change-password', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ currentPassword: currentPassword, newPassword: newPassword, confirmPassword: confirmPassword }) }); var j = await r.json().catch(function() { return {}; }); if (!r.ok || !j.ok) throw new Error(j.message || j.error || 'เปลี่ยนรหัสผ่านไม่สำเร็จ'); if (status) { status.textContent = 'เปลี่ยนรหัสผ่านแล้ว'; status.classList.add('ok'); } body.querySelector('#currentPassword').value = ''; body.querySelector('#newPassword').value = ''; body.querySelector('#confirmPassword').value = ''; if (typeof toast === 'function') toast('🔑 เปลี่ยนรหัสผ่านแล้ว'); } catch (e) { if (status) status.textContent = e.message; } finally { changePasswordBtn.disabled = false; }
+    });
 
     /* Wire up settings actions */
     body.querySelectorAll('[data-action]').forEach(function(item) {
@@ -5825,17 +6002,17 @@ SM.register('help', {
         '<div class="screen-help-section-title">🚀 เริ่มต้นใช้งาน</div>' +
         '<div class="screen-help-item"><span class="screen-help-key">พิมพ์ข้อความ</span><span class="screen-help-desc">พิมพ์คำถามหรือคำสั่งในช่องแชทแล้วกด Enter</span></div>' +
         '<div class="screen-help-item"><span class="screen-help-key">/agents &lt;งาน&gt;</span><span class="screen-help-desc">ส่งงานให้ AI 5 ตัวทำงานพร้อมกัน</span></div>' +
-        '<div class="screen-help-item"><span class="screen-help-key">/db &lt;SQL&gt;</span><span class="screen-help-desc">รันคำสั่ง SQLite</span></div>' +
+        '<div class="screen-help-item"><span class="screen-help-key">IDE / GitHub</span><span class="screen-help-desc">แก้ไฟล์โปรเจกต์จริงและตรวจสอบ diff</span></div>' +
         '<div class="screen-help-item"><span class="screen-help-key">/gh &lt;คำค้น&gt;</span><span class="screen-help-desc">ค้นหา repo/user บน GitHub</span></div>' +
         '<div class="screen-help-item"><span class="screen-help-key">@ชื่อฝ่าย &lt;งาน&gt;</span><span class="screen-help-desc">เรียกทีม AI เฉพาะทาง</span></div>' +
       '</div>' +
       '<div class="screen-help-section">' +
         '<div class="screen-help-section-title">⌨️ ปุ่มลัด</div>' +
         '<div class="screen-help-item"><span class="screen-help-key">Ctrl+K</span><span class="screen-help-desc">เปิดค้นหาแชท</span></div>' +
-        '<div class="screen-help-item"><span class="screen-help-key">Ctrl+I</span><span class="screen-help-desc">เปิด IDE</span></div>' +
-        '<div class="screen-help-item"><span class="screen-help-key">Ctrl+P</span><span class="screen-help-desc">เปิด Preview</span></div>' +
+        '<div class="screen-help-item"><span class="screen-help-key">Ctrl+I</span><span class="screen-help-desc">เปิด GitHub Editor</span></div>' +
+        '<div class="screen-help-item"><span class="screen-help-key">Ctrl+P</span><span class="screen-help-desc">เปิด GitHub Editor</span></div>' +
         '<div class="screen-help-item"><span class="screen-help-key">Ctrl+D</span><span class="screen-help-desc">เปิด Deploy</span></div>' +
-        '<div class="screen-help-item"><span class="screen-help-key">Ctrl+B</span><span class="screen-help-desc">เปิด DB</span></div>' +
+        '<div class="screen-help-item"><span class="screen-help-key">IDE / GitHub</span><span class="screen-help-desc">เปิดตัวแก้ไขโปรเจกต์จริง</span></div>' +
         '<div class="screen-help-item"><span class="screen-help-key">Ctrl+T</span><span class="screen-help-desc">เปิด Team AI</span></div>' +
         '<div class="screen-help-item"><span class="screen-help-key">Ctrl+S</span><span class="screen-help-desc">เปิด Settings</span></div>' +
         '<div class="screen-help-item"><span class="screen-help-key">Ctrl+H</span><span class="screen-help-desc">เปิด Help</span></div>' +
@@ -5843,11 +6020,11 @@ SM.register('help', {
       '</div>' +
       '<div class="screen-help-section">' +
         '<div class="screen-help-section-title">🛠️ เครื่องมือ</div>' +
-        '<div class="screen-help-item"><span class="screen-help-key">🛠️ Code Tools</span><span class="screen-help-desc">สร้าง/แปลง/อธิบาย/ปรับปรุง/คอมเมนต์/ทดสอบ/ไดอแกรม/Refactor โค้ด</span></div>' +
-        '<div class="screen-help-item"><span class="screen-help-key">🚀 SUPER MODE</span><span class="screen-help-desc">เปิด Super CodingFleet — AI ทำงานจริง ตรวจจริง</span></div>' +
-        '<div class="screen-help-item"><span class="screen-help-key">👁 Live Preview</span><span class="screen-help-desc">ดูผลงานเว็บที่รันอยู่แบบ real-time</span></div>' +
-        '<div class="screen-help-item"><span class="screen-help-key">💻 IDE</span><span class="screen-help-desc">File Explorer + Code Editor + Terminal</span></div>' +
-        '<div class="screen-help-item"><span class="screen-help-key">🗄️ DB Sandbox</span><span class="screen-help-desc">รัน SQL กับ SQLite จริง</span></div>' +
+        '<div class="screen-help-item"><span class="screen-help-key">🛠️ Git/IDE only</span><span class="screen-help-desc">แก้ไฟล์โปรเจกต์จริงผ่าน GitHub และตัวแก้ไขไฟล์</span></div>' +
+        '<div class="screen-help-item"><span class="screen-help-key">🔐 Project changes</span><span class="screen-help-desc">ทุกการแก้ไขต้องผ่านไฟล์จริงและ Git/IDE</span></div>' +
+        '<div class="screen-help-item"><span class="screen-help-key">🔒 Execution</span><span class="screen-help-desc">ปิดการจำลองและการรันโค้ดจากห้องแชท</span></div>' +
+        '<div class="screen-help-item"><span class="screen-help-key">💻 IDE</span><span class="screen-help-desc">File Explorer + Code Editor สำหรับไฟล์จริง</span></div>' +
+        '<div class="screen-help-item"><span class="screen-help-key">🗄️ Database</span><span class="screen-help-desc">แก้ schema/query ในโปรเจกต์จริงผ่าน Git/IDE</span></div>' +
         '<div class="screen-help-item"><span class="screen-help-key">🐙 GitHub Tool</span><span class="screen-help-desc">ค้นหา repo/user บน GitHub</span></div>' +
         '<div class="screen-help-item"><span class="screen-help-key">📤 Export</span><span class="screen-help-desc">ส่งออกแชทเป็น JSON + TXT</span></div>' +
       '</div>' +
@@ -5864,11 +6041,11 @@ SM.register('help', {
 /* ──── Wire up header buttons ──── */
 function initScreenNavigation() {
   var buttonMap = {
-    'ideBtn': 'ide',
-    'previewBtn': 'preview',
+    'ideBtn': 'github',
+    'previewBtn': 'github',
     'teamBtn': 'team',
-    'toolsBtn': 'tools',
-    'coderBtn': 'ide',
+    'toolsBtn': 'github',
+    'coderBtn': 'github',
     'browserBtn': 'browser',
     'liveOpsBtn': 'liveops',
     'themeBtn': 'settings',
@@ -5988,3 +6165,21 @@ console.log('[Silelo] Shortcuts: Ctrl+I(IDE) Ctrl+P(Preview) Ctrl+D(Deploy) Ctrl
 </html>
 <!-- v1.26-bump -->
 <!-- v1.26-b2 -->
+
+<style>
+/* Compact reading mode: keep long replies from taking over the phone screen. */
+@media (max-width: 560px) {
+  #msgs { padding: 10px 10px 76px; gap: 9px; }
+  .msg { max-width: 78%; }
+  .msg.bot { max-width: 86%; }
+  .bubble { padding: 9px 12px; font-size: 14px; line-height: 1.48; }
+  .meta { margin-top: 3px; font-size: 9px; gap: 6px; }
+  .sys-note { padding: 4px 10px; }
+}
+@media (max-width: 380px) {
+  #msgs { padding-left: 8px; padding-right: 8px; gap: 7px; }
+  .msg { max-width: 76%; }
+  .msg.bot { max-width: 84%; }
+  .bubble { padding: 8px 10px; font-size: 13.5px; line-height: 1.42; }
+}
+</style>

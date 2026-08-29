@@ -2,12 +2,16 @@ const assert = require('node:assert/strict');
 const { loadRegistry, registryStats, suggestIntentSkills, intentSnapshot } = require('../lib/intent-skills');
 
 const registry = loadRegistry();
-assert.equal(registry.total, 500);
-assert.equal(registry.skills.length, 500);
-assert.equal(new Set(registry.skills.map((skill) => skill.id)).size, 500);
-assert.equal(registry.skills.filter((skill) => skill.mode === 'understand').length, 250);
-assert.equal(registry.skills.filter((skill) => skill.mode === 'execute').length, 250);
-assert.deepEqual(registryStats(), { total: 500, understand: 250, execute: 250, categories: 25 });
+assert.equal(registry.total, 900);
+assert.equal(registry.skills.length, 900);
+assert.equal(new Set(registry.skills.map((skill) => skill.id)).size, 900);
+assert.equal(registry.skills.filter((skill) => skill.mode === 'understand').length, 450);
+assert.equal(registry.skills.filter((skill) => skill.mode === 'execute').length, 450);
+assert.deepEqual(registryStats(), { total: 900, understand: 450, execute: 450, categories: 25 });
+
+const addedTroubleshooting = registry.skills.filter((skill) => /^understand-troubleshooting-(?:0(?:1[1-9]|[2-9][0-9])|1[0-9]{2}|2(?:0[0-9]|10))-/.test(skill.id));
+assert.equal(addedTroubleshooting.length, 200);
+assert.equal(new Set(addedTroubleshooting.map((skill) => skill.intents[0])).size, 200);
 
 const understand = suggestIntentSkills('ออกแบบ responsive layout สำหรับมือถือ', 'understand');
 assert.ok(understand.length > 0);
@@ -18,4 +22,12 @@ const execute = intentSnapshot('สร้าง manifest สำหรับ PWA'
 assert.equal(execute.mode, 'execute');
 assert.equal(execute.needsConfirmation, true);
 assert.match(execute.executionPolicy, /allowlist-only/);
+
+for (const [command, expectedUnderstandId, expectedExecuteId] of [
+  ['แก้ database connection pool เต็ม', 'understand-troubleshooting-031-database', 'execute-troubleshooting-031-database'],
+  ['แก้ session หมดอายุเร็วเกินไป', 'understand-troubleshooting-051-authentication', 'execute-troubleshooting-051-authentication'],
+]) {
+  assert.equal(suggestIntentSkills(command, 'understand', 1)[0].id, expectedUnderstandId);
+  assert.equal(suggestIntentSkills(command, 'execute', 1)[0].id, expectedExecuteId);
+}
 console.log('intent skill registry tests passed');

@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>SILELO File Editor</title>
+  <style>
+    :root{color-scheme:dark;--bg:#0b1020;--panel:#121a2d;--line:#263451;--text:#edf2ff;--muted:#98a6c7;--accent:#a78bfa;--ok:#51e5a7;--bad:#fb7185}
+    *{box-sizing:border-box}body{margin:0;background:radial-gradient(800px 500px at 50% -10%,#382a6b55,transparent 70%),var(--bg);color:var(--text);font:15px/1.55 system-ui,sans-serif;padding:18px}.wrap{max-width:1000px;margin:auto}.panel{background:#121a2dee;border:1px solid var(--line);border-radius:18px;padding:18px;box-shadow:0 16px 45px #0005}.head{display:flex;align-items:center;gap:12px;border-bottom:1px solid var(--line);padding-bottom:14px;margin-bottom:14px}.logo{font-size:25px}.title{font-size:18px;font-weight:750}.sub{color:var(--muted);font-size:12px}.toolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px}button,a{border:1px solid #43537a;background:#1a2540;color:var(--text);border-radius:9px;padding:8px 12px;text-decoration:none;cursor:pointer}button.primary{background:#694dcc;border-color:#9178f5}button:disabled{opacity:.5;cursor:not-allowed}.meta{margin-left:auto;color:var(--muted);font-size:12px}textarea,pre{width:100%;min-height:62vh;margin:0;border:1px solid var(--line);border-radius:12px;background:#080d18;color:#e8edff;padding:14px;font:13px/1.6 ui-monospace,SFMono-Regular,monospace;white-space:pre-wrap;overflow:auto}textarea{resize:vertical}.status{min-height:24px;color:var(--muted);font-size:13px}.status.ok{color:var(--ok)}.status.bad{color:var(--bad)}.notice{padding:12px;border:1px solid #8b6df655;background:#221d3d;border-radius:10px;color:#d9d0ff;margin-bottom:12px}
+  </style>
+</head>
+<body><main class="wrap"><section class="panel">
+  <header class="head"><div class="logo">🔗</div><div><div class="title" id="name">กำลังโหลดไฟล์…</div><div class="sub" id="sub">ลิงก์แชร์แบบหมดอายุ · ตรวจสิทธิ์จากเซิร์ฟเวอร์</div></div></header>
+  <div id="notice" class="notice">ลิงก์นี้ใช้ได้ 7 วัน และแก้ไขได้เฉพาะไฟล์ข้อความขนาดไม่เกิน 2MB</div>
+  <div class="toolbar"><button id="save" class="primary" disabled>บันทึกการแก้ไข</button><button id="copy">คัดลอกลิงก์</button><a id="download" target="_blank" rel="noopener">เปิด/ดาวน์โหลด</a><span id="meta" class="meta"></span></div>
+  <div id="status" class="status">กำลังอ่านข้อมูล…</div><textarea id="editor" spellcheck="false" hidden></textarea><pre id="preview" hidden></pre>
+</section></main>
+<script>
+(() => {
+  const qs = new URLSearchParams(location.search), id = qs.get('id') || '', token = qs.get('token') || '';
+  const headers = { 'X-Share-Token': token };
+  const $ = (id) => document.getElementById(id);
+  const status = (text, bad = false) => { $('status').textContent = text; $('status').className = 'status ' + (bad ? 'bad' : 'ok'); };
+  const bytes = (n) => n < 1024 ? n + ' B' : n < 1048576 ? (n / 1024).toFixed(1) + ' KB' : (n / 1048576).toFixed(1) + ' MB';
+  async function load() {
+    if (!id || !token) return status('ลิงก์ไม่ครบหรือไม่มี token', true);
+    const r = await fetch('/api/files/share/' + encodeURIComponent(id) + '?token=' + encodeURIComponent(token));
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok || !j.ok) return status('ลิงก์หมดอายุหรือไม่ถูกต้อง', true);
+    const f = j.file; $('name').textContent = f.name; $('sub').textContent = f.type + ' · ' + bytes(f.size); $('meta').textContent = f.editable ? 'แก้ไขได้' : 'ดู/ดาวน์โหลดเท่านั้น';
+    $('download').href = '/api/files/share/' + encodeURIComponent(id) + '/content?token=' + encodeURIComponent(token);
+    const contentR = await fetch($('download').href, { headers });
+    if (!contentR.ok) return status('อ่านเนื้อหาไฟล์ไม่สำเร็จ', true);
+    if (f.editable) { $('editor').value = await contentR.text(); $('editor').hidden = false; $('save').disabled = false; status('พร้อมแก้ไข'); }
+    else { $('preview').textContent = 'ไฟล์ชนิดนี้เปิดแก้ไขในเบราว์เซอร์ไม่ได้\n\nใช้ปุ่ม “เปิด/ดาวน์โหลด” เพื่อดูไฟล์ด้วยโปรแกรมที่เหมาะสม'; $('preview').hidden = false; status('ไฟล์นี้ดูหรือดาวน์โหลดได้ แต่แก้ไขผ่านหน้านี้ไม่ได้'); }
+  }
+  $('save').onclick = async () => { $('save').disabled = true; status('กำลังบันทึก…'); const r = await fetch('/api/files/share/' + encodeURIComponent(id) + '?token=' + encodeURIComponent(token), { method: 'PATCH', headers: { ...headers, 'Content-Type': 'application/json' }, body: JSON.stringify({ content: $('editor').value }) }); const j = await r.json().catch(() => ({})); $('save').disabled = !j.ok; status(j.ok ? 'บันทึกแล้ว ' + new Date().toLocaleTimeString('th-TH') : (j.error || 'บันทึกไม่สำเร็จ'), !j.ok); };
+  $('copy').onclick = async () => { try { await navigator.clipboard.writeText(location.href); status('คัดลอกลิงก์แล้ว'); } catch (_) { status('คัดลอกไม่ได้ ให้คัดลอกจากแถบที่อยู่', true); } };
+  load().catch(() => status('เชื่อมต่อเซิร์ฟเวอร์ไม่ได้', true));
+})();
+</script></body></html>
