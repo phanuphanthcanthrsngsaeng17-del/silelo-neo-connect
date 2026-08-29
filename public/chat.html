@@ -1730,6 +1730,51 @@ body.theme-dola #inp { border-radius: 16px; }
     .screen-ide-sidebar { max-height: 25vh; }
   }
 </style>
+<style id="manus-reference-ui">
+  /* Manus-style reference UI: mobile-first, fluid width, no fixed desktop canvas */
+  :root { --ref-bg:#111111; --ref-panel:#1c1c1c; --ref-card:#292b33; --ref-line:#303039; --ref-text:#f1f1f1; --ref-muted:#aaaab3; --ref-green:#54d13d; }
+  html, body { background:var(--ref-bg) !important; color:var(--ref-text); }
+  body { min-width:0 !important; }
+  .app { width:min(100%, 760px) !important; max-width:760px !important; min-height:100dvh; margin:0 auto !important; background:var(--ref-bg) !important; border:0 !important; border-radius:0 !important; box-shadow:none !important; overflow:hidden; }
+  .app > header { position:sticky; top:0; z-index:30; min-height:76px; padding:12px 18px 10px !important; background:rgba(27,27,27,.97) !important; border-bottom:1px solid #272727 !important; backdrop-filter:blur(18px); }
+  .hinfo h1 { font-size:clamp(19px,4vw,25px) !important; letter-spacing:-.3px; }
+  .hinfo .status { color:#a9a9b0 !important; font-size:11px !important; }
+  .hbtns { gap:6px !important; max-width:48vw; overflow-x:auto; scrollbar-width:none; }
+  .hbtns::-webkit-scrollbar { display:none; }
+  .hbtns .icon-btn, .hbtns .call-top { background:transparent !important; border:0 !important; box-shadow:none !important; font-size:20px; }
+  #msgs { width:100%; box-sizing:border-box; padding:18px clamp(16px,5vw,38px) 150px !important; gap:14px !important; background:var(--ref-bg) !important; }
+  .msg { max-width:100% !important; width:100%; }
+  .msg.user { display:flex; justify-content:flex-end; }
+  .msg.user .bubble { max-width:min(78%, 520px); padding:13px 17px !important; border-radius:21px 21px 6px 21px !important; background:#3a3a3d !important; border:1px solid #46464a !important; color:#f7f7f7 !important; font-size:16px !important; line-height:1.45 !important; }
+  .msg.bot { display:block; }
+  .msg.bot .bubble { max-width:100%; padding:0 !important; background:transparent !important; border:0 !important; color:#eeeeef !important; font-size:16px !important; line-height:1.62 !important; }
+  .msg.bot .bubble::first-line { font-weight:600; }
+  .bubble pre, .msg pre { margin:12px 0 !important; padding:17px 15px !important; border-radius:9px !important; background:#292c35 !important; color:#e5e7eb !important; border:0 !important; font-size:14px !important; line-height:1.65 !important; overflow:auto; }
+  .bubble code { color:#e7e8ee !important; }
+  .msg .meta { color:#888890 !important; margin-top:7px; }
+  .typing { margin:0 clamp(16px,5vw,38px) 12px !important; }
+  .modelbar { margin:0 clamp(16px,5vw,38px) 10px !important; border:0 !important; background:transparent !important; }
+  .inputbar { position:fixed !important; z-index:40; left:50%; bottom:max(12px, env(safe-area-inset-bottom)); transform:translateX(-50%); width:min(calc(100% - 32px), 700px); min-height:76px; box-sizing:border-box; padding:12px 15px 10px !important; border:1px solid #3a3a3d !important; border-radius:28px !important; background:#2a2a2b !important; box-shadow:0 10px 30px rgba(0,0,0,.38) !important; display:flex !important; flex-direction:column-reverse; gap:8px; }
+  #inp { width:100% !important; min-height:32px; max-height:110px; padding:0 2px !important; background:transparent !important; border:0 !important; color:#fff !important; font-size:16px !important; line-height:1.4; }
+  #inp::placeholder { color:#b9b9bd !important; opacity:1; }
+  .composer-tools { width:100%; justify-content:space-between !important; order:initial !important; padding:0 !important; }
+  .composer-tools .icon-btn { width:36px !important; height:36px !important; border:0 !important; background:transparent !important; font-size:20px !important; }
+  .composer-tools .send { width:45px !important; height:45px !important; border-radius:50% !important; background:#fff !important; color:#111 !important; font-size:23px !important; }
+  .composer-tools .ptt, .composer-tools .chat-call-inline { display:none !important; }
+  .add-sheet-panel { border-radius:24px 24px 0 0 !important; }
+  @media (min-width: 761px) {
+    .app { min-height:100vh; }
+    .app > header { padding-left:28px !important; padding-right:28px !important; }
+    #msgs { padding-left:clamp(28px,8vw,80px) !important; padding-right:clamp(28px,8vw,80px) !important; }
+    .inputbar { bottom:20px; }
+  }
+  @media (max-width: 380px) {
+    .app > header { padding-left:10px !important; padding-right:10px !important; }
+    #msgs { padding-left:12px !important; padding-right:12px !important; }
+    .hinfo h1 { font-size:18px !important; }
+    .msg.user .bubble, .msg.bot .bubble { font-size:15px !important; }
+  }
+</style>
 </head>
 <body>
 <div class="bgfx">
