@@ -44,7 +44,11 @@ app.use((req, res, next) => {
   res.setHeader('Permissions-Policy', 'camera=(self), microphone=(self), display-capture=(self)');
   next();
 });
-app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static(path.join(__dirname, 'public'), {
+  setHeaders(res, filePath) {
+    if (/\.(?:html|js|css|json)$/i.test(filePath)) res.setHeader('Cache-Control', 'no-store, max-age=0');
+  },
+}));
 // Chat is Git/IDE-only: never execute or simulate code inside the chat process.
 const CHAT_DISABLED_SIMULATION_PATHS = ['/api/run', '/api/code', '/api/codetool', '/api/install', '/api/sandbox', '/api/db', '/db', '/preview'];
 app.use(CHAT_DISABLED_SIMULATION_PATHS, (req, res) => res.status(410).json({ ok: false, error: 'SANDBOX_DISABLED', message: 'การรันหรือจำลองถูกปิดจากห้องแชท กรุณาแก้ไฟล์จริงผ่าน Git/IDE' }));
@@ -112,6 +116,8 @@ app.delete('/api/notifications/:id', requireAuth, (req, res) => {
 
 app.get('/chat', (req, res) => {
   if (!getAuthUser(req)) return res.redirect('/');
+  res.setHeader('Cache-Control', 'no-store, max-age=0');
+  res.setHeader('Pragma', 'no-cache');
   res.sendFile(path.join(__dirname, 'public', 'chat.html'));
 });
 // Canonical compatibility path for the single Sli room.
