@@ -9,6 +9,8 @@
    TTS: msedge-tts (ฟรี)
    ============================================================ */
 const express = require('express');
+const http = require('http');
+const WebSocket = require('ws');
 const path = require('path');
 const fs = require('fs');
 const os = require('os');
@@ -3356,9 +3358,39 @@ async function buildWebApp(task) {
   return best;
 }
 
+// WebRTC signaling: relay only room-scoped signaling messages; media remains P2P.
+const callRooms = new Map();
+function callRoomId(value) { return String(value || '').trim().replace(/[^A-Za-z0-9_-]/g, '').slice(0, 64); }
+function callSend(ws, payload) { if (ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(payload)); }
+function callBroadcast(room, payload, except) { for (const peer of room || []) if (peer !== except) callSend(peer, payload); }
+function removeCallPeer(ws) { const room = callRooms.get(ws.callRoom); if (!room) return; room.delete(ws); callBroadcast(room, { type: 'peer-left', peerId: ws.callPeerId }, ws); if (!room.size) callRooms.delete(ws.callRoom); }
+const callServer = http.createServer(app);
+const callWss = new WebSocket.Server({ server: callServer, path: '/ws/call', maxPayload: 256 * 1024 });
+callWss.on('connection', (ws) => {
+  ws.callPeerId = Math.random().toString(36).slice(2, 10);
+  ws.on('message', (raw) => {
+    let msg; try { msg = JSON.parse(String(raw)); } catch (_) { return callSend(ws, { type: 'error', error: 'invalid message' }); }
+    if (msg.type === 'join') {
+      const roomId = callRoomId(msg.roomId); if (roomId.length < 4) return callSend(ws, { type: 'error', error: 'invalid room' });
+      if (ws.callRoom) removeCallPeer(ws);
+      let room = callRooms.get(roomId); if (!room) { room = new Set(); callRooms.set(roomId, room); }
+      if (room.size >= 8) return callSend(ws, { type: 'error', error: 'room is full' });
+      ws.callRoom = roomId; room.add(ws);
+      callSend(ws, { type: 'joined', peerId: ws.callPeerId, roomId, peers: [...room].filter(p => p !== ws).map(p => p.callPeerId) });
+      callBroadcast(room, { type: 'peer-joined', peerId: ws.callPeerId }, ws); return;
+    }
+    const room = callRooms.get(ws.callRoom); if (!room) return callSend(ws, { type: 'error', error: 'join a room first' });
+    if (['offer', 'answer', 'ice'].includes(msg.type) && msg.to) {
+      const target = [...room].find(p => p.callPeerId === String(msg.to));
+      if (target) callSend(target, { type: msg.type, from: ws.callPeerId, data: msg.data });
+    }
+  });
+  ws.on('close', () => removeCallPeer(ws));
+});
+
 // Vercel-ready: export app สำหรับ serverless, listen เฉพาะตอนรันตรง (local/Railway)
 if (require.main === module) {
-  app.listen(PORT, () => console.log('⚡ SILELO Neo-Connect running on port ' + PORT));
+  callServer.listen(PORT, () => console.log('⚡ SILELO Neo-Connect running on port ' + PORT));
 }
 
 /* ============ 🌐 WEB SEARCH (live — DuckDuckGo HTML, ฟรีไม่ต้อง key) ============ */
