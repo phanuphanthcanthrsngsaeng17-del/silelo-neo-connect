@@ -993,6 +993,7 @@ const SUPER_PERSONA = `คุณคือ "Super CodingFleet" — AI operator �
 async function askRoomAI(roomId, question, history, memory, unrestricted, intel, superMode, modelMode) {
   const room = ROOMS[roomId] || ROOMS.private;
   let sys = room.sys;
+  sys += '\n\n[รูปแบบคำตอบเริ่มต้น: ตอบให้สั้นและได้ใจความ ใช้ภาษาไทย กระชับประมาณ 3-6 บรรทัดหรือ bullet สั้น ๆ ก่อน หากผู้ใช้ขอรายละเอียด/โค้ดจึงค่อยขยาย หลีกเลี่ยงการทวนคำถามและคำเกริ่นยาว]';
   if (superMode) sys = SUPER_PERSONA + '\n\n(⚡ SUPER MODE เปิดอยู่ — ปฏิบัติตามบทบาท Super CodingFleet)' + '\n\n' + sys;
   if (roomId === 'private') sys += '\n\n' + PROJECT_KNOWLEDGE + '\n\n' + CODINGFLEET_KNOWLEDGE;
   // 🌐 ข้อมูลสดทั่วโลก — ให้ AI ใช้ตอบแบบ "พระเจ้ารู้ทุกเรื่อง"
@@ -1391,33 +1392,6 @@ async function ttsOneChunk(txt, voice, voiceName, rate) {
   let buf = null;
   if (OPENAI_TTS_VOICES[voice]) buf = await openaiTtsOnce(txt, voice, rate);
   if (!buf) buf = await msedgeTtsOnce(txt, voiceName || 'th-TH-PremwadeeNeural', rate);
-  if (!buf) buf = await googleTtsBuf(txt).catch(() => null);
-  if (!buf && !isThaiText) buf = await elevenLabsTtsBuf(txt, voice);
-  if (!buf) buf = await googleTtsBuf(txt).catch(() => null);
-  if (!buf) buf = await msedgeTtsOnce(txt, voiceName || 'th-TH-PremwadeeNeural');
-  if (!buf && !isThaiText) buf = await elevenLabsTtsBuf(txt, voice);
-  if (!buf) throw new Error('tts chunk fail');
-  ttsCacheSet(key, buf);
-  return buf;
-}
-async function msedgeTtsOnce(txt, voiceName, rate) {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'nctts-'));
-  const out = path.join(dir, 'v.mp3');
-  try {
-    await msedgeTtsFile(txt, out, voiceName, rate);
-    return fs.readFileSync(out);
-  } catch (e) { return null; }
-  finally { try { fs.rmSync(dir, { recursive: true, force: true }); } catch (e) {} }
-}
-/* TTS หนึ่งจังหวะพูด — google → msedge → google retry (cache แยกต่อ chunk) */
-async function ttsOneChunk(txt, voice, voiceName, rate) {
-  const key = (voice || 'silelo') + '|c|r' + (rate || 1) + '|' + txt;
-  const hit = ttsCacheGet(key);
-  if (hit) return hit;
-  /* 🇹🇭 เสียงไทยแท้ 100%: msedge ไทย → Google ไทย → ElevenLabs (เฉพาะข้อความอังกฤษล้วน) → ฉุกเฉิน */
-  const isThaiText = /[\u0E00-\u0E7F]/.test(txt);
-  let buf = null;
-  buf = await msedgeTtsOnce(txt, voiceName || 'th-TH-PremwadeeNeural', rate);
   if (!buf) buf = await googleTtsBuf(txt).catch(() => null);
   if (!buf && !isThaiText) buf = await elevenLabsTtsBuf(txt, voice);
   if (!buf) buf = await googleTtsBuf(txt).catch(() => null);

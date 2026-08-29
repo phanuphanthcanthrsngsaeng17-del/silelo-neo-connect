@@ -6066,3 +6066,21 @@ console.log('[Silelo] Shortcuts: Ctrl+I(IDE) Ctrl+P(Preview) Ctrl+D(Deploy) Ctrl
 </html>
 <!-- v1.26-bump -->
 <!-- v1.26-b2 -->
+
+<style>
+/* Compact reading mode: keep long replies from taking over the phone screen. */
+@media (max-width: 560px) {
+  #msgs { padding: 10px 10px 76px; gap: 9px; }
+  .msg { max-width: 78%; }
+  .msg.bot { max-width: 86%; }
+  .bubble { padding: 9px 12px; font-size: 14px; line-height: 1.48; }
+  .meta { margin-top: 3px; font-size: 9px; gap: 6px; }
+  .sys-note { padding: 4px 10px; }
+}
+@media (max-width: 380px) {
+  #msgs { padding-left: 8px; padding-right: 8px; gap: 7px; }
+  .msg { max-width: 76%; }
+  .msg.bot { max-width: 84%; }
+  .bubble { padding: 8px 10px; font-size: 13.5px; line-height: 1.42; }
+}
+</style>
