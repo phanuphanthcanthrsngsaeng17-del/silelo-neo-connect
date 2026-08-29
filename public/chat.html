@@ -1754,6 +1754,7 @@ body.theme-dola #inp { border-radius: 16px; }
     <div class="hbtns">
       <button class="call-top" id="callBtn" title="โทรหาสลี่ออลา">📞</button>
       <button class="icon-btn" id="rtcBtn" title="โทรเสียง/วิดีโอและแชร์หน้าจอ">📹</button>
+      <button class="icon-btn" id="computerBtn" title="Computer 2569 — เปิดเว็บจริงของสลี่">🖥️</button>
       <button class="icon-btn" id="voiceBtn" title="เลือกเสียง">🎙️</button>
       <button class="icon-btn" id="soundBtn" title="เปิด/ปิดเสียงสลี่">🔊</button>
       <button class="icon-btn" id="memBtn" title="🧠 จดจำ · ดับเบิลคลิก = เปิดสมุดโน้ต">🧠</button>
@@ -3448,6 +3449,8 @@ body.theme-dola #inp { border-radius: 16px; }
   callBtn.onclick = startCall;
   const rtcBtn = document.getElementById('rtcBtn');
   if (rtcBtn) rtcBtn.onclick = () => { window.location.href = '/call.html'; };
+  const computerBtn = document.getElementById('computerBtn');
+  if (computerBtn) computerBtn.onclick = () => { window.location.href = '/computer.html'; };
   if (chatCallFab) chatCallFab.onclick = startCall;
   hangBtn.onclick = endCall;
 

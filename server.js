@@ -16,6 +16,7 @@ const fs = require('fs');
 const os = require('os');
 const { extractCodeBlocks, chatCodeRequested, validateChatCodeBlocks } = require('./lib/chat-code-policy');
 const { isOwnerIdentity, ownerModeEnabled, requiresOwner } = require('./lib/owner-armor');
+const computerBrowser = require('./lib/computer-browser');
 const { getOpenRouterMode, normalizeChatModelMode } = require('./lib/model-switching');
 const { PLUGINS, listForUser, setEnabled } = require('./lib/plugins');
 const { gatewayUserFromRequest } = require('./lib/gateway-auth');
@@ -48,6 +49,26 @@ const CHAT_DISABLED_SIMULATION_PATHS = ['/api/run', '/api/code', '/api/codetool'
 app.use(CHAT_DISABLED_SIMULATION_PATHS, (req, res) => res.status(410).json({ ok: false, error: 'SANDBOX_DISABLED', message: 'การรันหรือจำลองถูกปิดจากห้องแชท กรุณาแก้ไฟล์จริงผ่าน Git/IDE' }));
 
 // 🧭 AI Intent Mode — exposes the 500-skill allowlist without executing arbitrary actions.
+// 🖥️ Computer 2569 — real Chromium session; no simulated screen or fake result.
+app.get('/api/computer/status', requireAuth, requireOwner, (req, res) => {
+  res.json({ ok: true, ...computerBrowser.status(String(req.authUser.u || req.authUser.e || 'owner')) });
+});
+app.post('/api/computer/action', requireAuth, requireOwner, async (req, res) => {
+  const body = req.body && typeof req.body === 'object' ? req.body : {};
+  const action = String(body.action || '').trim();
+  if (!['navigate', 'read', 'screenshot', 'click', 'type'].includes(action)) return res.status(400).json({ ok: false, error: 'COMPUTER_ACTION_NOT_ALLOWED' });
+  if (['click', 'type'].includes(action) && body.confirmed !== true) return res.status(409).json({ ok: false, error: 'CONFIRMATION_REQUIRED', message: 'ต้องยืนยันก่อนคลิกหรือกรอกข้อมูล' });
+  try {
+    const owner = String(req.authUser.u || req.authUser.e || 'owner');
+    const result = await computerBrowser.execute(owner, action, body);
+    res.json({ ok: true, action, ...result });
+  } catch (e) { res.status(503).json({ ok: false, error: 'COMPUTER_UNAVAILABLE', message: e.message }); }
+});
+app.post('/api/computer/stop', requireAuth, requireOwner, (req, res) => {
+  const owner = String(req.authUser.u || req.authUser.e || 'owner');
+  res.json({ ok: true, stopped: computerBrowser.stop(owner) });
+});
+
 app.get('/api/intent-skills', requireAuth, (req, res) => {
   const mode = String(req.query.mode || 'understand') === 'execute' ? 'execute' : 'understand';
   const query = String(req.query.q || '').trim().slice(0, 1600);
