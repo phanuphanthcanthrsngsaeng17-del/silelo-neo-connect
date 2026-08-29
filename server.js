@@ -20,6 +20,7 @@ const { gatewayUserFromRequest } = require('./lib/gateway-auth');
 const { SERVICE_OPERATIONS, requestGateway, gatewayStatus } = require('./lib/integration-gateway');
 const { executeManusConnector, gatewayStatus: manusGatewayStatus } = require('./lib/manus-connector-gateway');
 const { intentSnapshot, registryStats, suggestIntentSkills } = require('./lib/intent-skills');
+const { listNotifications, createNotification, markNotificationRead, deleteNotification } = require('./lib/custom-notifications');
 
 // 🛡️ Key Manager กลาง — ตรวจ/จัดการคีย์จากที่เดียว
 const ENV = require('./config/env');
@@ -49,6 +50,32 @@ app.post('/api/intent', requireAuth, (req, res) => {
   if (command.length < 3 || command.length > 1600) return res.status(400).json({ ok: false, error: 'คำสั่งต้องมีความยาว 3-1600 ตัวอักษร' });
   const mode = req.body && req.body.mode === 'execute' ? 'execute' : 'understand';
   res.json({ ok: true, ...intentSnapshot(command, mode, 6) });
+});
+
+app.get('/api/notifications', requireAuth, (req, res) => {
+  const includeRead = String(req.query.includeRead || '') === '1';
+  res.json({ ok: true, notifications: listNotifications(req.authUser, includeRead) });
+});
+
+app.post('/api/notifications', requireAuth, (req, res) => {
+  try {
+    const notification = createNotification(req.authUser, req.body || {});
+    res.status(201).json({ ok: true, notification });
+  } catch (error) {
+    res.status(400).json({ ok: false, error: String(error.message || 'แจ้งเตือนไม่ถูกต้อง') });
+  }
+});
+
+app.post('/api/notifications/:id/read', requireAuth, (req, res) => {
+  const notification = markNotificationRead(req.authUser, req.params.id);
+  if (!notification) return res.status(404).json({ ok: false, error: 'ไม่พบแจ้งเตือน' });
+  res.json({ ok: true, notification });
+});
+
+app.delete('/api/notifications/:id', requireAuth, (req, res) => {
+  const deleted = deleteNotification(req.authUser, req.params.id);
+  if (!deleted) return res.status(404).json({ ok: false, error: 'ไม่พบแจ้งเตือน' });
+  res.json({ ok: true });
 });
 
 app.get('/chat', (req, res) => {
