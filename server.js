@@ -24,6 +24,7 @@ const { executeManusConnector, gatewayStatus: manusGatewayStatus } = require('./
 const { intentSnapshot, registryStats, suggestIntentSkills } = require('./lib/intent-skills');
 const githubRepo = require('./lib/github-repo');
 const projectAgent = require('./lib/project-agent');
+const mediaPipeline = require('./lib/media-pipeline');
 const { PROJECT_SKILLS } = projectAgent;
 
 // 🛡️ Key Manager กลาง — ตรวจ/จัดการคีย์จากที่เดียว
@@ -1882,6 +1883,44 @@ app.get('/api/files/:id', requireAuth, (req, res) => {
   res.type(safeType).set('Content-Disposition', `inline; filename*=UTF-8''${encodeURIComponent(file.name)}`).sendFile(file.path);
 });
 
+
+/* ============ MEDIA PIPELINE — ดึงข้อมูล แตกไฟล์ และสร้างวิดีโอจริง ============ */
+app.post('/api/media', requireAuth, requireOwner, async (req, res) => {
+  try {
+    const body = req.body || {};
+    const action = String(body.action || '').toLowerCase();
+    const owner = String(req.authUser.u || '');
+    const userDir = path.join(UPLOAD_DIR, crypto.createHash('sha256').update(owner || 'user').digest('hex').slice(0, 24));
+    fs.mkdirSync(userDir, { recursive: true, mode: 0o700 });
+    if (action === 'fetch') {
+      const target = path.join(userDir, crypto.randomBytes(18).toString('hex') + '.download');
+      const fetched = await mediaPipeline.fetchRemote(body.url, target);
+      const name = path.basename(new URL(fetched.url).pathname).slice(0, 180) || 'download.bin';
+      const id = crypto.randomBytes(18).toString('hex');
+      uploadedFiles.set(id, { path: target, name, type: String(body.type || 'application/octet-stream'), size: fetched.size, owner });
+      return res.json({ ok: true, action, file: { id, name, size: fetched.size, url: '/api/files/' + id } });
+    }
+    const source = uploadedFiles.get(String(body.fileId || ''));
+    if (action === 'inventory' || action === 'extract') {
+      if (!source || source.owner !== owner) return res.status(404).json({ ok: false, error: 'FILE_NOT_FOUND' });
+      const listing = await mediaPipeline.listArchive(source.path);
+      if (action === 'inventory') return res.json({ ok: true, action, kind: listing.kind, entries: listing.entries });
+      const destination = path.join(userDir, crypto.randomBytes(18).toString('hex') + '-extracted');
+      return res.json({ ok: true, action, result: await mediaPipeline.extractArchive(source.path, destination) });
+    }
+    if (action === 'video') {
+      const ids = Array.isArray(body.fileIds) ? body.fileIds.slice(0, 300).map(String) : [];
+      const images = ids.map(id => uploadedFiles.get(id)).filter(f => f && f.owner === owner && /^image\//.test(f.type));
+      if (!images.length || images.length !== ids.length) return res.status(400).json({ ok: false, error: 'IMAGE_FILES_REQUIRED' });
+      const id = crypto.randomBytes(18).toString('hex');
+      const output = path.join(userDir, id + '.mp4');
+      const result = await mediaPipeline.renderVideo(images.map(f => f.path), output, { fps: body.fps, duration: body.duration });
+      uploadedFiles.set(id, { path: output, name: String(body.name || 'silelo-video.mp4').slice(0, 180), type: 'video/mp4', size: result.size, owner });
+      return res.json({ ok: true, action, video: { id, name: 'silelo-video.mp4', size: result.size, url: '/api/files/' + id }, render: result });
+    }
+    return res.status(400).json({ ok: false, error: 'unknown media action' });
+  } catch (e) { return res.status(400).json({ ok: false, error: e.message || 'MEDIA_PIPELINE_FAILED' }); }
+});
 
 // แชท
 
