@@ -689,6 +689,8 @@ header::after { height: 1px; background: linear-gradient(90deg, transparent, rgb
 
 /* ---------- Messages ---------- */
 #msgs { padding: 14px 18px 90px; gap: 12px; }
+/* Git/IDE-only chat surface: hide simulation and local-run controls. */
+#superBtn, #coderBtn, #previewBtn, #codeBtn, #toolsBtn, #chatRunBtn, #codeTools { display: none !important; }
 .msg { max-width: 84%; }
 .msg.user .bubble {
   background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 88%, #312e81), color-mix(in srgb, var(--accent) 55%, #7c3aed));
@@ -1744,14 +1746,14 @@ body.theme-dola #inp { border-radius: 16px; }
       <button class="icon-btn" id="voiceBtn" title="เลือกเสียง">🎙️</button>
       <button class="icon-btn" id="soundBtn" title="เปิด/ปิดเสียงสลี่">🔊</button>
       <button class="icon-btn" id="memBtn" title="🧠 จดจำ · ดับเบิลคลิก = เปิดสมุดโน้ต">🧠</button>
-      <button class="icon-btn" id="toolsBtn" title="🧭️ เครื่องมือโค้ด (CodingFleet style): สร้าง/แปลง/อธิบาย/ปรับปรุง/คอมเมนต์/Unit Test/ไดอแกรม/Refactor">🧭️</button>
+      <button class="icon-btn" id="toolsBtn" aria-hidden="true" hidden title="เครื่องมือโค้ดถูกปิด ใช้ IDE/GitHub แก้ไฟล์จริง">🧭️</button>
       <button class="icon-btn" id="ruleBtn" title="โหมดไร้กฎ — ไม่มีข้อจำกัด">⚡</button>
       <button class="icon-btn" id="superBtn" title="⚡ SUPER MODE — Super CodingFleet: AI operator ระดับสูง ทำงานจริง ตรวจจริง">🚀</button>
       <button class="icon-btn coder-btn" id="coderBtn" title="🤖 โหมดเขียนโค้ด — สลี่เขียน+รันให้อัตโนมัติ">🤖</button>
-      <button class="icon-btn" id="browserBtn" title="🌐 Browser Workspace — เปิดเว็บหรือ Preview">🌐</button>
+      <button class="icon-btn" id="browserBtn" hidden aria-hidden="true" title="Browser Workspace ปิดจากห้องแชท">🌐</button>
       <button class="icon-btn" id="liveOpsBtn" title="📡 Live Operations — สถานะระบบจริง">📡</button>
       <button class="icon-btn" id="integrationsBtn" title="🔌 Integrations — สถานะบริการที่เชื่อมต่อจริง">🔌</button>
-      <button class="icon-btn" id="previewBtn" title="👁 Live Preview — ดูเว็บจาก workspace แบบ Bolt">👁</button>
+      <button class="icon-btn" id="previewBtn" hidden aria-hidden="true" title="Preview ปิดจากห้องแชท">👁</button>
       <button class="icon-btn" id="ideBtn" title="🗂 IDE — File Explorer + Editor + Terminal">🗂</button>
       <button class="icon-btn" id="themeBtn" title="เปลี่ยนธีม">🎨</button>
       <button class="icon-btn" id="puterBtn" title="🐋 DeepSeek ฟรีไม่จำกัด (Puter) — แตะเพื่อเชื่อม/สลับ">🐋</button>
@@ -1782,7 +1784,7 @@ body.theme-dola #inp { border-radius: 16px; }
     </select>
     <span class="modelbar-hint" id="modelHint"></span>
   </div>
-  <div id="codeTools" style="display:none;flex-wrap:wrap;gap:6px;padding:6px 10px;background:rgba(10,16,32,.85);border-top:1px solid rgba(167,139,250,.25);">
+  <div id="codeTools" aria-hidden="true" style="display:none!important;">
     <button class="ct-btn" data-mode="create" title="เขียนโค้ดใหม่ แล้วรันให้ทันที">🐍 สร้าง</button>
     <button class="ct-btn" data-mode="convert" title="แปลงโค้ดข้ามภาษา 60+">🔄 แปลง</button>
     <button class="ct-btn" data-mode="explain" title="อธิบายโค้ดทีละส่วน ภาษาไทย">📖 อธิบาย</button>
@@ -1801,8 +1803,8 @@ body.theme-dola #inp { border-radius: 16px; }
       <button class="icon-btn chat-call-inline" id="chatCallFab" title="📞 โทรหาสลี่" aria-label="โทรหาสลี่">📞</button>
       <button class="icon-btn" id="imgBtn" title="เพิ่มลงในแชท" aria-haspopup="dialog" aria-controls="addSheet" aria-label="เพิ่มลงในแชท">✚</button>
       <button class="send" id="sendBtn" title="ส่ง" aria-label="ส่งข้อความ">➤</button>
-      <button class="icon-btn" id="chatRunBtn" title="▶ รัน code block ในแชต (ต้องกดเปิดเอง)" aria-label="รัน code block ในแชต">▶</button>
-      <button class="icon-btn" id="codeBtn" title="💻 Lab Console" aria-label="Lab Console">💻</button>
+      <button class="icon-btn" id="chatRunBtn" aria-hidden="true" hidden title="การรันโค้ดในแชทถูกปิด" aria-label="การรันโค้ดในแชทถูกปิด">▶</button>
+      <button class="icon-btn" id="codeBtn" hidden aria-hidden="true" title="Lab Console ปิดจากห้องแชท" aria-label="Lab Console ปิดจากห้องแชท">💻</button>
     </div>
     <textarea id="inp" rows="1" placeholder="พิมพ์ข้อความ..." enterkeyhint="send"></textarea>
   </div>
@@ -2512,7 +2514,7 @@ body.theme-dola #inp { border-radius: 16px; }
     } catch (e) {}
   }
   let sending = false;
-  let runCodeNext = false;
+  let runCodeNext = false; // retained for state compatibility; chat execution is disabled server-side
   const chatRunBtn = document.getElementById('chatRunBtn');
   function syncChatRunBtn() {
     if (!chatRunBtn) return;
@@ -2531,7 +2533,7 @@ body.theme-dola #inp { border-radius: 16px; }
     if (sending) { toast('⏳ รอสลี่ตอบก่อนน้า... เดี๋ยวส่งต่อให้'); return; }
     const q = inp.value.trim();
     if (!q) return;
-    const requestedCodeRun = runCodeNext;
+    const requestedCodeRun = false;
     runCodeNext = false;
     syncChatRunBtn();
     addMsg('user', q);
@@ -5890,7 +5892,7 @@ SM.register('help', {
         '<div class="screen-help-section-title">🚀 เริ่มต้นใช้งาน</div>' +
         '<div class="screen-help-item"><span class="screen-help-key">พิมพ์ข้อความ</span><span class="screen-help-desc">พิมพ์คำถามหรือคำสั่งในช่องแชทแล้วกด Enter</span></div>' +
         '<div class="screen-help-item"><span class="screen-help-key">/agents &lt;งาน&gt;</span><span class="screen-help-desc">ส่งงานให้ AI 5 ตัวทำงานพร้อมกัน</span></div>' +
-        '<div class="screen-help-item"><span class="screen-help-key">/db &lt;SQL&gt;</span><span class="screen-help-desc">รันคำสั่ง SQLite</span></div>' +
+        '<div class="screen-help-item"><span class="screen-help-key">IDE / GitHub</span><span class="screen-help-desc">แก้ไฟล์โปรเจกต์จริงและตรวจสอบ diff</span></div>' +
         '<div class="screen-help-item"><span class="screen-help-key">/gh &lt;คำค้น&gt;</span><span class="screen-help-desc">ค้นหา repo/user บน GitHub</span></div>' +
         '<div class="screen-help-item"><span class="screen-help-key">@ชื่อฝ่าย &lt;งาน&gt;</span><span class="screen-help-desc">เรียกทีม AI เฉพาะทาง</span></div>' +
       '</div>' +
@@ -5900,7 +5902,7 @@ SM.register('help', {
         '<div class="screen-help-item"><span class="screen-help-key">Ctrl+I</span><span class="screen-help-desc">เปิด IDE</span></div>' +
         '<div class="screen-help-item"><span class="screen-help-key">Ctrl+P</span><span class="screen-help-desc">เปิด Preview</span></div>' +
         '<div class="screen-help-item"><span class="screen-help-key">Ctrl+D</span><span class="screen-help-desc">เปิด Deploy</span></div>' +
-        '<div class="screen-help-item"><span class="screen-help-key">Ctrl+B</span><span class="screen-help-desc">เปิด DB</span></div>' +
+        '<div class="screen-help-item"><span class="screen-help-key">IDE / GitHub</span><span class="screen-help-desc">เปิดตัวแก้ไขโปรเจกต์จริง</span></div>' +
         '<div class="screen-help-item"><span class="screen-help-key">Ctrl+T</span><span class="screen-help-desc">เปิด Team AI</span></div>' +
         '<div class="screen-help-item"><span class="screen-help-key">Ctrl+S</span><span class="screen-help-desc">เปิด Settings</span></div>' +
         '<div class="screen-help-item"><span class="screen-help-key">Ctrl+H</span><span class="screen-help-desc">เปิด Help</span></div>' +
@@ -5908,11 +5910,11 @@ SM.register('help', {
       '</div>' +
       '<div class="screen-help-section">' +
         '<div class="screen-help-section-title">🛠️ เครื่องมือ</div>' +
-        '<div class="screen-help-item"><span class="screen-help-key">🛠️ Code Tools</span><span class="screen-help-desc">สร้าง/แปลง/อธิบาย/ปรับปรุง/คอมเมนต์/ทดสอบ/ไดอแกรม/Refactor โค้ด</span></div>' +
-        '<div class="screen-help-item"><span class="screen-help-key">🚀 SUPER MODE</span><span class="screen-help-desc">เปิด Super CodingFleet — AI ทำงานจริง ตรวจจริง</span></div>' +
-        '<div class="screen-help-item"><span class="screen-help-key">👁 Live Preview</span><span class="screen-help-desc">ดูผลงานเว็บที่รันอยู่แบบ real-time</span></div>' +
-        '<div class="screen-help-item"><span class="screen-help-key">💻 IDE</span><span class="screen-help-desc">File Explorer + Code Editor + Terminal</span></div>' +
-        '<div class="screen-help-item"><span class="screen-help-key">🗄️ DB Sandbox</span><span class="screen-help-desc">รัน SQL กับ SQLite จริง</span></div>' +
+        '<div class="screen-help-item"><span class="screen-help-key">🛠️ Git/IDE only</span><span class="screen-help-desc">แก้ไฟล์โปรเจกต์จริงผ่าน GitHub และตัวแก้ไขไฟล์</span></div>' +
+        '<div class="screen-help-item"><span class="screen-help-key">🔐 Project changes</span><span class="screen-help-desc">ทุกการแก้ไขต้องผ่านไฟล์จริงและ Git/IDE</span></div>' +
+        '<div class="screen-help-item"><span class="screen-help-key">🔒 Execution</span><span class="screen-help-desc">ปิดการจำลองและการรันโค้ดจากห้องแชท</span></div>' +
+        '<div class="screen-help-item"><span class="screen-help-key">💻 IDE</span><span class="screen-help-desc">File Explorer + Code Editor สำหรับไฟล์จริง</span></div>' +
+        '<div class="screen-help-item"><span class="screen-help-key">🗄️ Database</span><span class="screen-help-desc">แก้ schema/query ในโปรเจกต์จริงผ่าน Git/IDE</span></div>' +
         '<div class="screen-help-item"><span class="screen-help-key">🐙 GitHub Tool</span><span class="screen-help-desc">ค้นหา repo/user บน GitHub</span></div>' +
         '<div class="screen-help-item"><span class="screen-help-key">📤 Export</span><span class="screen-help-desc">ส่งออกแชทเป็น JSON + TXT</span></div>' +
       '</div>' +

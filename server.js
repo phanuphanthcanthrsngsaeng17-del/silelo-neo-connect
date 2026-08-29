@@ -40,6 +40,9 @@ app.use((req, res, next) => {
   next();
 });
 app.use(express.static(path.join(__dirname, 'public')));
+// Chat is Git/IDE-only: never execute or simulate code inside the chat process.
+const CHAT_DISABLED_SIMULATION_PATHS = ['/api/run', '/api/code', '/api/codetool', '/api/install', '/api/sandbox', '/api/db', '/db', '/preview'];
+app.use(CHAT_DISABLED_SIMULATION_PATHS, (req, res) => res.status(410).json({ ok: false, error: 'SANDBOX_DISABLED', message: 'การรันหรือจำลองถูกปิดจากห้องแชท กรุณาแก้ไฟล์จริงผ่าน Git/IDE' }));
 
 // 🧭 AI Intent Mode — exposes the 500-skill allowlist without executing arbitrary actions.
 app.get('/api/intent-skills', requireAuth, (req, res) => {
@@ -2437,14 +2440,7 @@ app.post('/api/chat', requireAuth, async (req, res) => {
     const body = req.body || {};
     const codeBlocks = extractCodeBlocks(String(question));
     if (codeBlocks.length && chatCodeRequested(body)) {
-      if (!CHAT_CODE_EXECUTION_ENABLED) {
-        return chatJson(res, { reply: '🧪 ตรวจพบบล็อกโค้ดแล้ว แต่การรันโค้ดจากห้องแชตยังปิดอยู่เพื่อความปลอดภัย — ใช้ LAB Console หรือเปิด CHAT_CODE_EXECUTION_ENABLED=on บนเซิร์ฟเวอร์ที่มี sandbox แยกจริงก่อน', provider: 'chat-code', model: 'disabled', room: roomId, t: Date.now(), verified: false });
-      }
-      const run = await runChatCodeBlocks(question);
-      if (run && run.disabled) return chatJson(res, { reply: '🧪 ไม่ได้รันโค้ด: ' + run.reason, provider: 'chat-code', model: 'blocked', room: roomId, t: Date.now(), verified: false });
-      const results = run.results || [];
-      const allPassed = results.length > 0 && results.every((item) => item.ok && item.code === 0);
-      return chatJson(res, { reply: chatCodeReply(run.blocks, results), provider: 'chat-code', model: 'bounded-exec', room: roomId, t: Date.now(), verified: allPassed, superRun: { blockCount: results.length, ok: allPassed, engine: results.map((item) => item.engine).join(',') } });
+      return chatJson(res, { reply: '🔒 ห้องแชทนี้ไม่รันหรือจำลองโค้ด — กรุณาเปิดไฟล์จริงใน IDE และบันทึกผ่าน GitHub/Git เพื่อให้ตรวจสอบการเปลี่ยนแปลงได้', provider: 'project-editor', model: 'disabled', room: roomId, t: Date.now(), verified: false });
     }
     // 💭 จอคิด: ผูก traceId จาก client (ถ้ามี) เพื่อให้ poll สถานะสดได้
     const _tid = String((req.body || {}).traceId || '') || (Date.now().toString(36) + Math.random().toString(36).slice(2, 8));
@@ -2465,22 +2461,9 @@ app.post('/api/chat', requireAuth, async (req, res) => {
       if (pa) return chatJson(res, Object.assign({ reply: pa.reply, provider: 'parallel', model: pa.model, room: roomId, t: Date.now() }, pa));
       return chatJson(res, { reply: '⚠️ ไม่มี AI ตัวไหนตอบได้ตอนนี้ (provider ทั้งหมดล้ม?) — ลองอีกสักครู่ หรือส่งผ่านแชทปกติ', provider: 'parallel', model: 'fail', room: roomId, t: Date.now() });
     }
-    // 🗄️ v1.33 DB SANDBOX — /db <SQL> — รัน SQL บน SQLite จริง
-    const dm = /^\/db(?:\s+([\s\S]+))?$/.exec(String(question).trim());
-    if (dm) {
-      const sql = (dm[1] || '').trim();
-      if (!sql) {
-        return chatJson(res, { reply: '🗄️ **DB SANDBOX (SQLite)** — รัน SQL ได้จริงบนเซิร์ฟเวอร์ ข้อมูลอยู่ได้ข้าม session\n\nพิมพ์: `/db <SQL>` เช่น\n• `/db SELECT 1`\n• `/db CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT, age INT)`\n• `/db INSERT INTO users (name, age) VALUES (\'พี่นุ\', 30)`\n• `/db SELECT * FROM users`\n\nตารางเริ่มต้น: `notes`, `kv` · บล็อก DROP/DELETE-ไม่มี-WHERE (กันพลาด) · รองรับ SELECT/INSERT/UPDATE/DELETE/CREATE/ALTER/PRAGMA', provider: 'db', model: 'help', room: roomId, t: Date.now() });
-      }
-      const dr = await dbRunSql(sql);
-      if (dr.error) return chatJson(res, { reply: '🗄️ **DB ERROR** ⚠️\n`' + String(dr.error).slice(0, 300) + '`', provider: 'db', model: 'error', room: roomId, t: Date.now() });
-      const parts = (dr.rows || []).map(t => {
-        const head = '`' + t.columns.join(' | ') + '`';
-        const rows = t.values.slice(0, 20).map(v => '`' + v.map(x => x === null ? 'NULL' : String(x).slice(0, 60)).join(' | ') + '`').join('\n');
-        return head + (rows ? '\n' + rows : '') + (t.values.length > 20 ? '\n… และอีก ' + (t.values.length - 20) + ' แถว' : '');
-      }).join('\n\n');
-      return chatJson(res, { reply: '🗄️ **SQLite · ' + (dr.write ? 'WRITE ✓' : 'QUERY') + '** — ' + dr.timeMs + 'ms\n\n' + (parts || (dr.write ? '✅ ทำรายการสำเร็จ' : '(ไม่มีผลลัพธ์)')), provider: 'db', model: 'sqlite', room: roomId, t: Date.now() });
-    }
+    // Chat is project-editing only; /db never executes from the chat surface.
+    const dm = /^\/db(?:\s+[\s\S]+)?$/i.exec(String(question).trim());
+    if (dm) return chatJson(res, { reply: '🔒 คำสั่ง /db ถูกปิดจากห้องแชทแล้ว กรุณาเปิดฐานข้อมูลจริงใน IDE/เครื่องมือ Git ของโปรเจกต์และส่ง diff ที่ต้องการแก้', provider: 'project-editor', model: 'disabled', room: roomId, t: Date.now(), verified: false });
     // 🐙 v1.33 GITHUB TOOL — /gh <repo|user|คำค้น> — GitHub API จริง (ฟรี)
     const gm = /^\/gh(?:\s+([\s\S]+))?$/.exec(String(question).trim());
     if (gm) {
