@@ -23,6 +23,7 @@ const { SERVICE_OPERATIONS, requestGateway, gatewayStatus } = require('./lib/int
 const { executeManusConnector, gatewayStatus: manusGatewayStatus } = require('./lib/manus-connector-gateway');
 const { intentSnapshot, registryStats, suggestIntentSkills } = require('./lib/intent-skills');
 const githubRepo = require('./lib/github-repo');
+const projectAgent = require('./lib/project-agent');
 
 // 🛡️ Key Manager กลาง — ตรวจ/จัดการคีย์จากที่เดียว
 const ENV = require('./config/env');
@@ -2431,6 +2432,46 @@ app.put('/api/github/file', requireAuth, requireOwner, requireGithubToken, async
   try { if (!req.body || !req.body.path) return res.status(400).json({ ok: false, error: 'path is required' }); const d = await githubRepo.writeFile(githubWriteInput(req)); res.json({ ok: true, commit: d.commit, content: d.content }); } catch (e) { githubApiError(res, e); }
 });
 
+/* ============ PROJECT AGENT — GitHub จริง ไม่ใช้ sandbox ============ */
+app.post('/api/project-agent', requireAuth, requireOwner, requireGithubToken, async (req, res) => {
+  try {
+    const body = req.body || {};
+    const action = String(body.action || 'status').toLowerCase();
+    const input = { owner: body.owner, repo: body.repo, ref: body.ref || 'main' };
+    if (action === 'status') {
+      const [repo, branches, commits] = await Promise.all([githubRepo.getRepo(input), githubRepo.listBranches(input), githubRepo.listCommits(input)]);
+      return res.json({ ok: true, action, repo: { full_name: repo.full_name, default_branch: repo.default_branch, private: repo.private }, branches: branches.map(b => ({ name: b.name, protected: !!b.protected })), commits: commits.slice(0, 10).map(c => ({ sha: c.sha, message: c.commit && c.commit.message, date: c.commit && c.commit.author && c.commit.author.date })) });
+    }
+    if (action === 'read') {
+      const file = await githubRepo.getFile({ ...input, path: projectAgent.cleanPath(body.path) });
+      return res.json({ ok: true, action, file: { path: file.path, sha: file.sha, size: file.size, content: file.content, html_url: file.html_url } });
+    }
+    if (action === 'plan') {
+      const task = String(body.task || '').trim();
+      if (!task) return res.status(400).json({ ok: false, error: 'task is required' });
+      const requested = Array.isArray(body.paths) ? body.paths.slice(0, 8) : [];
+      if (!requested.length) return res.status(400).json({ ok: false, error: 'paths is required; ระบุไฟล์ที่ต้องการให้ agent อ่านก่อนแก้' });
+      const files = await Promise.all(requested.map(async p => { const f = await githubRepo.getFile({ ...input, path: projectAgent.cleanPath(p) }); return { path: f.path, content: f.content === null ? '(binary file; not editable)' : String(f.content).slice(0, 16000) }; }));
+      const ai = await fastChat([{ role: 'system', content: 'คุณเป็น project-agent สำหรับ repository จริง ตอบเฉพาะ JSON และห้ามรันโค้ดหรือใช้ sandbox' }, { role: 'user', content: projectAgent.buildPlanPrompt(task, files) }]);
+      if (!ai || !ai.reply) return res.status(503).json({ ok: false, error: 'AI project-agent ไม่พร้อม' });
+      return res.json({ ok: true, action, plan: projectAgent.parsePlan(ai.reply), sourceFiles: files.map(f => f.path), provider: ai.provider, model: ai.model });
+    }
+    if (action === 'apply') {
+      if (body.confirm !== true) return res.status(400).json({ ok: false, error: 'confirmation_required', message: 'ต้องยืนยันก่อนเขียนไฟล์จริงและสร้าง commit' });
+      if (!Array.isArray(body.files) || !body.files.length || body.files.length > 12) return res.status(400).json({ ok: false, error: 'files is required' });
+      const message = String(body.message || 'Update project files').trim().slice(0, 200);
+      const results = [];
+      for (const item of body.files) {
+        const pathName = projectAgent.cleanPath(item && item.path);
+        const content = String(item && item.content === undefined ? '' : item.content);
+        results.push({ path: pathName, result: await githubRepo.writeFile({ ...input, path: pathName, content, message }) });
+      }
+      return res.json({ ok: true, action, message, commits: results.map(x => ({ path: x.path, sha: x.result.commit && x.result.commit.sha, url: x.result.commit && x.result.commit.html_url })) });
+    }
+    return res.status(400).json({ ok: false, error: 'unknown action' });
+  } catch (e) { return githubApiError(res, e); }
+});
+
 app.post('/api/chat', requireAuth, async (req, res) => {
   try {
     const { room, question, history, memory, unrestricted, modelMode, intentMode } = req.body || {};
@@ -2460,6 +2501,35 @@ app.post('/api/chat', requireAuth, async (req, res) => {
       const pa = await parallelAgents(task);
       if (pa) return chatJson(res, Object.assign({ reply: pa.reply, provider: 'parallel', model: pa.model, room: roomId, t: Date.now() }, pa));
       return chatJson(res, { reply: '⚠️ ไม่มี AI ตัวไหนตอบได้ตอนนี้ (provider ทั้งหมดล้ม?) — ลองอีกสักครู่ หรือส่งผ่านแชทปกติ', provider: 'parallel', model: 'fail', room: roomId, t: Date.now() });
+    }
+    // 🐙 PROJECT AGENT — สั่งงานกับ GitHub repository จริงจากแชท
+    const pm = /^\/project(?:\s+([\s\S]+))?$/i.exec(String(question).trim());
+    if (pm) {
+      if (!isOwner(req.authUser)) return chatJson(res, { reply: 'คำสั่ง project-agent สงวนไว้สำหรับ owner ของ repository', provider: 'project-editor', model: 'owner-only', room: roomId, t: Date.now() });
+      const raw = (pm[1] || '').trim();
+      const [sub, ...rest] = raw.split(/\s+/);
+      const input = { ref: 'main' };
+      if (!sub) return chatJson(res, { reply: '🐙 **Project Agent · GitHub จริง**\n\n/project status — ดูสถานะ repo และ branch\n/project read <path> — อ่านไฟล์จริง\n/project plan <path1,path2> :: <งาน> — อ่านไฟล์และสร้างแผนแก้ไข\n\nทุกการแก้จริงต้องผ่าน GitHub Editor และยืนยันก่อน commit', provider: 'project-editor', model: 'help', room: roomId, t: Date.now() });
+      if (sub.toLowerCase() === 'status') {
+        const repo = await githubRepo.getRepo(input);
+        const branches = await githubRepo.listBranches(input);
+        return chatJson(res, { reply: '🐙 **' + repo.full_name + '**\nBranch หลัก: `' + (repo.default_branch || 'main') + '`\nสถานะ: เชื่อม GitHub จริงแล้ว\nBranch ที่พบ: ' + branches.map(b => '`' + b.name + '`').join(', '), provider: 'project-editor', model: 'github-live', room: roomId, t: Date.now() });
+      }
+      if (sub.toLowerCase() === 'read') {
+        const file = await githubRepo.getFile({ ...input, path: projectAgent.cleanPath(rest.join(' ')) });
+        if (file.content === null) return chatJson(res, { reply: '📄 `' + file.path + '` เป็น binary file จึงอ่านเป็นข้อความไม่ได้ แต่เปิดดูได้จาก GitHub: ' + (file.html_url || ''), provider: 'project-editor', model: 'github-live', room: roomId, t: Date.now() });
+        return chatJson(res, { reply: '📄 **' + file.path + '**\n\n```\n' + String(file.content).slice(0, 14000) + '\n```', provider: 'project-editor', model: 'github-live', room: roomId, t: Date.now() });
+      }
+      if (sub.toLowerCase() === 'plan') {
+        const split = rest.join(' ').split(/\s*::\s*/);
+        const paths = String(split[0] || '').split(',').map(x => x.trim()).filter(Boolean).slice(0, 8);
+        const task = String(split.slice(1).join(' :: ') || '').trim();
+        if (!paths.length || !task) return chatJson(res, { reply: 'รูปแบบ: `/project plan server.js,public/chat.html :: ลดช่องว่างแชท`', provider: 'project-editor', model: 'usage', room: roomId, t: Date.now() });
+        const files = await Promise.all(paths.map(async p => { const f = await githubRepo.getFile({ ...input, path: projectAgent.cleanPath(p) }); return { path: f.path, content: f.content === null ? '(binary)' : String(f.content).slice(0, 16000) }; }));
+        const ai = await fastChat([{ role: 'system', content: 'คุณเป็น project-agent สำหรับ GitHub จริง ตอบภาษาไทย กระชับ ห้ามรันโค้ด ห้ามใช้ sandbox และให้สรุปไฟล์ที่ควรแก้กับขั้นตอนทดสอบเท่านั้น' }, { role: 'user', content: projectAgent.buildPlanPrompt(task, files).replace('ตอบ JSON เท่านั้นในรูปแบบ:', 'ตอบเป็น Markdown พร้อมหัวข้อ แผนแก้ไข, ไฟล์ที่จะเปลี่ยน, และการทดสอบ:') }]);
+        return chatJson(res, { reply: ai && ai.reply ? '🐙 **Project Plan จากไฟล์จริง**\n\n' + ai.reply.slice(0, 12000) + '\n\nถ้าต้องการให้แก้จริง ให้เปิด GitHub Editor ตรวจ diff แล้วกด Commit เมื่อพร้อม' : 'AI project-agent ไม่พร้อม', provider: 'project-editor', model: ai && ai.model || 'unavailable', room: roomId, t: Date.now() });
+      }
+      return chatJson(res, { reply: 'ไม่รู้จักคำสั่ง project-agent: ใช้ `/project status`, `/project read <path>` หรือ `/project plan <path1,path2> :: <งาน>`', provider: 'project-editor', model: 'usage', room: roomId, t: Date.now() });
     }
     // Chat is project-editing only; /db never executes from the chat surface.
     const dm = /^\/db(?:\s+[\s\S]+)?$/i.exec(String(question).trim());

@@ -42,3 +42,14 @@ test('simulation controls are hidden while IDE remains available', () => {
 test('chat never asks the server to run code for a normal message', () => {
   assert.match(chat, /const requestedCodeRun = false/);
 });
+
+test('project agent is wired to real GitHub actions and keeps owner confirmation', () => {
+  assert.match(server, /app\.post\('\/api\/project-agent', requireAuth, requireOwner, requireGithubToken/);
+  assert.match(server, /action === 'status'/);
+  assert.match(server, /action === 'read'/);
+  assert.match(server, /action === 'plan'/);
+  assert.match(server, /action === 'apply'/);
+  assert.match(server, /body\.confirm !== true/);
+  assert.match(server, /githubRepo\.writeFile/);
+  assert.match(server, /const pm = \/\^\\\/project/);
+});
