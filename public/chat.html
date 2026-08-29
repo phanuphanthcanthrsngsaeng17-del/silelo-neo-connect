@@ -6231,3 +6231,13 @@ console.log('[Silelo] Shortcuts: Ctrl+I(IDE) Ctrl+P(Preview) Ctrl+D(Deploy) Ctrl
     .msg.user .bubble, .msg.bot .bubble { font-size:15px !important; }
   }
 </style>
+
+<style id="mobile-viewport-hardening">
+  /* Hardening for mobile browsers that resolve percentage fixed widths against a stale containing block. */
+  @media (max-width:800px) {
+    html, body { width:100% !important; max-width:100% !important; margin:0 !important; overflow-x:hidden !important; }
+    .app { width:100vw !important; max-width:100vw !important; min-width:0 !important; margin-left:0 !important; margin-right:0 !important; }
+    .inputbar { left:0 !important; right:0 !important; width:100vw !important; max-width:100vw !important; transform:none !important; }
+    #msgs { width:100% !important; max-width:100% !important; }
+  }
+</style>
