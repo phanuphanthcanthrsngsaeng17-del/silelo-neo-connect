@@ -2700,12 +2700,18 @@ body.theme-dola #inp { border-radius: 16px; }
   let speakToken = 0;
   function stopSpeaking() {
     speakToken++;
-    try { if (audio) audio.pause(); } catch (e) {}
+    try { if (audio) { audio.pause(); audio.currentTime = 0; } } catch (e) {}
     if (window.speechSynthesis) { try { speechSynthesis.cancel(); } catch (e) {} }
+    pendingSpeak = null;
   }
   function speak(text) {
-    const myToken = ++speakToken;
-    const run = speakChain.then(() => _speak(text, myToken));
+    /* คำตอบใหม่ต้องเริ่มทันที ไม่รอคิวเก่าที่อาจยาวหลายประโยค */
+    speakToken++;
+    const myToken = speakToken;
+    try { if (audio) { audio.pause(); audio.currentTime = 0; } } catch (e) {}
+    if (window.speechSynthesis) { try { speechSynthesis.cancel(); } catch (e) {} }
+    pendingSpeak = null;
+    const run = Promise.resolve().then(() => _speak(text, myToken));
     speakChain = run.catch(() => {});
     return run;
   }
@@ -2775,7 +2781,11 @@ body.theme-dola #inp { border-radius: 16px; }
 
     /* ===== 🎙️ เลือกเสียง ===== */
   const voicePop = document.getElementById('voicePop');
-  document.getElementById('voiceBtn').onclick = () => {
+  const voiceBtn = document.getElementById('voiceBtn');
+  const voiceLabels = { silelo: 'สลี่', auto: 'อัตโนมัติ', premwadee: 'พรีมาวดี', niwat: 'นิวัฒน์', achara: 'อัจฉรา', aria: 'Aria', guy: 'Guy', sonia: 'Sonia', nanami: 'Nanami', sunhi: 'Sun-Hi', xiaoxiao: 'Xiaoxiao', coral: 'Coral', marin: 'Marin', cedar: 'Cedar', alloy: 'Alloy', ash: 'Ash', echo: 'Echo', fable: 'Fable', nova: 'Nova', onyx: 'Onyx', sage: 'Sage' };
+  function syncVoiceUi() { if (voiceBtn) { voiceBtn.title = '🎙️ เสียงปัจจุบัน: ' + (voiceLabels[voice] || voice) + ' — กดเพื่อเลือก'; voiceBtn.setAttribute('aria-label', voiceBtn.title); } }
+  syncVoiceUi();
+  voiceBtn.onclick = () => {
     voicePop.classList.toggle('show');
     document.querySelectorAll('.voice-opt').forEach(o => o.classList.toggle('on', o.dataset.voice === voice));
     syncRateUi();
@@ -2787,7 +2797,10 @@ body.theme-dola #inp { border-radius: 16px; }
       document.querySelectorAll('.voice-opt').forEach(x => x.classList.toggle('on', x === o));
       voicePop.classList.remove('show');
       const names = { silelo: '💜 สลี่ออลา (เสียงสลี่)', auto: 'อัตโนมัติ (เร็วสุด)', premwadee: 'พรีมาวดี (หญิง อ่อนโยน)', niwat: 'นิวััฒน์ (ชาย)', achara: 'อัจฉรา (หญิง ทางการ)', aria: 'Aria (EN หญิง)', guy: 'Guy (EN ชาย)', sonia: 'Sonia (UK หญิง)', nanami: 'Nanami (JP หญิง)', sunhi: 'Sun-Hi (KR หญิง)', xiaoxiao: 'Xiaoxiao (CN หญิง)', coral: 'Coral (อบอุ่น)', marin: 'Marin (สงบ)', cedar: 'Cedar (ชัดเจน)', alloy: 'Alloy (กลาง)', ash: 'Ash (สดใส)', echo: 'Echo (ทุ้ม)', fable: 'Fable (เล่าเรื่อง)', nova: 'Nova (นุ่มนวล)', onyx: 'Onyx (มืออาชีพ)', sage: 'Sage (แม่นยำ)' };
-      toast('🎙️ เสียง: ' + (names[voice] || voice));
+      syncVoiceUi();
+      toast('🎙️ เลือกเสียง: ' + (names[voice] || voice));
+      /* พรีวิวสั้น ๆ เพื่อยืนยันว่าเสียงที่เลือกใช้งานได้ */
+      if (soundOn) speak('เลือกเสียง ' + (names[voice] || voice) + ' แล้วครับ');
     };
   });
   /* ===== ⚡ ความเร็วเสียง (0.5x - 2.0x) ===== */
