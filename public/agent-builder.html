@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#0b1020">
+<title>SILELO — AI Agent Builder</title>
+<style>
+:root{--bg:#070b14;--panel:#0e1525;--panel2:#111b2f;--line:#263451;--txt:#edf4ff;--muted:#8fa0bd;--accent:#8b7cf7;--green:#22c55e;--danger:#fb7185}*{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at 75% 0,#182043 0,transparent 38%),var(--bg);color:var(--txt);font:14px system-ui,-apple-system,Segoe UI,sans-serif;height:100vh;overflow:hidden}button,input,textarea,select{font:inherit;color:inherit}button{cursor:pointer}.app{height:100vh;display:grid;grid-template-columns:260px 1fr 330px}.sidebar,.right{background:rgba(10,16,29,.92);border-color:var(--line);border-style:solid}.sidebar{border-width:0 1px 0 0;padding:18px 14px;overflow:auto}.brand{font-size:20px;font-weight:800;margin-bottom:20px}.brand span{color:var(--accent)}.nav{display:grid;gap:7px}.nav button{border:1px solid transparent;background:transparent;text-align:left;padding:11px 12px;border-radius:10px}.nav button.active,.nav button:hover{background:var(--panel2);border-color:var(--line)}.section{margin:22px 5px 8px;color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:1.5px}.agent{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px;margin-top:8px}.agent b{display:block}.agent small{color:var(--muted)}.main{min-width:0;display:flex;flex-direction:column}.top{height:66px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:12px;padding:0 18px}.top h1{font-size:17px;margin:0}.pill{margin-left:auto;color:#b8c7e3;background:#15203a;border:1px solid var(--line);padding:7px 10px;border-radius:999px}.btn{border:1px solid var(--line);background:var(--panel2);padding:9px 12px;border-radius:9px}.btn.primary{background:var(--accent);border-color:var(--accent);color:white}.canvas{position:relative;flex:1;overflow:auto;padding:28px;background-image:linear-gradient(rgba(139,124,247,.08) 1px,transparent 1px),linear-gradient(90deg,rgba(139,124,247,.08) 1px,transparent 1px);background-size:32px 32px}.flow{min-width:900px;min-height:620px;position:relative}.node{position:absolute;width:250px;background:rgba(14,21,37,.96);border:1px solid var(--line);border-radius:14px;box-shadow:0 12px 35px #0005;overflow:hidden}.node .head{padding:10px 12px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between}.node .body{padding:12px}.node .tag{font-size:10px;color:var(--muted);text-transform:uppercase}.node textarea,.node input,.node select{width:100%;background:#09101d;border:1px solid var(--line);border-radius:8px;padding:9px;margin-top:7px;outline:none}.node textarea{min-height:100px;resize:vertical}.port{width:9px;height:9px;background:var(--accent);border-radius:50%;position:absolute;right:-5px;top:50%;box-shadow:0 0 12px var(--accent)}.node.start{left:50px;top:80px}.node.model{left:360px;top:80px}.node.tools{left:670px;top:80px}.node.memory{left:360px;top:340px}.node.output{left:670px;top:340px}.edge{position:absolute;height:2px;background:#4b5d82;transform-origin:left center}.e1{left:300px;top:143px;width:60px}.e2{left:610px;top:143px;width:60px}.e3{left:485px;top:238px;width:2px;height:100px}.e4{left:610px;top:403px;width:60px}.right{border-width:0 0 0 1px;padding:18px;overflow:auto}.right h2{font-size:14px;margin:0 0 14px}.field{margin-bottom:15px}.field label{display:block;color:var(--muted);font-size:12px;margin-bottom:6px}.field input,.field textarea,.field select{width:100%;background:#09101d;border:1px solid var(--line);border-radius:9px;padding:10px;outline:none}.field textarea{min-height:120px;resize:vertical}.check{display:flex;align-items:center;gap:8px;margin:9px 0}.test{margin-top:20px;border-top:1px solid var(--line);padding-top:18px}.log{background:#070c15;border:1px solid var(--line);border-radius:9px;padding:10px;min-height:100px;color:#b9c8e1;white-space:pre-wrap;font-size:12px}.actions{display:flex;gap:8px;flex-wrap:wrap}.mobile{display:none}@media(max-width:900px){body{overflow:auto}.app{height:auto;min-height:100vh;grid-template-columns:1fr}.sidebar,.right{border:0}.sidebar{display:none}.right{border-top:1px solid var(--line)}.mobile{display:block}.canvas{min-height:700px}.flow{min-width:850px}}
+</style>
+</head>
+<body>
+<div class="app">
+<aside class="sidebar">
+  <div class="brand">SILELO <span>Agent Builder</span></div>
+  <div class="nav">
+    <button class="active">🧩 Agent Builder</button><button>💬 Playground</button><button>📚 Knowledge</button><button>🔧 Tools & APIs</button><button>📊 Runs & Logs</button><button>⚙️ Settings</button>
+  </div>
+  <div class="section">My agents</div>
+  <div class="agent"><b>🤖 SILELO Assistant</b><small>พร้อมใช้งาน • v1</small></div>
+  <div class="agent"><b>🛠️ Coding Agent</b><small>Draft</small></div>
+  <div class="section">Workspace</div>
+  <button class="btn" style="width:100%" onclick="newAgent()">＋ สร้าง Agent ใหม่</button>
+</aside>
+<main class="main">
+  <header class="top"><button class="btn mobile" onclick="history.back()">←</button><h1>AI Agent Builder</h1><span class="pill" id="status">● Draft</span><button class="btn" onclick="loadAgent()">โหลด</button><button class="btn" onclick="exportAgent()">Export</button><button class="btn primary" onclick="saveAgent()">บันทึก Agent</button></header>
+  <section class="canvas"><div class="flow">
+    <div class="edge e1"></div><div class="edge e2"></div><div class="edge e3"></div><div class="edge e4"></div>
+    <div class="node start"><div class="head"><b>▶ Trigger</b><span>1</span></div><div class="body"><div class="tag">Input</div><input id="trigger" value="ข้อความจากผู้ใช้"></div><div class="port"></div></div>
+    <div class="node model"><div class="head"><b>🧠 AI Model</b><span>2</span></div><div class="body"><div class="tag">Model</div><select id="model"><option>auto</option><option>gpt-5.6</option><option>claude</option><option>gemini</option></select><div class="tag" style="margin-top:10px">System prompt</div><textarea id="prompt">คุณคือ SILELO AI Agent ทำงานตามเป้าหมายของผู้ใช้ ตอบเป็นภาษาไทยเมื่อเหมาะสม และใช้เครื่องมือเฉพาะเมื่อจำเป็น</textarea></div><div class="port"></div></div>
+    <div class="node tools"><div class="head"><b>🔧 Tools</b><span>3</span></div><div class="body"><label class="check"><input type="checkbox" id="web" checked> Web / Search</label><label class="check"><input type="checkbox" id="github" checked> GitHub</label><label class="check"><input type="checkbox" id="n8n"> n8n Webhook</label><label class="check"><input type="checkbox" id="code"> Code execution</label></div></div>
+    <div class="node memory"><div class="head"><b>🧠 Memory</b><span>4</span></div><div class="body"><select id="memory"><option>Session memory</option><option>Long-term memory</option><option>Disabled</option></select><input id="memoryKey" placeholder="Memory key (optional)"></div></div>
+    <div class="node output"><div class="head"><b>✓ Response</b><span>5</span></div><div class="body"><div class="tag">Output</div><select id="output"><option>Chat response</option><option>JSON</option><option>Webhook</option></select><input id="webhook" placeholder="Webhook URL (optional)"></div></div>
+  </div></section>
+</main>
+<aside class="right">
+  <h2>⚡ Agent Configuration</h2>
+  <div class="field"><label>ชื่อ Agent</label><input id="name" value="SILELO Assistant"></div>
+  <div class="field"><label>คำอธิบาย</label><input id="description" value="AI Agent สำหรับ SILELO Neo-Connect"></div>
+  <div class="field"><label>เป้าหมายหลัก</label><textarea id="goal">ช่วยผู้ใช้ค้นข้อมูล วิเคราะห์ สร้างเนื้อหา และเชื่อมต่อเครื่องมือที่ได้รับอนุญาต</textarea></div>
+  <div class="field"><label>Temperature</label><input id="temperature" type="range" min="0" max="1" step="0.1" value="0.4"></div>
+  <div class="field"><label>Max output tokens</label><input id="tokens" type="number" value="4096"></div>
+  <div class="actions"><button class="btn primary" onclick="runTest()">▶ ทดสอบ Agent</button><button class="btn" onclick="resetAgent()">รีเซ็ต</button></div>
+  <div class="test"><h2>🧪 Test run</h2><div class="field"><label>ข้อความทดสอบ</label><textarea id="testInput">ช่วยวางแผนงานให้ฉันหน่อย</textarea></div><div class="log" id="log">ยังไม่มีการทดสอบ</div></div>
+</aside>
+</div>
+<script>
+const ids=['name','description','goal','model','prompt','temperature','tokens','memory','memoryKey','output','webhook','trigger'];
+function data(){const o={};ids.forEach(id=>o[id]=document.getElementById(id).value);['web','github','n8n','code'].forEach(id=>o[id]=document.getElementById(id).checked);return o}
+function apply(o){ids.forEach(id=>{if(o[id]!==undefined)document.getElementById(id).value=o[id]});['web','github','n8n','code'].forEach(id=>{if(o[id]!==undefined)document.getElementById(id).checked=!!o[id]})}
+function saveAgent(){localStorage.setItem('silelo-agent',JSON.stringify(data()));document.getElementById('status').textContent='● Saved';}
+function loadAgent(){const x=localStorage.getItem('silelo-agent');if(x)apply(JSON.parse(x));document.getElementById('status').textContent=x?'● Loaded':'● Draft'}
+function exportAgent(){const blob=new Blob([JSON.stringify(data(),null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=(document.getElementById('name').value||'silelo-agent')+'.json';a.click();URL.revokeObjectURL(a.href)}
+function runTest(){const d=data(), input=document.getElementById('testInput').value;document.getElementById('log').textContent='Agent: '+d.name+'\nModel: '+d.model+'\nTools: '+['web','github','n8n','code'].filter(k=>d[k]).join(', ')+'\n\nรับคำขอ: '+input+'\n\n✓ Flow พร้อมทำงาน — เชื่อม runtime/API ของคุณเพื่อเรียกโมเดลจริง';}
+function newAgent(){localStorage.removeItem('silelo-agent');location.reload()}
+function resetAgent(){location.reload()}
+</script>
+</body></html>
