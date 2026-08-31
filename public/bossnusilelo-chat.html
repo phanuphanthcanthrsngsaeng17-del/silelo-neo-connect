@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Bossnusilelo 👑</title>
+<style>
+*{box-sizing:border-box}html,body{height:100%;margin:0;font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#0b0d12;color:#f5f7fb}body{overflow:hidden}.app{height:100%;display:flex}.side{width:280px;flex:none;background:#11141b;border-right:1px solid #242936;display:flex;flex-direction:column;transition:.2s}.brand{padding:20px 18px;font-weight:800;font-size:20px}.new{margin:0 14px 14px;padding:12px;border:1px solid #303746;border-radius:12px;background:#171b24;color:#fff;text-align:left;cursor:pointer}.tools{padding:4px 14px}.tool{display:block;width:100%;padding:10px 12px;border:0;background:transparent;color:#aeb6c5;text-align:left;border-radius:9px;cursor:pointer}.tool:hover,.new:hover{background:#1c212c;color:#fff}.history{padding:14px;overflow:auto;flex:1}.history small{color:#6f7889}.chat{min-width:0;flex:1;display:flex;flex-direction:column;background:#0b0d12}.top{height:58px;display:flex;align-items:center;padding:0 16px;border-bottom:1px solid #202530}.toggle{border:0;background:transparent;color:#dce2ed;font-size:22px;cursor:pointer}.title{margin-left:12px;font-weight:700}.messages{flex:1;overflow:auto;padding:30px max(18px,calc((100% - 900px)/2));scroll-behavior:smooth}.welcome{height:100%;display:flex;align-items:center;justify-content:center;text-align:center;color:#aeb6c5}.welcome h1{color:#fff;font-size:32px;margin:0 0 8px}.msg{max-width:900px;margin:0 auto 22px;line-height:1.65;white-space:pre-wrap;overflow-wrap:anywhere}.msg.user{background:#151a23;border:1px solid #242b38;border-radius:16px;padding:13px 16px}.msg.ai{padding:4px 2px}.msg a{color:#79aaff}.msg img{display:block;max-width:min(100%,620px);max-height:500px;border-radius:12px;margin-top:10px}.composer{padding:12px max(18px,calc((100% - 900px)/2)) 18px}.box{border:1px solid #303746;background:#141821;border-radius:18px;padding:10px;display:flex;align-items:flex-end;gap:8px}.box textarea{flex:1;resize:none;min-height:44px;max-height:180px;border:0;outline:0;background:transparent;color:#fff;font:inherit;padding:10px}.icon,.send{border:0;border-radius:12px;width:42px;height:42px;cursor:pointer}.icon{background:#202631;color:#d8deea}.send{background:#fff;color:#111;font-weight:800}.hint{text-align:center;color:#687286;font-size:11px;margin-top:7px}.hidden{display:none}.side.closed{width:0;overflow:hidden;border:0}.scrollbtn{position:fixed;right:22px;bottom:105px;width:38px;height:38px;border-radius:50%;border:1px solid #303746;background:#171b24;color:#fff;cursor:pointer}@media(max-width:700px){.side{position:absolute;z-index:5;height:100%;box-shadow:10px 0 40px #0008}.messages{padding:20px 12px}.composer{padding:8px 10px 12px}.welcome h1{font-size:26px}}
+</style>
+</head>
+<body>
+<div class="app">
+<aside class="side" id="side">
+<div class="brand">Bossnusilelo 👑</div>
+<button class="new" id="newChat">＋ New Chat</button>
+<div class="tools">
+<button class="tool">🔍 ค้นหาแชท</button><button class="tool">🤖 โมเดล</button><button class="tool">📎 ไฟล์และรูปภาพ</button><button class="tool">🌐 Web / Tools</button><button class="tool">💻 Code</button><button class="tool">⚙️ Settings</button>
+</div>
+<div class="history"><small>ประวัติการสนทนา</small><div id="historyList"></div></div>
+</aside>
+<main class="chat">
+<header class="top"><button class="toggle" id="toggle">☰</button><div class="title">Bossnusilelo 👑</div></header>
+<section class="messages" id="messages"><div class="welcome" id="welcome"><div><h1>Bossnusilelo 👑</h1><div>สั่งงานทุกอย่างผ่านแชทได้จากพื้นที่เดียว</div></div></div></section>
+<button class="scrollbtn" id="scrollBtn" title="ไปข้อความล่าสุด">↓</button>
+<footer class="composer"><div class="box"><button class="icon" id="attach" title="แนบไฟล์">＋</button><textarea id="input" rows="1" placeholder="ส่งข้อความถึง Bossnusilelo..."></textarea><button class="send" id="send">↑</button></div><div class="hint">รองรับข้อความ • ลิงก์ • รูปภาพ • ไฟล์ • Markdown • Code</div></footer>
+</main>
+</div>
+<script>
+const side=document.getElementById('side'),messages=document.getElementById('messages'),input=document.getElementById('input'),welcome=document.getElementById('welcome'),historyList=document.getElementById('historyList');
+document.getElementById('toggle').onclick=()=>side.classList.toggle('closed');
+document.getElementById('newChat').onclick=()=>{messages.innerHTML='';messages.appendChild(welcome);welcome.style.display='flex';input.focus()};
+function add(text,who){welcome.style.display='none';const d=document.createElement('div');d.className='msg '+who;d.textContent=text;messages.appendChild(d);messages.scrollTop=messages.scrollHeight;if(who==='user'){const h=document.createElement('div');h.className='tool';h.textContent=text.slice(0,45);historyList.prepend(h)}}
+function send(){const t=input.value.trim();if(!t)return;add(t,'user');input.value='';input.style.height='44px';setTimeout(()=>add('รับคำสั่งแล้วครับ 👑\nพื้นที่นี้ถูกเตรียมไว้เป็น Chat Core ของ Bossnusilelo สำหรับเชื่อม AI และเครื่องมือทั้งหมดต่อไป','ai'),180)}
+document.getElementById('send').onclick=send;input.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();send()}});input.addEventListener('input',()=>{input.style.height='auto';input.style.height=Math.min(input.scrollHeight,180)+'px'});document.getElementById('scrollBtn').onclick=()=>messages.scrollTo({top:messages.scrollHeight,behavior:'smooth'});document.getElementById('attach').onclick=()=>{const i=document.createElement('input');i.type='file';i.accept='image/*,.pdf,.txt,.doc,.docx,.csv,.json';i.click()};
+</script>
+</body>
+</html>
